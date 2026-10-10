@@ -35,6 +35,23 @@ describe("formatNugetDescription", () => {
     );
   });
 
+  it("should prefer the catalog summary and drop the platform list", () => {
+    const formatted = formatNugetDescription(
+      "NUnit is a unit-testing framework for all .NET languages.\n\nIf you are upgrading from NUnit 3, see the migration guide (https://docs.nunit.org/articles/nunit/release-notes/breaking-changes.html).\n\nSupported platforms:\n- .NET Framework 4.6.2+\n- .NET 8.0+",
+      "NUnit is a unit-testing framework for all .NET languages with a strong TDD focus.",
+    );
+    formatted.description.should.equal(
+      "NUnit is a unit-testing framework for all .NET languages with a strong TDD focus.",
+    );
+    formatted.description.should.not.match(/Supported platforms|migration guide/);
+  });
+
+  it("should omit a supported-platforms list when there is no summary", () => {
+    formatNugetDescription(
+      "JSON for .NET\n\nSupported platforms:\n- .NET 8.0+",
+    ).description.should.equal("JSON for .NET");
+  });
+
   it("should split commonly used types and keep a trailing note", () => {
     const formatted = formatNugetDescription(
       "JSON for .NET\n\nCommonly Used Types:\nSystem.Text.Json.JsonSerializer\nSystem.Collections.Generic.List<T>\nRequires NuGet 2.12 or higher.",

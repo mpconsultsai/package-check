@@ -12,16 +12,18 @@ All three registries:
 - **Health signals** - GitHub stars, forks, issues, and release activity when the package links a GitHub repository; days since the latest release; README deprecation and maintenance warnings
 - **Quality score** - A 0–100 score from the signals that are available for that package
 - **AI insights** - Recommendation, strengths, concerns, and scores. Gemini 2.5 Flash falls back to Flash-Lite, then Groq
-- **Dependencies** - Direct dependencies before you add the package
+- **Dependencies** - Direct dependencies before you add the package. The chart legend marks peer dependencies on npm only
 - **Trends** - Release history and GitHub issue history
 - **Watchlist** - Saved packages checked again from the browser
 - **Paste a list** - Analyse many packages from a dependency file
 
 npm also includes monthly downloads and download charts, Bundlephobia size, dependents, a transitive dependency graph (deps.dev), OpenSSF Scorecard, related packages, and an upgrade advisor with an optional Groq upgrade brief.
 
-PyPI uses the PyPI JSON API for project metadata, versions, license, and description. It shows distribution size (wheel or sdist), `Requires-Python`, core requirements, extras, and environment markers. Paste analysis accepts `requirements.txt`, `pyproject.toml`, or PEP 508 lines. PyPI reviews do not include download totals, download charts, a transitive dependency tree, related packages, or the upgrade advisor.
+PyPI uses the PyPI JSON API for project metadata, versions, license, and description. It shows distribution size (wheel or sdist), `Requires-Python`, core requirements, extras, and environment markers. Paste analysis accepts `requirements.txt`, `pyproject.toml`, or PEP 508 lines. PyPI reviews do not include download totals, download charts, a transitive dependency tree, related packages, the upgrade advisor, or a peer entry on the dependency chart legend.
 
-NuGet uses the NuGet registration, flat-container, and search APIs. It shows the latest stable version, package size, lifetime downloads, every target framework the package supports, direct package dependencies, and related packages. `System.*` and `Microsoft.*` packages are left out of that related list. Paste analysis accepts `PackageReference` entries from a `.csproj` or `Directory.Packages.props`, or a plain list of package ids. NuGet reviews omit download charts, a transitive dependency tree, and the upgrade advisor. Widely downloaded `System.*` and `Microsoft.*` packages stay recommended when the latest stable release is old and advisories are clear.
+NuGet uses the NuGet registration, flat-container, and search APIs. It shows the latest stable version, package size, lifetime downloads, every target framework the package supports, direct package dependencies, and related packages. `System.*` and `Microsoft.*` packages are left out of that related list. Paste analysis accepts `PackageReference` entries from a `.csproj` or `Directory.Packages.props`, or a plain list of package ids. NuGet reviews omit download charts, a transitive dependency tree, the upgrade advisor, and the peer entry on the dependency chart legend. Widely downloaded `System.*` and `Microsoft.*` packages stay recommended when the latest stable release is old and advisories are clear.
+
+The header always shows a GitHub link. Before a review loads it points at this repository. After a package loads it points at that package's repository. Set `NEXT_PUBLIC_GITHUB_REPO` to `owner/name` to change the site link (the default is `mpconsultsai/pkglens`). Set `NEXT_PUBLIC_CONTACT_EMAIL` to show a Contact link in the footer.
 
 ## Tech stack
 
@@ -65,6 +67,14 @@ npm run dev
 
 5. Open [http://localhost:3000](http://localhost:3000)
 
+### Tests
+
+```bash
+npm test
+```
+
+Runs Vitest with coverage. The suite covers `lib/**/*.ts` and fails below 25% lines, functions, branches, and statements. Stay on Node.js 20; this project uses Vitest 3.
+
 ## Project structure
 
 ```
@@ -97,7 +107,7 @@ Routes live under `/api/v1` (`lib/api/paths.ts`). Pass `ecosystem=npm`, `ecosyst
 | GET | `/api/v1/packages/dependencies` | Direct dependencies. PyPI responses include extras and markers |
 | GET | `/api/v1/packages/dependencies/graph` | Transitive graph for npm |
 | GET | `/api/v1/packages/charts` | Download, release, and issue series. Download series are npm-only |
-| GET | `/api/v1/packages/similar` | Related npm packages |
+| GET | `/api/v1/packages/similar` | Related packages for npm and NuGet. NuGet omits `System.*` and `Microsoft.*` |
 | GET | `/api/v1/packages/dependents` | Packages that depend on an npm package |
 | GET | `/api/v1/packages/scorecard` | OpenSSF Scorecard for an npm package's GitHub repo |
 | GET | `/api/v1/upgrade` | npm upgrade notes for a version range |
@@ -129,7 +139,7 @@ A review includes:
 - **Metrics** - Quality score, GitHub stars when a repository is linked, and security counts (critical, high, moderate, low). npm also shows monthly downloads, dependents, and bundle size. PyPI shows distribution size. NuGet shows lifetime downloads, package size, and supported frameworks
 - **AI analysis** - `recommended`, `use-with-caution`, or `not-recommended`, with strengths, concerns, and scores
 - **Security** - Advisories that affect the selected version, with severity filters and links
-- **Dependencies** - npm dependencies and peer dependencies, PyPI `Requires-Dist` (core, conditional, and extras), or NuGet package dependencies for the selected target framework
+- **Dependencies** - npm runtime and peer dependencies, PyPI `Requires-Dist` (core, conditional, and extras), or NuGet package dependencies for the selected target framework. The chart legend includes Peer on npm only
 - **Maintenance** - README deprecation language and publish or commit frequency
 
 ## Quality score
@@ -154,7 +164,11 @@ On Render, create a **Web Service** (this app serves API routes, so it is not a 
 - **Start command**: `npm start`
 - **Health check path**: `/api/v1/health`
 - **Root directory**: leave blank
-- **Environment**: `GOOGLE_API_KEY`, `GROQ_API_KEY`, `GROQ_MODEL`, `GROQ_UPGRADE_AGENT_MODEL`, and `GITHUB_TOKEN`. Set `NEXT_PUBLIC_SITE_URL` for Open Graph, sitemap, and robots. On Render, `RENDER_EXTERNAL_URL` is used when that variable is unset
+- **Environment**: `GOOGLE_API_KEY`, `GROQ_API_KEY`, `GROQ_MODEL`, `GROQ_UPGRADE_AGENT_MODEL`, and `GITHUB_TOKEN`. Set `NEXT_PUBLIC_SITE_URL` for Open Graph, sitemap, and robots. On Render, `RENDER_EXTERNAL_URL` is used when that variable is unset. Optional: `NEXT_PUBLIC_GITHUB_REPO` and `NEXT_PUBLIC_CONTACT_EMAIL`
+
+A free Render instance sleeps after about 15 minutes idle. The first request can take about half a minute. While the service is starting, the package page shows **pkglens is starting up** and a **Reload** button. A paid instance stays up. Keep the health check path as `/api/v1/health`.
+
+To run tests during a Render build, use `npm install --include=dev && npm test && npm run build`. A production install skips devDependencies, so Vitest is otherwise omitted. A failed build leaves the previous deploy in place.
 
 ## License
 

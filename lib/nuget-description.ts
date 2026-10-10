@@ -38,25 +38,50 @@ function stripHtmlKeepGenerics(value: string): string {
   });
 }
 
+const TYPE_MARKER = /\n+\s*commonly used types:\s*\n+/i;
+const PLATFORM_MARKER = /\n+\s*supported platforms?:\s*\n+/i;
+
+function cleaned(raw: string | null | undefined): string {
+  if (!raw || typeof raw !== "string") return "";
+  return stripHtmlKeepGenerics(raw.replace(/\r\n/g, "\n")).trim();
+}
+
 /**
- * NuGet descriptions often end with a "Commonly Used Types" list, one type per line.
+ * NuGet descriptions often end with a type list or a supported-platforms list.
+ * When the catalog also has a short summary, that is the text to show.
  */
 export function formatNugetDescription(
   raw: string | null | undefined,
+  summary?: string | null,
 ): NugetDescription {
   const empty = { description: "", commonlyUsedTypes: [], note: null };
-  if (!raw || typeof raw !== "string") return empty;
+  const text = cleaned(raw);
+  const short = collapseProse(cleaned(summary));
+  if (!text && !short) return empty;
+  if (!text) return { ...empty, description: short };
 
-  const text = stripHtmlKeepGenerics(raw.replace(/\r\n/g, "\n")).trim();
-  if (!text) return empty;
+  const typeMarker = text.match(TYPE_MARKER);
+  const platformMarker = text.match(PLATFORM_MARKER);
+  const typeAt = typeMarker?.index ?? Number.POSITIVE_INFINITY;
+  const platformAt = platformMarker?.index ?? Number.POSITIVE_INFINITY;
+  const cutAt = Math.min(typeAt, platformAt);
 
-  const marker = text.match(/\n+\s*commonly used types:\s*\n+/i);
-  if (!marker || marker.index == null) {
-    return { ...empty, description: collapseProse(text) };
+  if (!Number.isFinite(cutAt)) {
+    const prose = collapseProse(text);
+    return {
+      ...empty,
+      description: short && short.length < prose.length ? short : prose,
+    };
   }
 
-  const description = collapseProse(text.slice(0, marker.index));
-  const rest = text.slice(marker.index + marker[0].length);
+  const prose = collapseProse(text.slice(0, cutAt));
+  const description = short && short.length < prose.length ? short : prose;
+  if (platformAt < typeAt) {
+    return { ...empty, description };
+  }
+
+  const marker = typeMarker!;
+  const rest = text.slice(cutAt + marker[0].length);
   const types: string[] = [];
   const notes: string[] = [];
   let listing = true;

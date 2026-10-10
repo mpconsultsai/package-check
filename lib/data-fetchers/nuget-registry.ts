@@ -282,6 +282,7 @@ export async function fetchNugetPackageData(packageName: string): Promise<{
 
     const formatted = formatNugetDescription(
       latest.description || latest.summary || "",
+      latest.summary,
     );
 
     return {
@@ -326,6 +327,7 @@ export async function searchNugetPackages(
       id?: string;
       version?: string;
       description?: string;
+      summary?: string;
     }[];
   }>(SEARCH_URL, {
     headers: HEADERS,
@@ -342,7 +344,8 @@ export async function searchNugetPackages(
     packages.push({
       name,
       description:
-        formatNugetDescription(item.description).description ||
+        formatNugetDescription(item.description, item.summary).description ||
+        sanitizeDescription(item.summary) ||
         sanitizeDescription(item.description) ||
         "No description",
       version: item.version || "Unknown",
@@ -371,6 +374,7 @@ type NugetSearchHit = {
   id?: string;
   version?: string;
   description?: string;
+  summary?: string;
   tags?: string | string[];
   totalDownloads?: number;
 };
@@ -436,7 +440,8 @@ export async function fetchNugetPackageCards(
         return {
           name: hit.id,
           description:
-            formatNugetDescription(hit.description).description ||
+            formatNugetDescription(hit.description, hit.summary).description ||
+            sanitizeDescription(hit.summary) ||
             sanitizeDescription(hit.description) ||
             "No description",
           version: hit.version || "Unknown",
@@ -504,7 +509,8 @@ export async function fetchSimilarNugetPackages(
         ranked.push({
           name,
           description:
-            formatNugetDescription(hit.description).description ||
+            formatNugetDescription(hit.description, hit.summary).description ||
+            sanitizeDescription(hit.summary) ||
             sanitizeDescription(hit.description) ||
             "No description",
           version: hit.version || "Unknown",
