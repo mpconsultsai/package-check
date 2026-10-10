@@ -5,6 +5,7 @@ const nextConfig = {
     "@langchain/core",
     "@langchain/groq",
     "@langchain/langgraph",
+    "@modelcontextprotocol/sdk",
   ],
 };
 
