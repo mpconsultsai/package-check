@@ -37,6 +37,6 @@ describe("parseNugetPackageList", () => {
       <PackageReference Include="Dapper" />
       <PackageReference Include="Dapper" Version="2.1.35" />
     `);
-    parsed.entries[0].requested.should.equal("2.1.35");
+    parsed.entries[0].requested!.should.equal("2.1.35");
   });
 });

@@ -24,9 +24,9 @@ describe("formatEpssPercent", () => {
   });
 
   it("should format larger scores with fewer decimals", () => {
-    formatEpssPercent(0.2).should.equal("20.0%");
-    formatEpssPercent(0.02).should.equal("2.00%");
-    formatEpssPercent(0.0002).should.equal("0.020%");
-    formatEpssPercent(0.00001).should.equal("<0.01%");
+    formatEpssPercent(0.2)!.should.equal("20.0%");
+    formatEpssPercent(0.02)!.should.equal("2.00%");
+    formatEpssPercent(0.0002)!.should.equal("0.020%");
+    formatEpssPercent(0.00001)!.should.equal("<0.01%");
   });
 });

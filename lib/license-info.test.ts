@@ -16,7 +16,7 @@ describe("licenseFromPypiClassifiers", () => {
     licenseFromPypiClassifiers([
       "License :: OSI Approved",
       "License :: OSI Approved :: MIT License",
-    ]).should.equal("MIT");
+    ])!.should.equal("MIT");
   });
 });
 
@@ -24,10 +24,10 @@ describe("inferSpdxFromLicenseText", () => {
   it("should recognise MIT and Apache text", () => {
     inferSpdxFromLicenseText(
       "Permission is hereby granted, free of charge, to any person obtaining a copy of this software",
-    ).should.equal("MIT");
+    )!.should.equal("MIT");
     inferSpdxFromLicenseText(
       "Licensed under the Apache License, Version 2.0",
-    ).should.equal("Apache-2.0");
+    )!.should.equal("Apache-2.0");
   });
 
   it("should be null when the text is unrecognised", () => {

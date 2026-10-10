@@ -3,13 +3,13 @@ import { formatNugetDescription, dotnetApiReferenceUrl } from "@/lib/nuget-descr
 
 describe("dotnetApiReferenceUrl", () => {
   it("should link a type to learn.microsoft.com", () => {
-    dotnetApiReferenceUrl("System.Text.Json.JsonSerializer").should.equal(
+    dotnetApiReferenceUrl("System.Text.Json.JsonSerializer")!.should.equal(
       "https://learn.microsoft.com/dotnet/api/system.text.json.jsonserializer",
     );
   });
 
   it("should include generic arity", () => {
-    dotnetApiReferenceUrl("System.Collections.Generic.List<T>").should.equal(
+    dotnetApiReferenceUrl("System.Collections.Generic.List<T>")!.should.equal(
       "https://learn.microsoft.com/dotnet/api/system.collections.generic.list-1",
     );
   });

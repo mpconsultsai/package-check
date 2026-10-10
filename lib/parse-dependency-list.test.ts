@@ -27,7 +27,7 @@ describe("parseDependencyList", () => {
     );
     parsed.source.should.equal("package.json");
     parsed.packages.should.have.members(["react", "typescript"]);
-    parsed.entries.find((entry) => entry.name === "react")!.requested.should.equal(
+    parsed.entries.find((entry) => entry.name === "react")!.requested!.should.equal(
       "^19.0.0",
     );
   });

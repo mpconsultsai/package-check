@@ -16,7 +16,7 @@ describe("parsePypiRequiresDist", () => {
       ["docs"],
       " >=3.9 ",
     );
-    install.requiresPython.should.equal(">=3.9");
+    install.requiresPython!.should.equal(">=3.9");
     install.core.map((dep) => dep.name).should.deep.equal(["requests"]);
     install.conditional[0].marker.should.match(/win32/);
     install.extras.dev[0].name.should.equal("pytest");

@@ -14,15 +14,15 @@ describe("decodePackageParam", () => {
 describe("packagePageMetadata", () => {
   it("should describe an npm review", () => {
     const meta = packagePageMetadata("npm", "lodash");
-    meta.title.should.equal("lodash npm package review");
+    meta.title!.should.equal("lodash npm package review");
     meta.description!.should.match(/npm package lodash/);
-    meta.alternates!.canonical.should.equal("/npm/lodash");
+    meta.alternates!.canonical!.should.equal("/npm/lodash");
   });
 
   it("should describe PyPI and NuGet reviews", () => {
     packagePageMetadata("pypi", "requests").description!.should.match(/PyPI project/);
     packagePageMetadata("nuget", "Serilog").description!.should.match(/NuGet package/);
-    packagePageMetadata("nuget", "A B").alternates!.canonical.should.equal(
+    packagePageMetadata("nuget", "A B").alternates!.canonical!.should.equal(
       "/nuget/A%20B",
     );
   });

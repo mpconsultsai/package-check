@@ -38,7 +38,7 @@ The header always shows a GitHub link. Before a review loads it points at this r
 
 ### Prerequisites
 
-- Node.js 20+
+- Node.js 24+
 - npm
 - `GOOGLE_API_KEY` for Gemini
 - `GROQ_API_KEY`, `GROQ_MODEL`, and `GROQ_UPGRADE_AGENT_MODEL` for the Groq fallback and the npm upgrade brief
@@ -73,7 +73,7 @@ npm run dev
 npm test
 ```
 
-Runs Vitest with coverage. The suite covers `lib/**/*.ts` and fails below 25% lines, functions, branches, and statements. Stay on Node.js 20; this project uses Vitest 3.
+Runs Vitest with coverage. The suite covers `lib/**/*.ts` and fails below 25% lines, functions, branches, and statements. Vitest 5 needs Node.js 24 or newer.
 
 ## Project structure
 
@@ -164,6 +164,7 @@ On Render, create a **Web Service** (this app serves API routes, so it is not a 
 - **Start command**: `npm start`
 - **Health check path**: `/api/v1/health`
 - **Root directory**: leave blank
+- **Node**: set `NODE_VERSION` to `24.21.0`. The app requires Node.js 24 or newer.
 - **Environment**: `GOOGLE_API_KEY`, `GROQ_API_KEY`, `GROQ_MODEL`, `GROQ_UPGRADE_AGENT_MODEL`, and `GITHUB_TOKEN`. Set `NEXT_PUBLIC_SITE_URL` for Open Graph, sitemap, and robots. On Render, `RENDER_EXTERNAL_URL` is used when that variable is unset. Optional: `NEXT_PUBLIC_GITHUB_REPO` and `NEXT_PUBLIC_CONTACT_EMAIL`. Set `MCP_API_KEY` to open the MCP endpoint
 
 The same service exposes MCP at `/api/mcp` and `/api/v1/mcp` (Streamable HTTP). Clients send `Authorization: Bearer <MCP_API_KEY>`. Tools are `search_packages`, `get_package`, `get_security`, `get_dependencies`, and `analyse_package`. `analyse_package` calls the configured LLM. When `MCP_API_KEY` is unset, every MCP request is rejected with JSON. `/api/v1/health` includes `apiKeys.mcp`, which is true when that variable is set.

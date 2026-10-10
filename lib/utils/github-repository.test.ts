@@ -13,8 +13,8 @@ describe("githubProjectIdFromUrl", () => {
   it("should read github.com and github: forms and drop .git", () => {
     githubProjectIdFromUrl(
       "https://github.com/lodash/lodash.git",
-    ).should.equal("github.com/lodash/lodash");
-    githubProjectIdFromUrl("github:lodash/lodash").should.equal(
+    )!.should.equal("github.com/lodash/lodash");
+    githubProjectIdFromUrl("github:lodash/lodash")!.should.equal(
       "github.com/lodash/lodash",
     );
   });
@@ -26,7 +26,7 @@ describe("githubProjectIdFromUrl", () => {
 
 describe("githubWebUrl", () => {
   it("should be a GitHub page for a repository url", () => {
-    githubWebUrl("git+https://github.com/facebook/react.git").should.equal(
+    githubWebUrl("git+https://github.com/facebook/react.git")!.should.equal(
       "https://github.com/facebook/react",
     );
   });

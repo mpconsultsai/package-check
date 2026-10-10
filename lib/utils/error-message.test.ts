@@ -26,7 +26,7 @@ describe("axiosResponseStatus", () => {
       config: error.config!,
       data: {},
     };
-    axiosResponseStatus(error).should.equal(404);
+    axiosResponseStatus(error)!.should.equal(404);
   });
 
   it("should be undefined for a plain error", () => {

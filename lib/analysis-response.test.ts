@@ -142,7 +142,7 @@ describe("buildAnalysisResponse", () => {
     response.packageInfo.latestVersion.should.equal("4.17.21");
     response.packageInfo.license.should.equal("MIT");
     response.packageInfo.registryUrl.should.match(/npmjs\.com/);
-    response.packageInfo.keywords.should.deep.equal(["util"]);
+    response.packageInfo.keywords!.should.deep.equal(["util"]);
     response.metrics.downloads.should.equal(1000);
     response.metrics.stars.should.equal(100);
     (response.ai === null).should.be.true;

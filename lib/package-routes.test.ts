@@ -45,11 +45,11 @@ describe("package page routes", () => {
   });
 
   it("should parse ecosystem routes and the legacy /package/ path", () => {
-    parsePackageRoute("/pypi/requests/extra").should.deep.equal({
+    parsePackageRoute("/pypi/requests/extra")!.should.deep.equal({
       ecosystem: "pypi",
       name: "requests",
     });
-    parsePackageRoute("/package/lodash").should.deep.equal({
+    parsePackageRoute("/package/lodash")!.should.deep.equal({
       ecosystem: "npm",
       name: "lodash",
     });
