@@ -160,17 +160,17 @@ The score is 0–100. Each available factor contributes up to 25 points, then th
 
 On Render, create a **Web Service** (this app serves API routes, so it is not a static site).
 
-- **Build command**: `npm install && npm run build`
+- **Build command**: `rm -rf .next && npm install && npm run build`
 - **Start command**: `npm start`
 - **Health check path**: `/api/v1/health`
 - **Root directory**: leave blank
 - **Environment**: `GOOGLE_API_KEY`, `GROQ_API_KEY`, `GROQ_MODEL`, `GROQ_UPGRADE_AGENT_MODEL`, and `GITHUB_TOKEN`. Set `NEXT_PUBLIC_SITE_URL` for Open Graph, sitemap, and robots. On Render, `RENDER_EXTERNAL_URL` is used when that variable is unset. Optional: `NEXT_PUBLIC_GITHUB_REPO` and `NEXT_PUBLIC_CONTACT_EMAIL`. Set `MCP_API_KEY` to open the MCP endpoint
 
-The same service exposes MCP at `/api/mcp` (Streamable HTTP). Clients send `Authorization: Bearer <MCP_API_KEY>`. Tools are `search_packages`, `get_package`, `get_security`, `get_dependencies`, and `analyse_package`. `analyse_package` calls the configured LLM. When `MCP_API_KEY` is unset, every MCP request is rejected.
+The same service exposes MCP at `/api/mcp` and `/api/v1/mcp` (Streamable HTTP). Clients send `Authorization: Bearer <MCP_API_KEY>`. Tools are `search_packages`, `get_package`, `get_security`, `get_dependencies`, and `analyse_package`. `analyse_package` calls the configured LLM. When `MCP_API_KEY` is unset, every MCP request is rejected with JSON. `/api/v1/health` includes `apiKeys.mcp`, which is true when that variable is set.
 
 A free Render instance sleeps after about 15 minutes idle. The first request can take about half a minute. While the service is starting, the package page shows **pkglens is starting up** and a **Reload** button. A paid instance stays up. Keep the health check path as `/api/v1/health`.
 
-To run tests during a Render build, use `npm install --include=dev && npm test && npm run build`. A production install skips devDependencies, so Vitest is otherwise omitted. A failed build leaves the previous deploy in place.
+To run tests during a Render build, use `rm -rf .next && npm install --include=dev && npm test && npm run build`. A production install skips devDependencies, so Vitest is otherwise omitted. A failed build leaves the previous deploy in place. Clearing `.next` avoids a cached server manifest that still omits `/api/mcp`.
 
 ## License
 

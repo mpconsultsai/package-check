@@ -3,10 +3,12 @@ import { mcpAuthorized } from "@/lib/mcp/auth";
 
 afterEach(() => {
   vi.unstubAllEnvs();
+  vi.restoreAllMocks();
 });
 
 describe("mcpAuthorized", () => {
   it("should reject every request when MCP_API_KEY is unset", () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
     vi.stubEnv("MCP_API_KEY", "");
     mcpAuthorized("Bearer secret").should.be.false;
     (mcpAuthorized(null) === false).should.be.true;

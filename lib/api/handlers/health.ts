@@ -12,6 +12,7 @@ export const GET = withHandler(async () => {
         process.env.GROQ_UPGRADE_AGENT_MODEL?.trim(),
       ),
       github: Boolean(process.env.GITHUB_TOKEN),
+      mcp: Boolean(process.env.MCP_API_KEY?.trim()),
     },
     message: "API is running",
   });

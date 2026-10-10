@@ -1,16 +1,8 @@
-import { mcpAuthorized } from "@/lib/mcp/auth";
-import { handleMcpRequest } from "@/lib/mcp/http";
+import { handleMcpRoute } from "@/lib/mcp/route";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-async function handle(request: Request): Promise<Response> {
-  if (!mcpAuthorized(request.headers.get("authorization"))) {
-    return Response.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  return handleMcpRequest(request);
-}
-
-export const GET = handle;
-export const POST = handle;
-export const DELETE = handle;
+export const GET = handleMcpRoute;
+export const POST = handleMcpRoute;
+export const DELETE = handleMcpRoute;
