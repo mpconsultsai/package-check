@@ -1,4 +1,5 @@
 import { PackageAnalysisPage } from "@/components/analysis/PackageAnalysisPage";
+import { recordOpenedPackage } from "@/lib/db/record-opened-package";
 import {
   decodePackageParam,
   packagePageMetadata,
@@ -15,11 +16,10 @@ export async function generateMetadata({ params }: NpmPackagePageProps) {
 
 export default async function NpmPackagePage({ params }: NpmPackagePageProps) {
   const { name } = await params;
+  const packageName = decodePackageParam(name);
+  recordOpenedPackage("npm", packageName);
 
   return (
-    <PackageAnalysisPage
-      ecosystem="npm"
-      nameFromPath={decodePackageParam(name)}
-    />
+    <PackageAnalysisPage ecosystem="npm" nameFromPath={packageName} />
   );
 }

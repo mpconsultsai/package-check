@@ -1,4 +1,5 @@
 import { PackageAnalysisPage } from "@/components/analysis/PackageAnalysisPage";
+import { recordOpenedPackage } from "@/lib/db/record-opened-package";
 import {
   decodePackageParam,
   packagePageMetadata,
@@ -17,11 +18,10 @@ export default async function PypiPackagePage({
   params,
 }: PypiPackagePageProps) {
   const { name } = await params;
+  const packageName = decodePackageParam(name);
+  recordOpenedPackage("pypi", packageName);
 
   return (
-    <PackageAnalysisPage
-      ecosystem="pypi"
-      nameFromPath={decodePackageParam(name)}
-    />
+    <PackageAnalysisPage ecosystem="pypi" nameFromPath={packageName} />
   );
 }
