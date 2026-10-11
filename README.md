@@ -165,7 +165,7 @@ On Render, create a **Web Service** (this app serves API routes, so it is not a 
 - **Health check path**: `/api/v1/health`
 - **Root directory**: leave blank
 - **Node**: set `NODE_VERSION` to `24.21.0`. The app requires Node.js 24 or newer.
-- **Environment**: `GOOGLE_API_KEY`, `GROQ_API_KEY`, `GROQ_MODEL`, `GROQ_UPGRADE_AGENT_MODEL`, and `GITHUB_TOKEN`. Set `NEXT_PUBLIC_SITE_URL` for Open Graph, sitemap, and robots. On Render, `RENDER_EXTERNAL_URL` is used when that variable is unset. Optional: `NEXT_PUBLIC_GITHUB_REPO` and `NEXT_PUBLIC_CONTACT_EMAIL`. Set `MCP_API_KEY` to open the MCP endpoint
+- **Environment**: `GOOGLE_API_KEY`, `GROQ_API_KEY`, `GROQ_MODEL`, `GROQ_UPGRADE_AGENT_MODEL`, and `GITHUB_TOKEN`. Set `NEXT_PUBLIC_SITE_URL` for Open Graph, sitemap, and robots. On Render, `RENDER_EXTERNAL_URL` is used when that variable is unset. Optional: `NEXT_PUBLIC_GITHUB_REPO` and `NEXT_PUBLIC_CONTACT_EMAIL`. Set `MCP_API_KEY` to open the MCP endpoint. Set `SUPABASE_URL`, `SUPABASE_DB_HOST`, `SUPABASE_DB_PORT`, `SUPABASE_DB_USER`, and `POSTGRES_DB_PWD` to store anonymous package searches through the transaction pooler. `/api/v1/health` includes `apiKeys.postgres` when the URL, pooler host, and password are set
 
 The same service exposes MCP at `/api/mcp` and `/api/v1/mcp` (Streamable HTTP). Clients send `Authorization: Bearer <MCP_API_KEY>`. Tools are `search_packages`, `get_package`, `get_security`, `get_dependencies`, and `analyse_package`. `analyse_package` calls the configured LLM. When `MCP_API_KEY` is unset, every MCP request is rejected with JSON. `/api/v1/health` includes `apiKeys.mcp`, which is true when that variable is set.
 

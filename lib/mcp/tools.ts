@@ -15,6 +15,7 @@ import {
 } from "@/lib/data-fetchers/nuget-registry";
 import { listPackageDependencies, type PackageDependency } from "@/lib/package-deps";
 import { advisoryEcosystem, type PackageEcosystem } from "@/lib/package-routes";
+import { recordPackageSearch } from "@/lib/db/package-searches";
 
 const DEP_CAP = 40;
 const ADVISORY_CAP = 15;
@@ -120,6 +121,7 @@ export async function searchPackages(
 ) {
   const ecosystem = parseEcosystem(rawEcosystem);
   const take = Math.min(Math.max(limit ?? 8, 1), 8);
+  const started = Date.now();
   const text = query.trim();
   if (text.length < 2) {
     return { ecosystem, packages: [] };
@@ -130,6 +132,13 @@ export async function searchPackages(
       : ecosystem === "nuget"
         ? await searchNugetPackages(text, take)
         : await searchNpmPackages(text, take);
+  await recordPackageSearch({
+    ecosystem,
+    query: text,
+    resultNames: packages.map((item) => item.name),
+    source: "mcp",
+    metadata: { limit: take, durationMs: Date.now() - started },
+  });
   return {
     ecosystem,
     packages: packages.map((item) => ({

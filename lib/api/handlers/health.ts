@@ -13,6 +13,11 @@ export const GET = withHandler(async () => {
       ),
       github: Boolean(process.env.GITHUB_TOKEN),
       mcp: Boolean(process.env.MCP_API_KEY?.trim()),
+      postgres: Boolean(
+        process.env.POSTGRES_DB_PWD?.trim() &&
+          process.env.SUPABASE_URL?.trim() &&
+          process.env.SUPABASE_DB_HOST?.trim(),
+      ),
     },
     message: "API is running",
   });

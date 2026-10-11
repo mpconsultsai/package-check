@@ -3,6 +3,7 @@ import { parseEcosystem } from "@/lib/api/params";
 import { searchNpmPackages } from "@/lib/data-fetchers/npm-registry";
 import { searchPypiPackages } from "@/lib/data-fetchers/pypi-registry";
 import { searchNugetPackages } from "@/lib/data-fetchers/nuget-registry";
+import { recordPackageSearch } from "@/lib/db/package-searches";
 
 const CACHE_TTL_MS = 10 * 60 * 1000;
 const MAX_CACHE_ENTRIES = 100;
@@ -45,22 +46,31 @@ export const GET = withHandler(
       return jsonOk({ packages: [] });
     }
 
+    const started = Date.now();
     const ecosystem = parseEcosystem(
       request.nextUrl.searchParams.get("ecosystem"),
     );
     const cacheKey = `v3:${ecosystem}:${q.toLowerCase()}:${limit}`;
     const cached = getCached(cacheKey);
-    if (cached) {
-      return jsonOk({ packages: cached });
-    }
-
     const packages =
-      ecosystem === "pypi"
+      cached ??
+      (ecosystem === "pypi"
         ? await searchPypiPackages(q, limit)
         : ecosystem === "nuget"
           ? await searchNugetPackages(q, limit)
-          : await searchNpmPackages(q, limit);
-    setCached(cacheKey, packages);
+          : await searchNpmPackages(q, limit));
+    if (!cached) setCached(cacheKey, packages);
+    await recordPackageSearch({
+      ecosystem,
+      query: q,
+      resultNames: packages.map((item) => item.name),
+      source: "web",
+      metadata: {
+        limit,
+        cacheHit: cached !== null,
+        durationMs: Date.now() - started,
+      },
+    });
     return jsonOk({ packages });
   },
   { logLabel: "packages/search", fallbackMessage: "Failed to search packages" },
