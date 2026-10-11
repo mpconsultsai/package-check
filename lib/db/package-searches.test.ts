@@ -57,12 +57,15 @@ describe("recordPackageSearch", () => {
     ]);
   });
 
-  it("should keep the caller going when the insert fails", async () => {
-    vi.spyOn(console, "error").mockImplementation(() => {});
+  it("should log the database error when the insert fails", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const cause = Object.assign(new Error("connection refused"), { code: "ECONNREFUSED" });
+    const failure = new Error("Failed query");
+    failure.cause = cause;
     const db = {
       insert: () => ({
         values: async () => {
-          throw new Error("connection refused");
+          throw failure;
         },
       }),
     } as unknown as Database;
@@ -74,6 +77,53 @@ describe("recordPackageSearch", () => {
         source: "web",
       },
       db,
+    );
+    errorSpy.mock.calls.should.have.length(1);
+    const [label, detail] = errorSpy.mock.calls[0] as [string, Record<string, unknown>];
+    label.should.equal("Failed to record package search:");
+    detail.should.include({ message: "connection refused", code: "ECONNREFUSED" });
+    detail.should.have.property("host");
+    detail.should.not.have.property("password");
+  });
+
+  it("should skip logging when the database rejects the password", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const cause = Object.assign(new Error("password authentication failed"), { code: "28P01" });
+    const failure = new Error("Failed query");
+    failure.cause = cause;
+    const db = {
+      insert: () => ({
+        values: async () => {
+          throw failure;
+        },
+      }),
+    } as unknown as Database;
+    await recordPackageSearch(
+      {
+        ecosystem: "npm",
+        query: "react-dom",
+        resultNames: ["react-dom"],
+        source: "web",
+      },
+      db,
+    );
+    errorSpy.mock.calls.should.have.length(0);
+  });
+
+  it("should log when the database client is unavailable", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    await recordPackageSearch(
+      {
+        ecosystem: "npm",
+        query: "react-dom",
+        resultNames: ["react-dom"],
+        source: "web",
+      },
+      null,
+    );
+    errorSpy.mock.calls.should.have.length(1);
+    errorSpy.mock.calls[0][0].should.equal(
+      "Package search not recorded: database client unavailable",
     );
   });
 });
