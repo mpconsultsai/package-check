@@ -15,10 +15,38 @@ import {
 } from "@/lib/data-fetchers/nuget-registry";
 import { listPackageDependencies, type PackageDependency } from "@/lib/package-deps";
 import { advisoryEcosystem, type PackageEcosystem } from "@/lib/package-routes";
+import { clientMetadata } from "@/lib/db/client-metadata";
 import { recordPackageSearch } from "@/lib/db/package-searches";
+import { currentMcpHeaders } from "@/lib/mcp/request-context";
 
 const DEP_CAP = 40;
 const ADVISORY_CAP = 15;
+
+function mcpMetadata(
+  fields: Record<string, string | number | boolean | null>,
+): Record<string, string | number | boolean | null> {
+  const headerList = currentMcpHeaders();
+  return {
+    ...fields,
+    ...(headerList ? clientMetadata(headerList) : {}),
+  };
+}
+
+async function recordMcpTool(event: {
+  tool: string;
+  ecosystem: PackageEcosystem;
+  query: string;
+  resultNames: string[];
+  metadata?: Record<string, string | number | boolean | null>;
+}): Promise<void> {
+  await recordPackageSearch({
+    ecosystem: event.ecosystem,
+    query: event.query,
+    resultNames: event.resultNames,
+    source: "mcp",
+    metadata: mcpMetadata({ tool: event.tool, ...event.metadata }),
+  });
+}
 
 function namedPackage(rawName: string, rawEcosystem?: string): {
   packageName: string;
@@ -79,7 +107,15 @@ export function compactPackage(report: ClientAnalysisResponse) {
 export async function getPackageReport(rawName: string, rawEcosystem?: string) {
   const { packageName, ecosystem } = namedPackage(rawName, rawEcosystem);
   const data = await analyzePackageCached(packageName, ecosystem);
-  return compactPackage(buildAnalysisResponse(packageName, data, null));
+  const report = compactPackage(buildAnalysisResponse(packageName, data, null));
+  await recordMcpTool({
+    tool: "get_package",
+    ecosystem,
+    query: packageName,
+    resultNames: [report.name],
+    metadata: { version: report.version },
+  });
+  return report;
 }
 
 export async function analysePackage(rawName: string, rawEcosystem?: string) {
@@ -93,6 +129,15 @@ export async function analysePackage(rawName: string, rawEcosystem?: string) {
     aiError = error instanceof Error ? error.message : "AI analysis failed";
   }
   const report = buildAnalysisResponse(packageName, data, ai);
+  await recordMcpTool({
+    tool: "analyse_package",
+    ecosystem,
+    query: packageName,
+    resultNames: [packageName],
+    metadata: {
+      ...(ai ? { recommendation: ai.recommendation, overallScore: ai.overallScore } : {}),
+    },
+  });
   return {
     ...compactPackage(report),
     ai: ai
@@ -132,11 +177,11 @@ export async function searchPackages(
       : ecosystem === "nuget"
         ? await searchNugetPackages(text, take)
         : await searchNpmPackages(text, take);
-  await recordPackageSearch({
+  await recordMcpTool({
+    tool: "search_packages",
     ecosystem,
     query: text,
     resultNames: packages.map((item) => item.name),
-    source: "mcp",
     metadata: { limit: take, durationMs: Date.now() - started },
   });
   return {
@@ -155,15 +200,23 @@ export async function getSecurity(
   rawEcosystem?: string,
 ) {
   const { packageName, ecosystem } = namedPackage(rawName, rawEcosystem);
+  const checkedVersion = version.trim();
   const security = await checkPackageSecurity(
     packageName,
-    version.trim(),
+    checkedVersion,
     advisoryEcosystem(ecosystem),
   );
+  await recordMcpTool({
+    tool: "get_security",
+    ecosystem,
+    query: packageName,
+    resultNames: [packageName],
+    metadata: { version: checkedVersion, advisoryCount: security.totalCount },
+  });
   return {
     ecosystem,
     name: packageName,
-    version: version.trim(),
+    version: checkedVersion,
     totalCount: security.totalCount,
     critical: security.critical,
     high: security.high,
@@ -187,32 +240,56 @@ export async function getDependencies(rawName: string, rawEcosystem?: string) {
   const { packageName, ecosystem } = namedPackage(rawName, rawEcosystem);
   if (ecosystem === "pypi") {
     const { data, pypiInstall } = await fetchPypiPackageData(packageName);
+    const dependencies = capDependencies(pypiInstall.core);
+    await recordMcpTool({
+      tool: "get_dependencies",
+      ecosystem,
+      query: packageName,
+      resultNames: dependencies.dependencies.map((dep) => dep.name),
+      metadata: { version: data.version },
+    });
     return {
       ecosystem,
       name: data.name || packageName,
       version: data.version,
       requiresPython: pypiInstall.requiresPython,
       extras: pypiInstall.providesExtra,
-      ...capDependencies(pypiInstall.core),
+      ...dependencies,
     };
   }
   if (ecosystem === "nuget") {
     const { data } = await fetchNugetPackageData(packageName);
+    const dependencies = capDependencies(listPackageDependencies(data.dependencies));
+    await recordMcpTool({
+      tool: "get_dependencies",
+      ecosystem,
+      query: packageName,
+      resultNames: dependencies.dependencies.map((dep) => dep.name),
+      metadata: { version: data.version },
+    });
     return {
       ecosystem,
       name: data.name || packageName,
       version: data.version,
       targetFramework: data.engines?.dotnet ?? null,
-      ...capDependencies(listPackageDependencies(data.dependencies)),
+      ...dependencies,
     };
   }
   const { data } = await fetchNpmPackageData(packageName);
+  const dependencies = capDependencies(
+    listPackageDependencies(data.dependencies, data.peerDependencies),
+  );
+  await recordMcpTool({
+    tool: "get_dependencies",
+    ecosystem,
+    query: packageName,
+    resultNames: dependencies.dependencies.map((dep) => dep.name),
+    metadata: { version: data.version },
+  });
   return {
     ecosystem,
     name: data.name || packageName,
     version: data.version,
-    ...capDependencies(
-      listPackageDependencies(data.dependencies, data.peerDependencies),
-    ),
+    ...dependencies,
   };
 }

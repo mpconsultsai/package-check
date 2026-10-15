@@ -3,6 +3,7 @@ import { parseEcosystem } from "@/lib/api/params";
 import { searchNpmPackages } from "@/lib/data-fetchers/npm-registry";
 import { searchPypiPackages } from "@/lib/data-fetchers/pypi-registry";
 import { searchNugetPackages } from "@/lib/data-fetchers/nuget-registry";
+import { clientMetadata } from "@/lib/db/client-metadata";
 import { recordPackageSearch } from "@/lib/db/package-searches";
 
 const CACHE_TTL_MS = 10 * 60 * 1000;
@@ -69,6 +70,7 @@ export const GET = withHandler(
         limit,
         cacheHit: cached !== null,
         durationMs: Date.now() - started,
+        ...clientMetadata(request.headers),
       },
     });
     return jsonOk({ packages });

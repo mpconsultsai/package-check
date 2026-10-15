@@ -16,7 +16,11 @@ describe("recordOpenedPackage", () => {
   });
 
   it("should record the opened package after the response", () => {
-    recordOpenedPackage("pypi", " requests ");
+    recordOpenedPackage(
+      "pypi",
+      " requests ",
+      new Headers({ "user-agent": "Cursor/1.4.0" }),
+    );
     after.mock.calls.should.have.length(1);
     recordPackageSearch.mock.calls.should.deep.equal([
       [
@@ -25,7 +29,12 @@ describe("recordOpenedPackage", () => {
           query: "requests",
           resultNames: ["requests"],
           source: "web",
-          metadata: { page: true },
+          metadata: {
+            page: true,
+            userAgent: "Cursor/1.4.0",
+            agent: "Cursor",
+            mobile: false,
+          },
         },
       ],
     ]);

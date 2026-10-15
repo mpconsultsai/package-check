@@ -1,4 +1,5 @@
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
+import { runWithMcpRequest } from "@/lib/mcp/request-context";
 import { createPkglensMcpServer } from "@/lib/mcp/server";
 
 /** One stateless MCP request. JSON responses suit a single Render process. */
@@ -10,7 +11,7 @@ export async function handleMcpRequest(request: Request): Promise<Response> {
   });
   await server.connect(transport);
   try {
-    return await transport.handleRequest(request);
+    return await runWithMcpRequest(request, () => transport.handleRequest(request));
   } finally {
     await server.close();
   }

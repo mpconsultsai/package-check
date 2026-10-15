@@ -11,6 +11,7 @@ import { isDotnetInboxPackageId, isStableDotnetPlatformPackage } from '../dotnet
 import { classifyRuntimeEnvironment } from '../runtime-environment';
 import type { RuntimeKind } from '../runtime-environment';
 import { getGroqModel, groqModelLabel } from './groq-config';
+import { loadPackageUsageBrief } from '../db/package-usage';
 import {
   fetchOpenSSFScorecard,
   resolveGithubProjectId,
@@ -745,6 +746,7 @@ function maintenanceContext(
 function createAnalysisPrompt(
   data: PackageAnalysisResult,
   scorecard: OpenSSFScorecard | null,
+  usageLine: string | null = null,
 ): string {
   const {
     packageName,
@@ -847,6 +849,13 @@ function createAnalysisPrompt(
   if (scorecard) {
     lines.push(
       `Background repo hygiene (internal only, do not name in output): ${formatScorecardForPrompt(scorecard)}`,
+    );
+  }
+
+  if (usageLine) {
+    lines.push(
+      "Background usage (internal only; do not quote counts or this note in summary, strengths, concerns, or reasoning). Counts measure interest, not quality. A small count is not a concern. Also-shown names may be competitors only when they do the same job:",
+      usageLine,
     );
   }
 
@@ -1076,7 +1085,11 @@ export async function analyzePackageWithAI(
   data: PackageAnalysisResult
 ): Promise<AIPackageAnalysis> {
   const scorecard = await loadScorecardForAnalysis(data);
-  const prompt = createAnalysisPrompt(data, scorecard);
+  const usageLine = await loadPackageUsageBrief(
+    data.ecosystem ?? "npm",
+    data.packageName,
+  );
+  const prompt = createAnalysisPrompt(data, scorecard, usageLine);
 
   const registryName = registryLabel(data.ecosystem ?? "npm");
   const systemPrompt =
