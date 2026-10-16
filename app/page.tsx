@@ -42,7 +42,7 @@ export default function Home() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <h2 id="home-features-heading" className="sr-only">
-        What pkglens shows for each package
+        What {SITE_NAME} shows for each package
       </h2>
       <InfoCards />
     </section>

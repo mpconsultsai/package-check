@@ -1,6 +1,6 @@
-const DEFAULT_GITHUB_REPO = "mpconsultsai/pkglens";
+const DEFAULT_GITHUB_REPO = "mpconsultsai/package-check";
 
-/** pkglens source repository. Override with NEXT_PUBLIC_GITHUB_REPO. */
+/** Package Check source repository. Override with NEXT_PUBLIC_GITHUB_REPO. */
 export function siteGithubUrl(): string | null {
   const slug =
     process.env.NEXT_PUBLIC_GITHUB_REPO?.trim() || DEFAULT_GITHUB_REPO;

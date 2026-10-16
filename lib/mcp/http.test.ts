@@ -48,7 +48,7 @@ describe("POST /api/mcp", () => {
     const payload = (await response.json()) as {
       result?: { serverInfo?: { name?: string } };
     };
-    payload.result!.serverInfo!.name!.should.equal("pkglens");
+    payload.result!.serverInfo!.name!.should.equal("package-check");
   });
 
   it("should list the package tools", async () => {

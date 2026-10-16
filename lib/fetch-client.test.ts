@@ -23,7 +23,7 @@ describe("fetchJson", () => {
       true.should.equal(false);
     } catch (error) {
       (error as Error).message.should.equal(
-        "pkglens is offline or still starting. Try again in a moment.",
+        "Package Check is offline or still starting. Try again in a moment.",
       );
       isServiceStartingError(error).should.be.true;
     }

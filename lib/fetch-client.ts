@@ -132,7 +132,7 @@ export async function fetchJson<T = unknown>(
 }
 
 const SERVICE_STARTING_MESSAGE =
-  "pkglens is offline or still starting. Try again in a moment.";
+  "Package Check is offline or still starting. Try again in a moment.";
 
 export function isServiceStartingError(error: unknown): boolean {
   const message =

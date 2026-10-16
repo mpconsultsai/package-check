@@ -1,5 +1,5 @@
 /** Public product name (UI, metadata, PWA). */
-export const SITE_NAME = "pkglens";
+export const SITE_NAME = "Package Check";
 
 /** Short line under the logo in the header. */
 export const SITE_STRAPLINE =

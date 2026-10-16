@@ -37,7 +37,7 @@ async function run(work: () => Promise<unknown>) {
 
 export function createPkglensMcpServer(): McpServer {
   const server = new McpServer(
-    { name: "pkglens", version: "0.1.0" },
+    { name: "package-check", version: "0.1.0" },
     {
       instructions:
         "Package reviews for npm, PyPI, and NuGet. get_package returns registry, quality, and advisory counts without an LLM. analyse_package adds an AI recommendation and is slower.",

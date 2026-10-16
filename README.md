@@ -1,8 +1,8 @@
-# pkglens
+# Package Check
 
 AI-assisted package reviews - security, quality and dependencies at a glance.
 
-pkglens reviews packages from **npm**, **PyPI**, and **NuGet** before you install them. Choose a registry in the search bar, then open a package at `/npm/<name>`, `/pypi/<name>`, or `/nuget/<name>`.
+Package Check reviews packages from **npm**, **PyPI**, and **NuGet** before you install them. Choose a registry in the search bar, then open a package at `/npm/<name>`, `/pypi/<name>`, or `/nuget/<name>`.
 
 ## Features
 
@@ -23,7 +23,7 @@ PyPI uses the PyPI JSON API for project metadata, versions, license, and descrip
 
 NuGet uses the NuGet registration, flat-container, and search APIs. It shows the latest stable version, package size, lifetime downloads, every target framework the package supports, direct package dependencies, and related packages. `System.*` and `Microsoft.*` packages are left out of that related list. Paste analysis accepts `PackageReference` entries from a `.csproj` or `Directory.Packages.props`, or a plain list of package ids. NuGet reviews omit download charts, a transitive dependency tree, the upgrade advisor, and the peer entry on the dependency chart legend. Widely downloaded `System.*` and `Microsoft.*` packages stay recommended when the latest stable release is old and advisories are clear.
 
-The header always shows a GitHub link. Before a review loads it points at this repository. After a package loads it points at that package's repository. Set `NEXT_PUBLIC_GITHUB_REPO` to `owner/name` to change the site link (the default is `mpconsultsai/pkglens`). Set `NEXT_PUBLIC_CONTACT_EMAIL` to show a Contact link in the footer.
+The header always shows a GitHub link. Before a review loads it points at this repository. After a package loads it points at that package's repository. Set `NEXT_PUBLIC_GITHUB_REPO` to `owner/name` to change the site link (the default is `mpconsultsai/package-check`). Set `NEXT_PUBLIC_CONTACT_EMAIL` to show a Contact link in the footer.
 
 ## Tech stack
 
@@ -78,7 +78,7 @@ Runs Vitest with coverage. The suite covers `lib/**/*.ts` and fails below 25% li
 ## Project structure
 
 ```
-pkglens/
+package-check/
 ├── app/
 │   ├── api/v1/          # Analysis, packages, upgrade, watchlist, health
 │   ├── npm/[name]/      # npm package page
@@ -169,7 +169,7 @@ On Render, create a **Web Service** (this app serves API routes, so it is not a 
 
 The same service exposes MCP at `/api/mcp` and `/api/v1/mcp` (Streamable HTTP). Clients send `Authorization: Bearer <MCP_API_KEY>`. Tools are `search_packages`, `get_package`, `get_security`, `get_dependencies`, and `analyse_package`. `analyse_package` calls the configured LLM. When `MCP_API_KEY` is unset, every MCP request is rejected with JSON. `/api/v1/health` includes `apiKeys.mcp`, which is true when that variable is set.
 
-A free Render instance sleeps after about 15 minutes idle. The first request can take about half a minute. While the service is starting, the package page shows **pkglens is starting up** and a **Reload** button. A paid instance stays up. Keep the health check path as `/api/v1/health`.
+A free Render instance sleeps after about 15 minutes idle. The first request can take about half a minute. While the service is starting, the package page shows **Package Check is starting up** and a **Reload** button. A paid instance stays up. Keep the health check path as `/api/v1/health`.
 
 To run tests during a Render build, use `rm -rf .next && npm install --include=dev && npm test && npm run build`. A production install skips devDependencies, so Vitest is otherwise omitted. A failed build leaves the previous deploy in place. Clearing `.next` avoids a cached server manifest that still omits `/api/mcp`.
 
