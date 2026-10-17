@@ -21,31 +21,31 @@ const STATIONS: StationDef[] = [
     id: "collect",
     label: "Collect",
     hint: "Gather advice, notes, and security in parallel",
-    color: "#64748b",
+    color: "#7a7569",
   },
   {
     id: "peers",
     label: "Peers",
     hint: "Peer dependency changes to align",
-    color: "#8b5cf6",
+    color: "#3b4c6e",
   },
   {
     id: "securityDelta",
     label: "Security",
     hint: "Advisory count change between versions",
-    color: "#b45309",
+    color: "#996b1d",
   },
   {
     id: "migration",
     label: "Migration",
     hint: "Migration / changelog links found",
-    color: "#10b981",
+    color: "#427d4f",
   },
   {
     id: "synthesize",
     label: "Synthesize",
     hint: "One LLM call to write the brief",
-    color: "#2563eb",
+    color: "#c8431b",
   },
 ];
 

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { InfoCards } from "@/components/InfoCards";
+import { WhatWeCheck } from "@/components/WhatWeCheck";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE } from "@/lib/site-brand";
 import { getSiteUrl } from "@/lib/site-url";
 
@@ -44,7 +44,7 @@ export default function Home() {
       <h2 id="home-features-heading" className="sr-only">
         What {SITE_NAME} shows for each package
       </h2>
-      <InfoCards />
+      <WhatWeCheck />
     </section>
   );
 }

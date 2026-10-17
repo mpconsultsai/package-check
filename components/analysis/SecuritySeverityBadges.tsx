@@ -59,7 +59,7 @@ export function SecuritySeverityBadges({
           <span
             key={level.key}
             title={`${level.count} ${level.label}`}
-            className={`inline-flex items-center justify-center rounded-full font-bold ${severityBadgeClass(level.key)} ${
+            className={`inline-flex items-center justify-center rounded-sm font-mono font-semibold tabular-nums ${severityBadgeClass(level.key)} ${
               isTab
                 ? "min-w-[1.125rem] h-[1.125rem] px-1 text-[10px] leading-none"
                 : "min-w-[1.5rem] h-6 px-1.5 text-xs"

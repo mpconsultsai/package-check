@@ -19,12 +19,12 @@ export function PageHeader({ showHomeLink = false }: PageHeaderProps) {
   const githubUrl = useHeaderGithubUrl() ?? siteGithubUrl();
 
   return (
-    <header className="mb-4 sm:mb-6 overflow-visible pb-0.5">
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="min-w-0 font-bold overflow-visible">
+    <header className="mb-6 sm:mb-8">
+      <div className="flex items-center justify-between gap-4 border-b-2 border-ink pb-3 sm:pb-4">
+        <h1 className="min-w-0">
           <Link
             href="/"
-            className="inline-flex items-center gap-3 hover:opacity-90 transition-opacity text-[2.125rem] sm:text-5xl md:text-[3.25rem]"
+            className="group inline-flex items-center gap-3"
             aria-label={showHomeLink ? "Back to home" : `${SITE_NAME} home`}
             onClick={(e) => {
               if (!showHomeLink) return;
@@ -32,28 +32,37 @@ export function PageHeader({ showHomeLink = false }: PageHeaderProps) {
               smoothNavigate(() => router.push("/"));
             }}
           >
-            <AppLogo className="block w-11 h-11 sm:w-[3.25rem] sm:h-[3.25rem] shrink-0" />
-            <span className="inline-block font-[family-name:var(--font-wordmark)] font-semibold tracking-tight text-gray-900 dark:text-gray-50 leading-none">
+            <AppLogo className="h-9 w-9 shrink-0 sm:h-11 sm:w-11" />
+            <span className="text-2xl font-semibold sm:text-3xl tracking-tight text-ink group-hover:underline group-hover:decoration-signal group-hover:decoration-2 group-hover:underline-offset-4">
               {SITE_NAME}
             </span>
           </Link>
         </h1>
-        {githubUrl && (
-          <a
-            href={githubUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="View on GitHub"
-            className="inline-flex shrink-0 items-center gap-1.5 text-sm font-medium text-gray-700 hover:text-gray-950 dark:text-gray-200 dark:hover:text-white"
-          >
-            <GitHubIcon className="h-5 w-5 shrink-0" />
-            GitHub
-          </a>
-        )}
+        <nav aria-label="Site" className="flex items-center gap-5 font-mono text-xs">
+          <span className="hidden text-gray-500 sm:inline dark:text-gray-400">
+            npm · PyPI · NuGet
+          </span>
+          {githubUrl && (
+            <a
+              href={githubUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="View on GitHub"
+              className="inline-flex items-center gap-1.5 text-ink hover:text-signal"
+            >
+              <GitHubIcon className="h-4 w-4 shrink-0" />
+              <span className="underline decoration-gray-400 underline-offset-4">
+                source
+              </span>
+            </a>
+          )}
+        </nav>
       </div>
-      <p className="mt-2 max-w-2xl text-sm leading-relaxed text-gray-600 dark:text-gray-400 sm:text-[0.9375rem]">
-        {SITE_STRAPLINE}
-      </p>
+      {!showHomeLink && (
+        <p className="mt-6 max-w-3xl text-xl font-medium leading-snug tracking-tight text-balance text-ink sm:mt-10 sm:text-3xl">
+          {SITE_STRAPLINE}
+        </p>
+      )}
     </header>
   );
 }

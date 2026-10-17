@@ -92,9 +92,9 @@ export function PypiDependenciesPanel({
             <button
               type="button"
               onClick={() => onSelectExtra(null)}
-              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+              className={`rounded-sm px-2.5 py-1 font-mono text-xs font-medium transition-colors ${
                 selectedExtra === null
-                  ? "bg-blue-600 text-white"
+                  ? "bg-ink text-paper"
                   : "border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
               }`}
             >
@@ -105,9 +105,9 @@ export function PypiDependenciesPanel({
                 key={extra}
                 type="button"
                 onClick={() => onSelectExtra(extra)}
-                className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                className={`rounded-sm px-2.5 py-1 font-mono text-xs font-medium transition-colors ${
                   selectedExtra === extra
-                    ? "bg-blue-600 text-white"
+                    ? "bg-ink text-paper"
                     : "border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
                 }`}
               >

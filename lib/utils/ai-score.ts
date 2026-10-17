@@ -37,15 +37,15 @@ export function ratingTextClass(rating: string): string {
   return "text-red-700 dark:text-red-300";
 }
 
-/** Recommendation pill colours aligned with the AI score palette. */
+/** Recommendation stamp colours aligned with the AI score palette. */
 export function recommendationBadgeClass(recommendation: string): string {
   const value = recommendation.toLowerCase().trim();
   if (value === "recommended") {
-    return "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200";
+    return "border-emerald-600 text-emerald-700 dark:border-emerald-400 dark:text-emerald-300";
   }
   if (value === "use-with-caution") {
-    return "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200";
+    return "border-amber-600 text-amber-700 dark:border-amber-400 dark:text-amber-300";
   }
   // do-not-use, not-recommended, and anything else negative
-  return "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200";
+  return "border-red-600 text-red-700 dark:border-red-400 dark:text-red-300";
 }

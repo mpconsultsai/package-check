@@ -4,7 +4,7 @@ import { getSiteUrl } from "@/lib/site-url";
 import { AppShell } from "@/components/AppShell";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { THEME_BOOT_SCRIPT } from "@/lib/theme-pref";
-import { wordmarkFont } from "@/lib/wordmark-font";
+import { monoFont, sansFont } from "@/lib/fonts";
 import "./globals.css";
 
 const siteName = SITE_NAME;
@@ -57,8 +57,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#2563eb" },
-    { media: "(prefers-color-scheme: dark)", color: "#1e40af" },
+    { media: "(prefers-color-scheme: light)", color: "#f3f0e8" },
+    { media: "(prefers-color-scheme: dark)", color: "#1a1916" },
   ],
 };
 
@@ -73,7 +73,7 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
       </head>
       <body
-        className={`${wordmarkFont.variable} antialiased`}
+        className={`${sansFont.variable} ${monoFont.variable} antialiased`}
         suppressHydrationWarning
       >
         <ThemeProvider>

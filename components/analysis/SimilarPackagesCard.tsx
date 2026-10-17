@@ -292,7 +292,7 @@ export function SimilarPackagesCard({
                   <div className="min-w-0 flex items-center gap-2">
                     <Link
                       href={packagePagePath(ecosystem, pkg.name)}
-                      className="font-semibold text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline underline-offset-2 truncate"
+                      className="font-mono font-semibold text-ink underline decoration-gray-400 underline-offset-4 hover:decoration-signal truncate"
                     >
                       {pkg.name}
                     </Link>
@@ -337,7 +337,7 @@ export function SimilarPackagesCard({
               type="button"
               onClick={() => void loadMore()}
               disabled={loadingMore}
-              className="w-full sm:w-auto sm:min-w-[10rem] rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-400"
+              className="w-full sm:w-auto sm:min-w-[10rem] rounded-lg bg-ink px-4 py-2.5 text-sm font-semibold text-paper hover:bg-signal disabled:opacity-50"
             >
               {loadingMore ? "Loading…" : "Load more"}
             </button>

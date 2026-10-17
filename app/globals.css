@@ -2,22 +2,207 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/*
+ * Palette overrides. Components use stock Tailwind names (gray, blue, red...),
+ * so these scales define the whole look: warm paper neutrals, one ink colour
+ * for interactive elements, and muted status colours.
+ */
+@theme {
+  --color-white: #fcfbf7;
+
+  --color-gray-50: #f6f4ee;
+  --color-gray-100: #ede9e0;
+  --color-gray-200: #ded9cc;
+  --color-gray-300: #c7c1b1;
+  --color-gray-400: #a09a8b;
+  --color-gray-500: #7a7569;
+  --color-gray-600: #5d5951;
+  --color-gray-700: #3d3a35;
+  --color-gray-800: #25231f;
+  --color-gray-900: #1a1916;
+  --color-gray-950: #11100e;
+
+  --color-blue-50: #eff1f5;
+  --color-blue-100: #dfe3eb;
+  --color-blue-200: #c0c8d8;
+  --color-blue-300: #a3b0c9;
+  --color-blue-400: #8395b8;
+  --color-blue-500: #56688c;
+  --color-blue-600: #3b4c6e;
+  --color-blue-700: #2e3d5a;
+  --color-blue-800: #243049;
+  --color-blue-900: #1b2438;
+  --color-blue-950: #111726;
+
+  --color-violet-50: var(--color-blue-50);
+  --color-violet-100: var(--color-blue-100);
+  --color-violet-200: var(--color-blue-200);
+  --color-violet-300: var(--color-blue-300);
+  --color-violet-400: var(--color-blue-400);
+  --color-violet-500: var(--color-blue-500);
+  --color-violet-600: var(--color-blue-600);
+  --color-violet-700: var(--color-blue-700);
+  --color-violet-800: var(--color-blue-800);
+  --color-violet-900: var(--color-blue-900);
+  --color-violet-950: var(--color-blue-950);
+  --color-purple-50: var(--color-blue-50);
+  --color-purple-100: var(--color-blue-100);
+  --color-purple-200: var(--color-blue-200);
+  --color-purple-300: var(--color-blue-300);
+  --color-purple-400: var(--color-blue-400);
+  --color-purple-500: var(--color-blue-500);
+  --color-purple-600: var(--color-blue-600);
+  --color-purple-700: var(--color-blue-700);
+  --color-purple-800: var(--color-blue-800);
+  --color-purple-900: var(--color-blue-900);
+  --color-purple-950: var(--color-blue-950);
+  --color-sky-50: var(--color-blue-50);
+  --color-sky-100: var(--color-blue-100);
+  --color-sky-200: var(--color-blue-200);
+  --color-sky-300: var(--color-blue-300);
+  --color-sky-400: var(--color-blue-400);
+  --color-sky-500: var(--color-blue-500);
+  --color-sky-600: var(--color-blue-600);
+  --color-sky-700: var(--color-blue-700);
+  --color-sky-800: var(--color-blue-800);
+  --color-sky-900: var(--color-blue-900);
+  --color-sky-950: var(--color-blue-950);
+  --color-teal-50: var(--color-blue-50);
+  --color-teal-100: var(--color-blue-100);
+  --color-teal-200: var(--color-blue-200);
+  --color-teal-300: var(--color-blue-300);
+  --color-teal-400: var(--color-blue-400);
+  --color-teal-500: var(--color-blue-500);
+  --color-teal-600: var(--color-blue-600);
+  --color-teal-700: var(--color-blue-700);
+  --color-teal-800: var(--color-blue-800);
+  --color-teal-900: var(--color-blue-900);
+  --color-teal-950: var(--color-blue-950);
+
+  --color-red-50: #fbf0ec;
+  --color-red-100: #f6dfd7;
+  --color-red-200: #ecbfb1;
+  --color-red-300: #df9682;
+  --color-red-400: #d4735b;
+  --color-red-500: #bb4a33;
+  --color-red-600: #a03a26;
+  --color-red-700: #82301f;
+  --color-red-800: #66271b;
+  --color-red-900: #4f2017;
+  --color-red-950: #2c100b;
+
+  --color-orange-50: #fcf2ea;
+  --color-orange-100: #f8e2d0;
+  --color-orange-200: #f0c3a0;
+  --color-orange-300: #e59c6a;
+  --color-orange-400: #d97a41;
+  --color-orange-500: #c45f26;
+  --color-orange-600: #a54b1c;
+  --color-orange-700: #853c19;
+  --color-orange-800: #693118;
+  --color-orange-900: #542816;
+  --color-orange-950: #2f1409;
+
+  --color-amber-50: #fbf6e9;
+  --color-amber-100: #f5ebcd;
+  --color-amber-200: #ebd69c;
+  --color-amber-300: #dfbd66;
+  --color-amber-400: #d0a23f;
+  --color-amber-500: #b98727;
+  --color-amber-600: #996b1d;
+  --color-amber-700: #79521a;
+  --color-amber-800: #5e4019;
+  --color-amber-900: #4a3316;
+  --color-amber-950: #2a1b09;
+  --color-yellow-50: var(--color-amber-50);
+  --color-yellow-100: var(--color-amber-100);
+  --color-yellow-200: var(--color-amber-200);
+  --color-yellow-300: var(--color-amber-300);
+  --color-yellow-400: var(--color-amber-400);
+  --color-yellow-500: var(--color-amber-500);
+  --color-yellow-600: var(--color-amber-600);
+  --color-yellow-700: var(--color-amber-700);
+  --color-yellow-800: var(--color-amber-800);
+  --color-yellow-900: var(--color-amber-900);
+  --color-yellow-950: var(--color-amber-950);
+
+  --color-emerald-50: #eef5ef;
+  --color-emerald-100: #d9eadc;
+  --color-emerald-200: #b3d4b9;
+  --color-emerald-300: #8dbd97;
+  --color-emerald-400: #6aa476;
+  --color-emerald-500: #427d4f;
+  --color-emerald-600: #33653f;
+  --color-emerald-700: #2a5134;
+  --color-emerald-800: #22402b;
+  --color-emerald-900: #1c3424;
+  --color-emerald-950: #0e1d13;
+  --color-green-50: var(--color-emerald-50);
+  --color-green-100: var(--color-emerald-100);
+  --color-green-200: var(--color-emerald-200);
+  --color-green-300: var(--color-emerald-300);
+  --color-green-400: var(--color-emerald-400);
+  --color-green-500: var(--color-emerald-500);
+  --color-green-600: var(--color-emerald-600);
+  --color-green-700: var(--color-emerald-700);
+  --color-green-800: var(--color-emerald-800);
+  --color-green-900: var(--color-emerald-900);
+  --color-green-950: var(--color-emerald-950);
+
+  --radius-xs: 1px;
+  --radius-sm: 2px;
+  --radius: 2px;
+  --radius-md: 2px;
+  --radius-lg: 3px;
+  --radius-xl: 4px;
+  --radius-2xl: 4px;
+
+  --shadow-sm: 0 0 0 1px var(--rule);
+  --shadow: 0 0 0 1px var(--rule);
+  --shadow-md: 0 0 0 1px var(--rule);
+  --shadow-lg: 0 0 0 1px var(--rule);
+  --shadow-xl: 0 0 0 1px var(--rule), 0 6px 16px -8px rgb(26 25 22 / 0.18);
+}
+
+@theme inline {
+  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, "SFMono-Regular", monospace;
+
+  --color-paper: var(--background);
+  --color-ink: var(--foreground);
+  --color-rule: var(--rule);
+  --color-signal: var(--signal);
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f3f0e8;
+  --foreground: #1a1916;
+  --rule: #ded9cc;
+  --signal: #c8431b;
   color-scheme: light;
 }
 
 .dark {
-  --background: #0a0a0a;
-  --foreground: #ededed;
+  --background: #1a1916;
+  --foreground: #ede9e0;
+  --rule: #3d3a35;
+  --signal: #e8693f;
   color-scheme: dark;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  font-feature-settings: "ss02";
+}
+
+::selection {
+  background: color-mix(in srgb, var(--signal) 28%, transparent);
+}
+
+:focus-visible {
+  outline-color: var(--signal);
 }
 
 @layer utilities {

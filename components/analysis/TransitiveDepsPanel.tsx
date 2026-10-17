@@ -122,7 +122,7 @@ function DepTreeRow({
             </Link>
             <RelationBadge relation={node.relation} />
             {node.advisoryCount > 0 && (
-              <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-900 dark:bg-red-950/50 dark:text-red-100">
+              <span className="rounded-sm bg-red-100 px-1.5 py-0.5 text-[10px] font-semibold text-red-900 dark:bg-red-950/50 dark:text-red-100">
                 {node.advisoryCount} advisory
                 {node.advisoryCount === 1 ? "" : "ies"}
               </span>
@@ -371,7 +371,7 @@ export function TransitiveDepsPanel({
               }}
               className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors ${
                 selected
-                  ? "bg-blue-600 text-white dark:bg-blue-500"
+                  ? "bg-ink text-paper"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
               }`}
             >

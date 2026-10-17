@@ -19,17 +19,9 @@ import { TrashIcon } from "@/components/icons";
 
 function EcosystemBadge({ ecosystem }: { ecosystem: PackageEcosystem }) {
   const label =
-    ecosystem === "pypi" ? "PyPI" : ecosystem === "nuget" ? "NuGet" : "NPM";
-  const tone =
-    ecosystem === "pypi"
-      ? "bg-amber-200 text-amber-950 ring-1 ring-amber-300/80 dark:bg-amber-500/30 dark:text-amber-50 dark:ring-amber-400/50"
-      : ecosystem === "nuget"
-        ? "bg-violet-200 text-violet-950 ring-1 ring-violet-300/80 dark:bg-violet-500/30 dark:text-violet-50 dark:ring-violet-400/50"
-        : "bg-blue-600 text-white ring-1 ring-blue-500/80 dark:bg-blue-500 dark:text-white dark:ring-blue-400/60";
+    ecosystem === "pypi" ? "PyPI" : ecosystem === "nuget" ? "NuGet" : "npm";
   return (
-    <span
-      className={`inline-flex shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${tone}`}
-    >
+    <span className="inline-flex shrink-0 border border-rule px-1 py-px font-mono text-[10px] text-gray-500 dark:text-gray-400">
       {label}
     </span>
   );
@@ -258,7 +250,7 @@ export function WatchToggle({
       disabled={disabled}
       onClick={() => toggle(packageName, summary, ecosystem)}
       aria-pressed={watched}
-      className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+      className="inline-flex items-center gap-1.5 border border-ink px-3 py-1.5 text-sm font-medium text-ink transition-colors hover:bg-ink hover:text-paper disabled:opacity-50 dark:border-gray-300"
     >
       <svg
         className={`h-4 w-4 transition-colors ${

@@ -458,7 +458,7 @@ export function PasteListPanel({
           type="button"
           onClick={() => void analyseList()}
           disabled={running || !text.trim()}
-          className="inline-flex items-center rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          className="inline-flex items-center rounded-lg bg-ink px-3 py-1.5 text-sm font-medium text-paper hover:bg-signal disabled:opacity-50"
         >
           {running ? "Analysing…" : "Analyse list"}
         </button>

@@ -8,35 +8,16 @@ export function AppLogo({ className = "w-10 h-10" }: { className?: string }) {
       className={`block ${className ?? ""}`.trim()}
       aria-hidden="true"
     >
-      <rect width="32" height="32" rx="8" fill="#2563eb" />
-      <path
-        fill="#fff"
-        d="M16 6.4 7.6 10.6v10.8L16 25.6l8.4-4.2V10.6L16 6.4Z"
-      />
-      <path
-        fill="#bfdbfe"
-        d="M16 15.8 7.6 10.6 16 6.4l8.4 4.2L16 15.8Z"
-      />
-      <path
-        fill="#dbeafe"
-        d="M16 15.8v9.8l8.4-4.2V10.6L16 15.8Z"
-      />
-      <circle cx="22.2" cy="22.4" r="6.4" fill="#1e40af" />
-      <circle
-        cx="21.5"
-        cy="21.7"
-        r="3.15"
-        fill="none"
-        stroke="#fff"
-        strokeWidth="2"
-      />
+      <rect width="32" height="32" rx="3" className="fill-ink" />
       <path
         fill="none"
-        stroke="#fff"
-        strokeWidth="2.2"
-        strokeLinecap="round"
-        d="M23.7 23.9 27.1 27.3"
+        className="stroke-paper"
+        strokeWidth="3.4"
+        strokeLinecap="square"
+        strokeLinejoin="miter"
+        d="M8.5 16.5 13.5 21.5 23.5 10.5"
       />
+      <rect x="23" y="23" width="5" height="5" className="fill-signal" />
     </svg>
   );
 }

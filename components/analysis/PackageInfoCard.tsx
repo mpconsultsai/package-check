@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, type ReactNode } from "react";
 import { formatDaysSinceRelease } from "@/lib/utils/format";
 import { describeLicense } from "@/lib/license-info";
 import { MetricsCard } from "./MetricsCard";
@@ -83,17 +83,9 @@ function PopularBadge({ dependents }: { dependents: number }) {
 
   return (
     <span
-      className="inline-flex items-center gap-1 rounded-md bg-amber-400 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-950 shadow-sm ring-1 ring-amber-600/30 dark:bg-amber-300 dark:text-amber-950 dark:ring-amber-200/40"
+      className="inline-flex items-center bg-ink px-1.5 py-0.5 font-mono text-[11px] font-medium uppercase tracking-[0.1em] text-paper"
       title={`${dependents.toLocaleString()} packages on npm depend on this (${formatDependents(dependents)})`}
     >
-      <svg
-        className="h-3 w-3 shrink-0"
-        viewBox="0 0 20 20"
-        fill="currentColor"
-        aria-hidden="true"
-      >
-        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-      </svg>
       {label}
     </span>
   );
@@ -131,7 +123,7 @@ function KeywordBadges({
       {labels.map((label) => (
         <span
           key={label}
-          className="inline-flex items-center rounded-md bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-700 ring-1 ring-gray-200 dark:bg-gray-700/70 dark:text-gray-200 dark:ring-gray-600"
+          className="inline-flex items-center border border-rule px-1.5 py-0.5 font-mono text-[11px] text-gray-600 dark:text-gray-300"
         >
           {label}
         </span>
@@ -217,10 +209,10 @@ export function PackageInfoCard({
               role="radio"
               aria-checked={selected}
               onClick={() => setSection(option.id)}
-              className={`-mb-px pb-2 text-sm font-medium border-b-2 transition-colors ${
+              className={`-mb-px pb-2 text-sm border-b-2 transition-colors ${
                 selected
-                  ? "border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400"
-                  : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                  ? "border-signal font-semibold text-ink"
+                  : "border-transparent font-medium text-gray-500 dark:text-gray-400 hover:text-ink"
               }`}
             >
               {option.label}
@@ -267,8 +259,8 @@ export function PackageInfoCard({
       ) : (
         <>
           {packageInfo.description && (
-            <div className="mb-6 pb-6 border-b border-gray-200 dark:border-gray-600">
-              <p className="text-base font-semibold leading-relaxed text-gray-800 dark:text-gray-100 sm:text-lg">
+            <div className="mb-5">
+              <p className="max-w-3xl text-lg leading-snug text-ink sm:text-xl">
                 {packageInfo.description}
               </p>
               {(packageInfo.commonlyUsedTypes?.length ?? 0) > 0 && (
@@ -313,28 +305,9 @@ export function PackageInfoCard({
           {!packageInfo.description && badgeRow && (
             <div className="mb-6">{badgeRow}</div>
           )}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <svg
-                  className="w-5 h-5 text-green-600 dark:text-green-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"
-                  />
-                </svg>
-                <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  Latest Version
-                </span>
-              </div>
-              <p className="text-lg font-semibold text-gray-900 dark:text-white inline-flex items-center gap-1.5">
+          <dl className="grid grid-cols-1 gap-x-10 md:grid-cols-2">
+            <Fact label="Latest version">
+              <span className="inline-flex items-center gap-1.5 font-mono">
                 <span>{packageInfo.latestVersion || packageInfo.version}</span>
                 {(packageInfo.latestVersion || packageInfo.version) && (
                   <CopyButton
@@ -344,304 +317,152 @@ export function PackageInfoCard({
                     label="Copy version"
                   />
                 )}
-              </p>
-            </div>
+              </span>
+            </Fact>
 
             {(packageInfo.lastReleaseLabel ||
               (packageInfo.daysSinceLastRelease !== null &&
                 packageInfo.daysSinceLastRelease !== undefined)) && (
-              <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <svg
-                    className="w-5 h-5 text-purple-600 dark:text-purple-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  aria-hidden="true"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                  <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                    Last Release
-                  </span>
-                </div>
-                <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                  {packageInfo.lastReleaseLabel ??
-                    formatDaysSinceRelease(packageInfo.daysSinceLastRelease!)}
-                </p>
-              </div>
+              <Fact label="Last release">
+                {packageInfo.lastReleaseLabel ??
+                  formatDaysSinceRelease(packageInfo.daysSinceLastRelease!)}
+              </Fact>
             )}
 
             {pythonEngine && ecosystem === "pypi" && (
-              <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <svg
-                    className="w-5 h-5 text-sky-600 dark:text-sky-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
-                    />
-                  </svg>
-                  <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                    Requires Python
-                  </span>
-                </div>
-                <p className="text-lg font-semibold text-gray-900 dark:text-white font-mono">
-                  {pythonEngine}
-                </p>
-              </div>
+              <Fact label="Requires Python">
+                <span className="font-mono">{pythonEngine}</span>
+              </Fact>
             )}
 
             {ecosystem === "nuget" && supportedFrameworks.length > 0 && (
-              <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 md:col-span-2">
-                <div className="flex items-center gap-2 mb-2">
-                  <svg
-                    className="w-5 h-5 text-violet-600 dark:text-violet-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
-                    />
-                  </svg>
-                  <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                    Supported frameworks
-                  </span>
-                </div>
-                <ul className="flex flex-wrap gap-2" aria-label="Supported frameworks">
+              <Fact label="Supported frameworks" wide>
+                <ul
+                  className="flex flex-wrap gap-x-3 gap-y-1 font-mono text-sm"
+                  aria-label="Supported frameworks"
+                >
                   {supportedFrameworks.map((framework) => (
-                    <li
-                      key={framework}
-                      className="rounded-full bg-white px-2.5 py-1 font-mono text-sm text-gray-900 ring-1 ring-gray-200 dark:bg-gray-800 dark:text-gray-100 dark:ring-gray-600"
-                    >
-                      {framework}
-                    </li>
+                    <li key={framework}>{framework}</li>
                   ))}
                 </ul>
-              </div>
+              </Fact>
             )}
 
             {dotnetEngine &&
               ecosystem === "nuget" &&
               supportedFrameworks.length === 0 && (
-              <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <svg
-                    className="w-5 h-5 text-violet-600 dark:text-violet-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    aria-hidden="true"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
-                    />
-                  </svg>
-                  <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                    Target framework
-                  </span>
-                </div>
-                <p className="text-lg font-semibold text-gray-900 dark:text-white font-mono">
-                  {dotnetEngine}
-                </p>
-              </div>
+              <Fact label="Target framework">
+                <span className="font-mono">{dotnetEngine}</span>
+              </Fact>
             )}
 
             {nodeEngine && ecosystem === "npm" && (
-              <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <svg
-                    className="w-5 h-5 text-emerald-600 dark:text-emerald-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  aria-hidden="true"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"
-                    />
-                  </svg>
-                  <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                    Supported Node version(s)
-                  </span>
-                </div>
-                <p className="text-lg font-semibold text-gray-900 dark:text-white font-mono">
-                  {nodeEngine}
-                </p>
-              </div>
+              <Fact label="Node">
+                <span className="font-mono">{nodeEngine}</span>
+              </Fact>
             )}
 
             {npmEngine && ecosystem === "npm" && (
-              <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <svg
-                    className="w-5 h-5 text-red-600 dark:text-red-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  aria-hidden="true"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                    />
-                  </svg>
-                  <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                    Supported npm version(s)
-                  </span>
-                </div>
-                <p className="text-lg font-semibold text-gray-900 dark:text-white font-mono">
-                  {npmEngine}
-                </p>
-              </div>
+              <Fact label="npm">
+                <span className="font-mono">{npmEngine}</span>
+              </Fact>
             )}
 
-            <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <svg
-                  className="w-5 h-5 text-orange-600 dark:text-orange-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-                <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                  Licence
-                </span>
-              </div>
-              <p className="text-lg font-semibold text-gray-900 dark:text-white break-all">
+            <Fact label="Licence">
+              <span className="break-all font-mono">
                 {licenseInfo?.href ? (
                   <a
                     href={licenseInfo.href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline underline-offset-2"
+                    className="underline decoration-gray-400 underline-offset-4 hover:decoration-signal"
                   >
                     {licenseInfo.id}
                   </a>
                 ) : (
                   licenseInfo?.id ?? packageInfo.license
                 )}
-              </p>
+              </span>
               {licenseInfo?.summary && (
-                <p className="mt-1.5 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+                <span className="mt-1 block text-xs font-normal leading-relaxed text-gray-500 dark:text-gray-400">
                   {licenseInfo.summary}
-                </p>
+                </span>
               )}
-            </div>
+            </Fact>
 
             {features.relatedPackages &&
               packageInfo.dependents !== undefined && (
-              <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  <div className="flex items-center gap-2">
-                    <svg
-                      className="w-5 h-5 text-teal-600 dark:text-teal-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    aria-hidden="true"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                      />
-                    </svg>
-                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                      Dependents
-                    </span>
-                  </div>
-                  {packageInfo.dependents > 0 && (
+              <Fact
+                label="Dependents"
+                action={
+                  packageInfo.dependents > 0 ? (
                     <button
                       type="button"
                       onClick={() => setDependentsOpen(true)}
-                      className="rounded-md px-1.5 py-0.5 text-xs font-medium text-teal-700 hover:bg-teal-100 hover:text-teal-900 dark:text-teal-300 dark:hover:bg-teal-900/40 dark:hover:text-teal-100"
+                      className="normal-case tracking-normal text-ink underline decoration-gray-400 underline-offset-4 hover:decoration-signal"
                       title="View dependents"
                       aria-label="View dependents"
                     >
-                      View
+                      view
                     </button>
-                  )}
-                </div>
-                <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                  {packageInfo.dependents.toLocaleString()}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  packages depend on this
-                </p>
-              </div>
-            )}
-
-            {features.relatedPackages && (
-              <DependentsModal
-                packageName={packageInfo.name}
-                dependentCount={packageInfo.dependents}
-                open={dependentsOpen}
-                onClose={closeDependents}
-              />
-            )}
-
-            <div className="md:col-span-2 flex flex-wrap items-center gap-x-4 gap-y-2">
-              <a
-                href={packageInfo.npmUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline"
+                  ) : null
+                }
               >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                  />
-                </svg>
-                View on {registryName}
-              </a>
-            </div>
-          </div>
+                <span className="font-mono tabular-nums">
+                  {packageInfo.dependents.toLocaleString()}
+                </span>
+                <span className="ml-2 text-sm font-normal text-gray-500 dark:text-gray-400">
+                  packages depend on this
+                </span>
+              </Fact>
+            )}
+          </dl>
+
+          {features.relatedPackages && (
+            <DependentsModal
+              packageName={packageInfo.name}
+              dependentCount={packageInfo.dependents}
+              open={dependentsOpen}
+              onClose={closeDependents}
+            />
+          )}
+
+          <p className="mt-4 border-t border-rule pt-3 text-sm">
+            <a
+              href={packageInfo.npmUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-ink underline decoration-gray-400 underline-offset-4 hover:decoration-signal"
+            >
+              View on {registryName} ↗
+            </a>
+          </p>
         </>
       )}
+    </div>
+  );
+}
+
+function Fact({
+  label,
+  action,
+  wide = false,
+  children,
+}: {
+  label: string;
+  action?: ReactNode;
+  wide?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      className={`border-t border-rule py-3 ${wide ? "md:col-span-2" : ""}`}
+    >
+      <dt className="flex items-baseline justify-between gap-3 font-mono text-[11px] uppercase tracking-[0.12em] text-gray-500 dark:text-gray-400">
+        {label}
+        {action}
+      </dt>
+      <dd className="mt-1 text-base font-medium text-ink">{children}</dd>
     </div>
   );
 }

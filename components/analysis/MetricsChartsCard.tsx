@@ -134,7 +134,7 @@ function MetricLineChart({
   empty,
   seriesName = "Current",
   compareName,
-  compareColor = "#8b5cf6",
+  compareColor = "#c8431b",
   comparePoints,
   externalLink,
 }: {
@@ -217,12 +217,12 @@ function MetricLineChart({
               >
                 <CartesianGrid
                   strokeDasharray="3 3"
-                  stroke="#6b7280"
+                  stroke="#a09a8b"
                   opacity={0.25}
                 />
                 <XAxis
                   dataKey="date"
-                  tick={{ fill: "#9ca3af", fontSize: 11 }}
+                  tick={{ fill: "#7a7569", fontSize: 11 }}
                   tickLine={false}
                   axisLine={false}
                   interval="preserveStartEnd"
@@ -230,7 +230,7 @@ function MetricLineChart({
                   tickFormatter={formatTickDate}
                 />
                 <YAxis
-                  tick={{ fill: "#9ca3af", fontSize: 11 }}
+                  tick={{ fill: "#7a7569", fontSize: 11 }}
                   tickLine={false}
                   axisLine={false}
                   width={48}
@@ -256,10 +256,10 @@ function MetricLineChart({
                       : ""
                   }
                   contentStyle={{
-                    backgroundColor: "#1f2937",
-                    border: "1px solid #374151",
+                    backgroundColor: "#25231f",
+                    border: "1px solid #3d3a35",
                     borderRadius: 8,
-                    color: "#f3f4f6",
+                    color: "#ede9e0",
                   }}
                 />
                 <Line
@@ -324,10 +324,10 @@ function ReleaseCadenceChart({
       ) : (
         <ChartFrame>
             <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#6b7280" opacity={0.25} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#a09a8b" opacity={0.25} />
               <XAxis
                 dataKey="label"
-                tick={{ fill: "#9ca3af", fontSize: 11 }}
+                tick={{ fill: "#7a7569", fontSize: 11 }}
                 tickLine={false}
                 axisLine={false}
                 interval="preserveStartEnd"
@@ -335,7 +335,7 @@ function ReleaseCadenceChart({
               />
               <YAxis
                 allowDecimals={false}
-                tick={{ fill: "#9ca3af", fontSize: 11 }}
+                tick={{ fill: "#7a7569", fontSize: 11 }}
                 tickLine={false}
                 axisLine={false}
                 width={36}
@@ -353,15 +353,15 @@ function ReleaseCadenceChart({
                     : ""
                 }
                 contentStyle={{
-                  backgroundColor: "#1f2937",
-                  border: "1px solid #374151",
+                  backgroundColor: "#25231f",
+                  border: "1px solid #3d3a35",
                   borderRadius: 8,
-                  color: "#f3f4f6",
+                  color: "#ede9e0",
                 }}
               />
               <Bar
                 dataKey="value"
-                fill="#8b5cf6"
+                fill="#c8431b"
                 radius={[3, 3, 0, 0]}
                 maxBarSize={28}
               />
@@ -783,7 +783,7 @@ export function MetricsChartsCard({
               onClick={() => setChartSection(option.id)}
               className={`-mb-px pb-2 text-sm font-medium border-b-2 transition-colors ${
                 selected
-                  ? "border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400"
+                  ? "border-signal font-semibold text-ink"
                   : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
               }`}
             >
@@ -842,7 +842,7 @@ export function MetricsChartsCard({
             )}
             <MetricLineChart
               title={downloadsChartTitle}
-              color="#3b82f6"
+              color="#3b4c6e"
               points={data.downloads}
               seriesName={packageName}
               compareName={
@@ -879,7 +879,7 @@ export function MetricsChartsCard({
         ) : (
           <MetricLineChart
             title="Open issues"
-            color="#f97316"
+            color="#996b1d"
             points={data.issues}
             empty="No GitHub issue history for this package."
             externalLink={

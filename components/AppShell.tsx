@@ -12,7 +12,8 @@ import {
 } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { HeaderGithubProvider } from "@/components/header-github";
-import { InfoCards } from "@/components/InfoCards";
+import { WhatWeCheck } from "@/components/WhatWeCheck";
+import { ShellEcosystemContext } from "@/components/shell-ecosystem";
 import { PageHeader } from "@/components/PageHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { PackageSearchForm } from "@/components/PackageSearchForm";
@@ -81,10 +82,11 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <SearchLoadingContext.Provider value={setSearchLoading}>
+      <ShellEcosystemContext.Provider value={toolbarEcosystem}>
       <HeaderGithubProvider>
-      <main className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-        <div className="container mx-auto px-3 sm:px-4 pt-4 pb-3 sm:pt-8 sm:pb-10">
-          <div className="max-w-4xl mx-auto">
+      <main className="min-h-screen bg-paper text-ink">
+        <div className="mx-auto px-4 pt-4 pb-6 sm:px-6 sm:pt-6 sm:pb-10">
+          <div className="mx-auto max-w-5xl">
             <div className="site-chrome-header">
               <PageHeader showHomeLink={!isHome} />
             </div>
@@ -105,7 +107,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             </div>
             {showPackageDivider && (
               <div
-                className="mt-4 mb-2 sm:mt-6 sm:mb-3 border-t border-gray-200 dark:border-gray-700"
+                className="mt-6 mb-5 sm:mt-8 sm:mb-6 border-t border-rule"
                 role="separator"
                 aria-hidden="true"
               />
@@ -114,13 +116,14 @@ export function AppShell({ children }: { children: ReactNode }) {
               key={isHome ? pathname : `${pathname}:${toolbarEcosystem}`}
               className="route-panel relative z-0"
             >
-              {hideRoutePanel && route ? <InfoCards /> : children}
+              {hideRoutePanel && route ? <WhatWeCheck /> : children}
             </div>
             <SiteFooter />
           </div>
         </div>
       </main>
       </HeaderGithubProvider>
+      </ShellEcosystemContext.Provider>
     </SearchLoadingContext.Provider>
   );
 }

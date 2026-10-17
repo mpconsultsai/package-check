@@ -18,7 +18,7 @@ export function ServiceStartingNotice() {
       <button
         type="button"
         onClick={() => window.location.reload()}
-        className="mt-4 inline-flex items-center rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400"
+        className="mt-4 inline-flex items-center rounded-lg bg-ink px-3 py-1.5 text-sm font-medium text-paper hover:bg-signal"
       >
         Reload
       </button>

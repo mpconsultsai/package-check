@@ -12,7 +12,7 @@ import { apiPaths } from "@/lib/api/paths";
 import { useShellSearchLoading } from "@/components/AppShell";
 import { ServiceStartingNotice } from "@/components/ServiceStartingNotice";
 import { usePackageGithubLink } from "@/components/header-github";
-import { InfoCards } from "@/components/InfoCards";
+import { WhatWeCheck } from "@/components/WhatWeCheck";
 import { WatchToggle } from "@/components/Watchlist";
 import { useWatchlistActions } from "@/lib/use-watchlist";
 import { useAiAnalysisEnabled, useAiAnalysisPrefReady } from "@/lib/use-ai-analysis-pref";
@@ -73,38 +73,28 @@ export function PackageAnalysisPage({
 
 function AIAnalysisSkeleton() {
   return (
-    <div className="space-y-4" role="status">
+    <div
+      className="rounded-lg bg-white p-4 shadow-lg dark:bg-gray-800 sm:p-6"
+      role="status"
+    >
       <span className="sr-only">Generating AI analysis</span>
-      <div
-        className="grid animate-pulse grid-cols-1 gap-px overflow-hidden rounded-lg bg-gray-200 shadow-lg dark:bg-gray-700 md:grid-cols-2"
-        aria-hidden="true"
-      >
-        <div className="space-y-2 bg-white p-4 dark:bg-gray-800 sm:p-6">
-          <div className="h-4 w-full rounded bg-gray-200 dark:bg-gray-700" />
-          <div className="h-4 w-11/12 rounded bg-gray-200 dark:bg-gray-700" />
-          <div className="h-4 w-4/5 rounded bg-gray-200 dark:bg-gray-700" />
+      <div className="animate-pulse" aria-hidden="true">
+        <div className="flex items-end justify-between gap-4 border-b border-rule pb-4">
+          <div className="h-8 w-36 bg-gray-200 dark:bg-gray-700" />
+          <div className="h-12 w-24 bg-gray-200 dark:bg-gray-700" />
         </div>
-        <div className="space-y-2 bg-white p-4 dark:bg-gray-800 sm:p-6">
-          <div className="h-3 w-10 rounded bg-gray-200 dark:bg-gray-700" />
-          <div className="h-4 w-full rounded bg-gray-200 dark:bg-gray-700" />
-          <div className="h-4 w-3/4 rounded bg-gray-200 dark:bg-gray-700" />
+        <div className="grid grid-cols-3 divide-x divide-rule border-b border-rule">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className={`space-y-1.5 py-3 ${i === 0 ? "pr-3" : "px-3"}`}>
+              <div className="h-2.5 w-16 bg-gray-200 dark:bg-gray-700" />
+              <div className="h-4 w-20 bg-gray-200 dark:bg-gray-700" />
+            </div>
+          ))}
         </div>
-      </div>
-      <div
-        className="animate-pulse rounded-lg bg-white p-4 shadow-lg dark:bg-gray-800 sm:p-6"
-        aria-hidden="true"
-      >
-        <div className="h-4 w-full rounded bg-gray-200 dark:bg-gray-700" />
-        <div className="mt-2 h-4 w-3/4 rounded bg-gray-200 dark:bg-gray-700" />
-        <div className="mt-4 flex items-center justify-between gap-4">
-          <div className="h-7 w-28 rounded-full bg-gray-200 dark:bg-gray-700" />
-          <div className="h-7 w-20 rounded bg-gray-200 dark:bg-gray-700" />
-        </div>
-        <div className="mt-3 h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700" />
-        <div className="mt-4 grid grid-cols-3 gap-2">
-          <div className="h-14 rounded-lg bg-gray-200 dark:bg-gray-700" />
-          <div className="h-14 rounded-lg bg-gray-200 dark:bg-gray-700" />
-          <div className="h-14 rounded-lg bg-gray-200 dark:bg-gray-700" />
+        <div className="space-y-2 py-5">
+          <div className="h-4 w-full bg-gray-200 dark:bg-gray-700" />
+          <div className="h-4 w-11/12 bg-gray-200 dark:bg-gray-700" />
+          <div className="h-4 w-4/5 bg-gray-200 dark:bg-gray-700" />
         </div>
       </div>
     </div>
@@ -727,7 +717,7 @@ function PackagePageContent({
             </div>
           )}
 
-          {!showResults && <InfoCards />}
+          {!showResults && <WhatWeCheck />}
     </>
   );
 }

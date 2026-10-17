@@ -46,10 +46,16 @@ const THEME_OPTIONS: { value: "light" | "dark"; label: string }[] = [
 ];
 
 const REGISTRY_TABS = [
-  { id: "npm" as const, label: "NPM" },
+  { id: "npm" as const, label: "npm" },
   { id: "pypi" as const, label: "PyPI" },
   { id: "nuget" as const, label: "NuGet" },
 ] as const;
+
+const INSTALL_PREFIX: Record<PackageEcosystem, string> = {
+  npm: "npm i",
+  pypi: "pip install",
+  nuget: "dotnet add package",
+};
 
 const PACKAGE_MANAGER_OPTIONS: {
   value: PackageManagerPreference;
@@ -453,25 +459,22 @@ export function PackageSearchForm({
   }, [showPasteList, utilityPanel, closeUtilityPanel]);
 
   const utilityButtonClass = (active: boolean) =>
-    `relative inline-flex h-9 w-9 items-center justify-center rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+    `relative inline-flex h-8 w-8 items-center justify-center rounded-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-signal ${
       active
-        ? "bg-gray-100 text-gray-900 dark:bg-gray-700 dark:text-white"
-        : "text-gray-500 hover:bg-gray-100 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-gray-700/80 dark:hover:text-gray-100"
+        ? "bg-ink text-paper"
+        : "text-gray-500 hover:text-ink dark:text-gray-400"
     }`;
 
   return (
-    <div
-      ref={cardRef}
-      className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-2 sm:p-8 mb-4 sm:mb-8"
-    >
-      <form onSubmit={handleSubmit} className="min-w-0 space-y-2">
-          <div className="flex items-end justify-between gap-2 border-b border-gray-200 dark:border-gray-600">
+    <div ref={cardRef} className="mb-6 sm:mb-8">
+      <form onSubmit={handleSubmit} className="min-w-0 space-y-3">
+          <div className="flex items-end justify-between gap-2">
             <div
               role="tablist"
               aria-label="Package registry"
               aria-orientation="horizontal"
               onKeyDown={onRegistryTabKeyDown}
-              className="flex min-w-0 flex-1 gap-4"
+              className="flex min-w-0 flex-1 gap-5 font-mono text-sm"
             >
               {REGISTRY_TABS.map((option) => {
                 const selected = ecosystem === option.id;
@@ -486,10 +489,10 @@ export function PackageSearchForm({
                     aria-controls={registryPanelId}
                     tabIndex={selected ? 0 : -1}
                     onClick={() => setEcosystem(option.id)}
-                    className={`-mb-px rounded-none border-b-[3px] px-2.5 pt-1 pb-2 text-base transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-800 ${
+                    className={`border-b-2 pb-1 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-2 focus-visible:ring-offset-paper ${
                       selected
-                        ? "border-blue-600 bg-blue-50 font-bold text-blue-800 dark:border-blue-400 dark:bg-blue-950/70 dark:text-blue-100"
-                        : "border-transparent font-medium text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                        ? "border-signal font-semibold text-ink"
+                        : "border-transparent text-gray-500 hover:text-ink dark:text-gray-400"
                     }`}
                   >
                     {option.label}
@@ -610,9 +613,17 @@ export function PackageSearchForm({
             <label id="package-name-label" htmlFor="packageName" className="sr-only">
               Package name
             </label>
-            <div className="relative">
-              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500">
-                <SearchIcon />
+            <div className="relative flex items-stretch border border-gray-400 bg-white transition-colors focus-within:border-ink dark:border-gray-600 dark:bg-gray-800 dark:focus-within:border-gray-300">
+              <span
+                className="pointer-events-none flex select-none items-center pl-3 pr-2 font-mono text-base text-gray-400 sm:pl-4 sm:text-lg dark:text-gray-500"
+                aria-hidden="true"
+              >
+                <span className="sm:hidden">
+                  <SearchIcon />
+                </span>
+                <span className="hidden sm:inline">
+                  <span className="text-signal">$</span> {INSTALL_PREFIX[ecosystem]}
+                </span>
               </span>
               <input
                 ref={inputRef}
@@ -632,13 +643,11 @@ export function PackageSearchForm({
                 onKeyDown={handleKeyDown}
                 placeholder={
                   ecosystem === "pypi"
-                    ? "Search PyPI projects, e.g. requests, django, langgraph"
-                    : ecosystem === "nuget"
-                      ? "Search NuGet packages, e.g. Newtonsoft.Json, Serilog, Dapper"
-                      : "Search npm packages, e.g. react, lodash, @types/node"
+                    ? "project name"
+                    : "package name"
                 }
-                className={`w-full text-base py-2.5 sm:py-3 border border-gray-300 dark:border-gray-600 rounded-lg outline-none focus:border-blue-500 focus:ring-2 focus:ring-inset focus:ring-blue-500/30 dark:focus:border-blue-400 dark:bg-gray-700 dark:text-white disabled:opacity-60 pl-10 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden ${
-                  showClear ? "pr-10" : "pr-4"
+                className={`min-w-0 flex-1 bg-transparent py-3 font-mono text-base text-ink outline-none placeholder:text-gray-400 disabled:opacity-60 sm:py-3.5 sm:text-lg dark:placeholder:text-gray-500 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden ${
+                  showClear ? "pr-10" : "pr-3"
                 }`}
                 disabled={disabled || loading}
                 role="combobox"
@@ -664,24 +673,24 @@ export function PackageSearchForm({
                 <button
                   type="button"
                   onClick={handleClear}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600/50 transition-colors"
+                  className="self-center mr-1 rounded-sm p-1.5 text-gray-400 transition-colors hover:text-ink dark:text-gray-500"
                   aria-label="Clear search"
                 >
                   <ClearIcon />
                 </button>
               )}
+              <button
+                type="submit"
+                className="sr-only"
+                disabled={disabled || loading || !value.trim()}
+              >
+                {ecosystem === "pypi"
+                  ? "Analyse PyPI package"
+                  : ecosystem === "nuget"
+                    ? "Analyse NuGet package"
+                    : "Analyse npm package"}
+              </button>
             </div>
-            <button
-              type="submit"
-              className="sr-only"
-              disabled={disabled || loading || !value.trim()}
-            >
-              {ecosystem === "pypi"
-                ? "Analyse PyPI package"
-                : ecosystem === "nuget"
-                  ? "Analyse NuGet package"
-                  : "Analyse npm package"}
-            </button>
             {!loading &&
               !utilityPanel &&
               isSearching &&
@@ -702,7 +711,7 @@ export function PackageSearchForm({
               <div
                 id={`${listboxId}-empty`}
                 role="status"
-                className="absolute z-20 mt-1 w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg px-4 py-3"
+                className="absolute z-20 -mt-px w-full border border-ink bg-white px-4 py-3 shadow-xl dark:border-gray-300 dark:bg-gray-800"
               >
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   No matches found
@@ -714,7 +723,7 @@ export function PackageSearchForm({
                 id={listboxId}
                 role="listbox"
                 aria-label="Package suggestions"
-                className="absolute z-20 mt-1 w-full max-h-72 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg"
+                className="absolute z-20 -mt-px w-full max-h-80 divide-y divide-rule overflow-y-auto border border-ink bg-white shadow-xl dark:border-gray-300 dark:bg-gray-800"
               >
                 {suggestions.map((pkg, index) => {
                   const selected = index === highlightIndex;
@@ -727,19 +736,21 @@ export function PackageSearchForm({
                       onMouseDown={(e) => e.preventDefault()}
                       onMouseEnter={() => setHighlightIndex(index)}
                       onClick={() => runSearch(pkg.name)}
-                      className={`cursor-pointer px-4 py-3 text-left transition-colors ${
+                      className={`cursor-pointer border-l-2 px-4 py-2.5 text-left ${
                         selected
-                          ? "bg-blue-50 dark:bg-blue-900/30"
-                          : "hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                          ? "border-signal bg-gray-50 dark:bg-gray-900/60"
+                          : "border-transparent"
                       }`}
                     >
-                      <span className="block font-medium text-gray-900 dark:text-white truncate">
-                        {pkg.name}
-                        <span className="ml-2 text-xs font-normal text-gray-500 dark:text-gray-400">
-                          v{pkg.version}
+                      <span className="flex items-baseline justify-between gap-3">
+                        <span className="truncate font-mono text-[0.9375rem] font-medium text-ink">
+                          {pkg.name}
+                        </span>
+                        <span className="shrink-0 font-mono text-xs text-gray-500 tabular-nums dark:text-gray-400">
+                          {pkg.version}
                         </span>
                       </span>
-                      <span className="block text-sm text-gray-600 dark:text-gray-400 truncate mt-0.5">
+                      <span className="mt-0.5 block truncate text-sm text-gray-600 dark:text-gray-400">
                         {pkg.description}
                       </span>
                     </li>
@@ -748,13 +759,8 @@ export function PackageSearchForm({
               </ul>
             )}
           </div>
-          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-2">
-            <span
-              className="text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500"
-              aria-hidden="true"
-            >
-              Try
-            </span>
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm text-gray-500 dark:text-gray-400">
+            <span aria-hidden="true">Or try</span>
             <ul
               aria-label={
                 ecosystem === "pypi"
@@ -763,18 +769,23 @@ export function PackageSearchForm({
                     ? "Example NuGet packages"
                     : "Example npm packages"
               }
-              className="flex flex-wrap items-center gap-2"
+              className="flex flex-wrap items-baseline gap-x-1"
             >
-              {EXAMPLE_PACKAGES[ecosystem].map((name) => (
+              {EXAMPLE_PACKAGES[ecosystem].map((name, index, all) => (
                 <li key={name}>
                   <button
                     type="button"
                     onClick={() => runSearch(name)}
                     disabled={disabled || loading}
-                    className="rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm text-gray-700 transition-colors hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-60 dark:border-gray-600 dark:bg-gray-700/60 dark:text-gray-200 dark:hover:border-blue-500 dark:hover:bg-blue-900/30 dark:hover:text-blue-300"
+                    className="font-mono text-ink underline decoration-gray-400 underline-offset-4 transition-colors hover:decoration-signal hover:decoration-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-signal disabled:opacity-60"
                   >
                     {name}
                   </button>
+                  {index < all.length - 2 ? (
+                    <span aria-hidden="true">,</span>
+                  ) : index === all.length - 2 ? (
+                    <span aria-hidden="true"> or</span>
+                  ) : null}
                 </li>
               ))}
             </ul>
@@ -801,7 +812,7 @@ export function PackageSearchForm({
           role="region"
           aria-labelledby="shell-watchlist-heading"
           tabIndex={-1}
-          className="mt-3 sm:mt-4 border-t border-gray-100 dark:border-gray-700 pt-3 sm:pt-4 max-h-80 overflow-y-auto outline-none"
+          className="mt-4 border border-rule bg-white p-4 sm:p-5 dark:bg-gray-800 max-h-80 overflow-y-auto outline-none"
         >
           <h2 id="shell-watchlist-heading" className="sr-only">
             Watchlist
@@ -817,7 +828,7 @@ export function PackageSearchForm({
           role="region"
           aria-labelledby="shell-paste-heading"
           tabIndex={-1}
-          className="mt-3 sm:mt-4 border-t border-gray-100 dark:border-gray-700 pt-3 sm:pt-4 max-h-[32rem] overflow-y-auto outline-none"
+          className="mt-4 border border-rule bg-white p-4 sm:p-5 dark:bg-gray-800 max-h-[32rem] overflow-y-auto outline-none"
         >
           <h2 id="shell-paste-heading" className="sr-only">
             {pasteLabel}
@@ -833,7 +844,7 @@ export function PackageSearchForm({
           role="region"
           aria-labelledby="shell-settings-heading"
           tabIndex={-1}
-          className="mt-3 sm:mt-4 border-t border-gray-100 dark:border-gray-700 pt-3 sm:pt-4 space-y-4 outline-none"
+          className="mt-4 border border-rule bg-white p-4 sm:p-5 dark:bg-gray-800 space-y-4 outline-none"
         >
           <h2 id="shell-settings-heading" className="sr-only">
             Settings
@@ -854,7 +865,7 @@ export function PackageSearchForm({
                 onClick={() => setAiEnabled(!aiEnabled)}
                 className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-800 ${
                   aiEnabled
-                    ? "bg-blue-600"
+                    ? "bg-signal"
                     : "bg-gray-300 dark:bg-gray-600"
                 }`}
               >
@@ -897,7 +908,7 @@ export function PackageSearchForm({
                       onClick={() => setThemePreference(value)}
                       className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-800 ${
                         selected
-                          ? "bg-blue-600 text-white"
+                          ? "bg-ink text-paper"
                           : "text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white"
                       }`}
                     >

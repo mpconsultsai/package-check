@@ -560,7 +560,7 @@ export function DependenciesCard({
                 onClick={() => setView(option.id)}
                 className={`-mb-px pb-2 text-sm font-medium border-b-2 transition-colors ${
                   selected
-                    ? "border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400"
+                    ? "border-signal font-semibold text-ink"
                     : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
                 }`}
               >

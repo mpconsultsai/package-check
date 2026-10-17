@@ -230,7 +230,7 @@ export function DependentsModal({
                   <div className="flex items-baseline justify-between gap-3">
                     <Link
                       href={packagePagePath("npm", pkg.name)}
-                      className="text-sm font-semibold text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 truncate"
+                      className="font-mono text-sm font-semibold text-ink underline decoration-gray-400 underline-offset-4 hover:decoration-signal truncate"
                       onClick={onClose}
                     >
                       {pkg.name}
@@ -258,7 +258,7 @@ export function DependentsModal({
               type="button"
               disabled={loadingMore || loading}
               onClick={() => void loadPage(page + 1, true)}
-              className="w-full sm:w-auto sm:min-w-[10rem] sm:mx-auto sm:block rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-400"
+              className="w-full sm:w-auto sm:min-w-[10rem] sm:mx-auto sm:block rounded-lg bg-ink px-4 py-2.5 text-sm font-semibold text-paper hover:bg-signal disabled:opacity-50"
             >
               {loadingMore ? "Loading…" : "Load more"}
             </button>

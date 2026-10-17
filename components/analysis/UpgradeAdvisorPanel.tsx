@@ -721,7 +721,7 @@ export function UpgradeAdvisorPanel({
                 });
               }}
               disabled={agentLoading}
-              className="w-full shrink-0 whitespace-nowrap rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50 sm:w-auto sm:min-w-[11.5rem] dark:bg-blue-500 dark:hover:bg-blue-400"
+              className="w-full shrink-0 whitespace-nowrap rounded-lg bg-ink px-3 py-2 text-sm font-semibold text-paper hover:bg-signal disabled:opacity-50 sm:w-auto sm:min-w-[11.5rem]"
             >
               {agentLoading
                 ? "Generating…"

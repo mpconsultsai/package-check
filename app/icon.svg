@@ -1,9 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="pkglens">
-  <rect width="32" height="32" rx="8" fill="#2563eb"/>
-  <path fill="#fff" d="M16 6.4 7.6 10.6v10.8L16 25.6l8.4-4.2V10.6L16 6.4Z"/>
-  <path fill="#bfdbfe" d="M16 15.8 7.6 10.6 16 6.4l8.4 4.2L16 15.8Z"/>
-  <path fill="#dbeafe" d="M16 15.8v9.8l8.4-4.2V10.6L16 15.8Z"/>
-  <circle cx="22.2" cy="22.4" r="6.4" fill="#1e40af"/>
-  <circle cx="21.5" cy="21.7" r="3.15" fill="none" stroke="#fff" stroke-width="2"/>
-  <path fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" d="M23.7 23.9 27.1 27.3"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Package Check">
+  <rect width="32" height="32" rx="3" fill="#1a1916"/>
+  <path fill="none" stroke="#f3f0e8" stroke-width="3.4" stroke-linecap="square" stroke-linejoin="miter" d="M8.5 16.5 13.5 21.5 23.5 10.5"/>
+  <rect x="23" y="23" width="5" height="5" fill="#c8431b"/>
 </svg>

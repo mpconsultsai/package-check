@@ -90,7 +90,10 @@ export async function loadPackageUsageBrief(
   const name = packageName.trim().toLowerCase();
   if (!db || name.length < 2) return null;
   try {
-    const since = new Date(Date.now() - USAGE_DAYS * 24 * 60 * 60 * 1000);
+    // Unprepared queries (transaction pooler) cannot bind a Date; send ISO text.
+    const since = new Date(
+      Date.now() - USAGE_DAYS * 24 * 60 * 60 * 1000,
+    ).toISOString();
     const counts = await db.execute<CountRow>(sql`
       select
         count(*) filter (

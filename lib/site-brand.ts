@@ -1,9 +1,9 @@
 /** Public product name (UI, metadata, PWA). */
 export const SITE_NAME = "Package Check";
 
-/** Short line under the logo in the header. */
+/** Home page headline under the masthead. */
 export const SITE_STRAPLINE =
-  "AI-assisted package reviews - security, quality and dependencies at a glance.";
+  "Package reviews for npm, PyPI and NuGet: security, upkeep and dependencies in one place.";
 
 /** Home document title and social title. */
 export const SITE_TITLE = `${SITE_NAME} | npm, PyPI and NuGet package reviews`;
