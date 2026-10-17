@@ -144,7 +144,7 @@ function DependencyRow({
           <div className="flex flex-wrap items-center gap-2">
             <Link
               href={packagePagePath(ecosystem, dep.name)}
-              className="font-medium text-blue-600 underline underline-offset-2 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 truncate"
+              className="link font-medium truncate"
             >
               {dep.name}
             </Link>
@@ -170,7 +170,7 @@ function DependencyRow({
         </div>
       </div>
       {open && (
-        <div className="border-l border-gray-200 dark:border-gray-600 ml-3 sm:ml-4">
+        <div className="border-l border-rule ml-3 sm:ml-4">
           {loading && (
             <p className="py-2 pl-4 text-xs text-gray-500 dark:text-gray-400">
               Loading…
@@ -189,7 +189,7 @@ function DependencyRow({
             </p>
           )}
           {!loading && children && children.length > 0 && (
-            <ul className="divide-y divide-gray-100 dark:divide-gray-700/80">
+            <ul className="divide-y divide-rule">
               {children.map((child, childIndex) => (
                 <DependencyRow
                   key={dependencyReactKey(child, childIndex)}
@@ -214,7 +214,7 @@ function DependencyList({
   ecosystem: PackageEcosystem;
 }) {
   return (
-    <ul className="divide-y divide-gray-100 dark:divide-gray-700 rounded-lg border border-gray-200 dark:border-gray-700 px-2 sm:px-3">
+    <ul className="divide-y divide-rule rounded-lg border border-rule px-2 sm:px-3">
       {deps.map((dep, index) => (
         <DependencyRow
           key={dependencyReactKey(dep, index)}
@@ -269,7 +269,7 @@ function DependenciesGraph({
           Showing {visible.length} of {dependencies.length}
         </p>
       )}
-      <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/80 dark:bg-gray-900/30">
+      <div className="overflow-hidden rounded-lg border border-rule bg-gray-50/80 dark:bg-gray-900/30">
         <svg
           viewBox={`${-pad} ${-pad} ${size + pad * 2} ${size + pad * 2}`}
           className="w-full h-auto max-h-[26rem]"
@@ -535,7 +535,7 @@ export function DependenciesCard({
         <div
           role="radiogroup"
           aria-label="Dependencies view"
-          className="flex flex-wrap gap-4 border-b border-gray-200 dark:border-gray-600"
+          className="flex flex-wrap gap-4 border-b border-rule"
         >
           {(
             [

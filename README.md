@@ -1,8 +1,10 @@
 # Package Check
 
-AI-assisted package reviews - security, quality and dependencies at a glance.
+Package reviews for npm, PyPI and NuGet: security, upkeep and dependencies in one place.
 
-Package Check reviews packages from **npm**, **PyPI**, and **NuGet** before you install them. Choose a registry in the search bar, then open a package at `/npm/<name>`, `/pypi/<name>`, or `/nuget/<name>`.
+Package Check reviews packages from **npm**, **PyPI**, and **NuGet** before you install them. Choose a registry above the search box, then open a package at `/npm/<name>`, `/pypi/<name>`, or `/nuget/<name>`.
+
+![Package Check home page](docs/home.png)
 
 ## Features
 
@@ -16,6 +18,9 @@ All three registries:
 - **Trends** - Release history and GitHub issue history
 - **Watchlist** - Saved packages checked again from the browser
 - **Paste a list** - Analyse many packages from a dependency file
+- **Most checked this week** - The home page lists the packages people opened most in the last seven days, and the most recent ones, for the selected registry (needs the database, see below)
+
+The toolbar next to the registry tabs has three text buttons: **Watchlist** (with a count, and a coloured dot when saved packages have updates), **Review package file**, and **Settings** (AI second opinion on or off, light or dark theme, and the npm client used in upgrade commands).
 
 npm also includes monthly downloads and download charts, Bundlephobia size, dependents, a transitive dependency graph (deps.dev), OpenSSF Scorecard, related packages, and an upgrade advisor with an optional Groq upgrade brief.
 
@@ -23,13 +28,14 @@ PyPI uses the PyPI JSON API for project metadata, versions, license, and descrip
 
 NuGet uses the NuGet registration, flat-container, and search APIs. It shows the latest stable version, package size, lifetime downloads, every target framework the package supports, direct package dependencies, and related packages. `System.*` and `Microsoft.*` packages are left out of that related list. Paste analysis accepts `PackageReference` entries from a `.csproj` or `Directory.Packages.props`, or a plain list of package ids. NuGet reviews omit download charts, a transitive dependency tree, the upgrade advisor, and the peer entry on the dependency chart legend. Widely downloaded `System.*` and `Microsoft.*` packages stay recommended when the latest stable release is old and advisories are clear.
 
-The header always shows a GitHub link. Before a review loads it points at this repository. After a package loads it points at that package's repository. Set `NEXT_PUBLIC_GITHUB_REPO` to `owner/name` to change the site link (the default is `mpconsultsai/package-check`). Set `NEXT_PUBLIC_CONTACT_EMAIL` to show a Contact link in the footer.
+The header shows a **GitHub** link. Before a review loads it points at this repository. After a package loads it points at that package's repository. Set `NEXT_PUBLIC_GITHUB_REPO` to `owner/name` to change the site link (the default is `mpconsultsai/package-check`). Set `NEXT_PUBLIC_CONTACT_EMAIL` to show a Contact link in the footer.
 
 ## Tech stack
 
-- **Framework**: Next.js 15 (App Router)
+- **Framework**: Next.js 16 (App Router, Turbopack)
 - **Language**: TypeScript
-- **Styling**: Tailwind CSS 4
+- **Styling**: Tailwind CSS 4 with a custom paper-and-ink theme (`app/globals.css`), IBM Plex Sans and IBM Plex Mono
+- **Database**: Postgres on Supabase through Drizzle and `postgres` (transaction pooler, optional)
 - **AI**: Google Gemini 2.5 (Flash, then Flash-Lite) and Groq
 - **Registries**: npm Registry, PyPI, NuGet
 - **Other APIs**: GitHub GraphQL, GitHub Advisory Database, deps.dev and OpenSSF Scorecard (npm), Bundlephobia (npm)
@@ -67,6 +73,12 @@ npm run dev
 
 5. Open [http://localhost:3000](http://localhost:3000)
 
+### Database (optional)
+
+Anonymous package searches and opened package pages are stored in a `package_searches` table. Create it by running `supabase/migrations/20261016000000_package_searches.sql` in the Supabase SQL editor, then set `SUPABASE_URL`, `SUPABASE_DB_HOST` (the transaction pooler host for your project region, for example `aws-0-eu-west-1.pooler.supabase.com`), `SUPABASE_DB_PORT` (`6543`), `SUPABASE_DB_USER` (`postgres.<project-ref>`), and `POSTGRES_DB_PWD`. The `NEXT_PUBLIC_SUPABASE_*` keys are not used.
+
+The home page lists come from this table and refresh every five minutes. A package name only appears there after a registry search has returned it, so a typed URL for a package that does not exist is never listed. Without the database, the app works and the lists are hidden.
+
 ### Tests
 
 ```bash
@@ -84,14 +96,17 @@ package-check/
 │   ├── npm/[name]/      # npm package page
 │   ├── pypi/[name]/     # PyPI package page
 │   ├── nuget/[name]/    # NuGet package page
-│   ├── page.tsx         # Home
+│   ├── page.tsx         # Home (search, most checked, what gets checked)
 │   └── layout.tsx
 ├── components/          # Search, analysis, and registry-specific panels
 └── lib/
     ├── ai/              # Gemini and Groq analysis, upgrade agent
     ├── api/             # Route handlers and path constants
     ├── data-fetchers/   # npm, PyPI, NuGet, GitHub, security, deps.dev
+    ├── db/              # Drizzle client, search logging, usage and home page activity
     └── ecosystem-features.ts
+supabase/
+└── migrations/          # package_searches table
 ```
 
 ## API
@@ -131,7 +146,7 @@ curl "http://localhost:3000/api/v1/analysis/metrics?package=Newtonsoft.Json&ecos
 
 ## Usage
 
-Select **NPM**, **PyPI**, or **NuGet**, enter a package name, and choose **Analyse npm package**, **Analyse PyPI package**, or **Analyse NuGet package**.
+Select **npm**, **PyPI**, or **NuGet**, type a package name, and pick a suggestion or press Enter. You can also open a package from **Or try** or from the most checked list on the home page.
 
 A review includes:
 

@@ -33,11 +33,8 @@ import { summarizeWatchlistAlerts } from "@/lib/watchlist-store";
 import { apiPaths } from "@/lib/api/paths";
 import { EXAMPLE_PACKAGES } from "@/lib/example-packages";
 import {
-  ClipboardIcon,
   ClearIcon,
-  CogIcon,
   SearchIcon,
-  StarIcon,
 } from "@/components/icons";
 
 const THEME_OPTIONS: { value: "light" | "dark"; label: string }[] = [
@@ -458,11 +455,20 @@ export function PackageSearchForm({
     }
   }, [showPasteList, utilityPanel, closeUtilityPanel]);
 
+  const watchlistAction = utilityPanel === "watchlist" ? "Hide" : "Show";
+  const watchedPackages = `${watchCount} ${watchCount === 1 ? "package" : "packages"}`;
+  const watchlistLabel =
+    watchCount === 0
+      ? `${watchlistAction} watchlist`
+      : alertSummary.total > 0
+        ? `${watchlistAction} watchlist (${watchedPackages}, ${alertSummary.total} with updates)`
+        : `${watchlistAction} watchlist (${watchedPackages})`;
+
   const utilityButtonClass = (active: boolean) =>
-    `relative inline-flex h-8 w-8 items-center justify-center rounded-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-signal ${
+    `inline-flex items-center gap-1.5 border-b-2 pb-1 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-signal ${
       active
-        ? "bg-ink text-paper"
-        : "text-gray-500 hover:text-ink dark:text-gray-400"
+        ? "border-ink text-ink"
+        : "border-transparent text-gray-500 hover:text-ink dark:text-gray-400"
     }`;
 
   return (
@@ -503,28 +509,12 @@ export function PackageSearchForm({
             <div
               role="toolbar"
               aria-label="Search utilities"
-              className="hidden shrink-0 items-center gap-0.5 pb-0.5 sm:flex sm:gap-1"
+              className="hidden shrink-0 items-center gap-5 sm:flex"
             >
               <button
                 type="button"
-                title={
-                  utilityPanel === "watchlist"
-                    ? "Hide watchlist"
-                    : "Show watchlist"
-                }
-                aria-label={
-                  utilityPanel === "watchlist"
-                    ? watchCount > 0
-                      ? alertSummary.total > 0
-                        ? `Hide watchlist (${watchCount} packages, ${alertSummary.total} with updates)`
-                        : `Hide watchlist (${watchCount} packages)`
-                      : "Hide watchlist"
-                    : watchCount > 0
-                      ? alertSummary.total > 0
-                        ? `Show watchlist (${watchCount} packages, ${alertSummary.total} with updates)`
-                        : `Show watchlist (${watchCount} packages)`
-                      : "Show watchlist"
-                }
+                title={watchlistLabel}
+                aria-label={watchlistLabel}
                 aria-expanded={utilityPanel === "watchlist"}
                 aria-controls="shell-panel-watchlist"
                 aria-haspopup="true"
@@ -533,26 +523,23 @@ export function PackageSearchForm({
                 }
                 className={utilityButtonClass(utilityPanel === "watchlist")}
               >
-                <StarIcon
-                  className={`w-4 h-4 ${
-                    utilityPanel === "watchlist"
-                      ? "fill-amber-400 text-amber-400"
-                      : ""
-                  }`}
-                />
+                <span>
+                  Watchlist
+                  {watchCount > 0 && (
+                    <span className="tabular-nums"> ({watchCount})</span>
+                  )}
+                </span>
                 {alertSummary.total > 0 && (
                   <span
-                    className={`absolute -right-0.5 -top-0.5 min-w-4 rounded-full px-1 text-[10px] font-semibold leading-4 text-white tabular-nums ${
+                    className={`h-1.5 w-1.5 shrink-0 rounded-full ${
                       alertSummary.tone === "vulns"
                         ? "bg-red-600"
                         : alertSummary.tone === "version"
                           ? "bg-emerald-600"
-                          : "bg-orange-500"
+                          : "bg-orange-600"
                     }`}
                     aria-hidden="true"
-                  >
-                    {alertSummary.total > 99 ? "99+" : alertSummary.total}
-                  </span>
+                  />
                 )}
               </button>
               {showPasteList && (
@@ -563,11 +550,7 @@ export function PackageSearchForm({
                       ? `Close ${pasteLabel}`
                       : pasteLabel
                   }
-                  aria-label={
-                    utilityPanel === "paste"
-                      ? `Close ${pasteLabel}`
-                      : pasteLabel
-                  }
+                  aria-label={`Review package file: ${pasteLabel}`}
                   aria-expanded={utilityPanel === "paste"}
                   aria-controls="shell-panel-paste"
                   aria-haspopup="true"
@@ -576,7 +559,7 @@ export function PackageSearchForm({
                   }
                   className={utilityButtonClass(utilityPanel === "paste")}
                 >
-                  <ClipboardIcon className="w-4 h-4" />
+                  Review package file
                 </button>
               )}
               <button
@@ -599,7 +582,7 @@ export function PackageSearchForm({
                 }
                 className={utilityButtonClass(utilityPanel === "settings")}
               >
-                <CogIcon className="w-4 h-4" />
+                Settings
               </button>
             </div>
           </div>
@@ -615,7 +598,7 @@ export function PackageSearchForm({
             </label>
             <div className="relative flex items-stretch border border-gray-400 bg-white transition-colors focus-within:border-ink dark:border-gray-600 dark:bg-gray-800 dark:focus-within:border-gray-300">
               <span
-                className="pointer-events-none flex select-none items-center pl-3 pr-2 font-mono text-base text-gray-400 sm:pl-4 sm:text-lg dark:text-gray-500"
+                className="pointer-events-none flex select-none items-center pl-3 pr-2 font-mono text-base text-gray-500 sm:pl-4 sm:text-lg dark:text-gray-400"
                 aria-hidden="true"
               >
                 <span className="sm:hidden">
@@ -646,7 +629,7 @@ export function PackageSearchForm({
                     ? "project name"
                     : "package name"
                 }
-                className={`min-w-0 flex-1 bg-transparent py-3 font-mono text-base text-ink outline-none placeholder:text-gray-400 disabled:opacity-60 sm:py-3.5 sm:text-lg dark:placeholder:text-gray-500 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden ${
+                className={`min-w-0 flex-1 bg-transparent py-3 font-mono text-base text-ink outline-none placeholder:text-gray-500 disabled:opacity-60 sm:py-3.5 sm:text-lg dark:placeholder:text-gray-400 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden ${
                   showClear ? "pr-10" : "pr-3"
                 }`}
                 disabled={disabled || loading}
@@ -673,7 +656,7 @@ export function PackageSearchForm({
                 <button
                   type="button"
                   onClick={handleClear}
-                  className="self-center mr-1 rounded-sm p-1.5 text-gray-400 transition-colors hover:text-ink dark:text-gray-500"
+                  className="self-center mr-1 rounded-sm p-1.5 text-gray-500 transition-colors hover:text-ink dark:text-gray-400"
                   aria-label="Clear search"
                 >
                   <ClearIcon />
@@ -736,10 +719,10 @@ export function PackageSearchForm({
                       onMouseDown={(e) => e.preventDefault()}
                       onMouseEnter={() => setHighlightIndex(index)}
                       onClick={() => runSearch(pkg.name)}
-                      className={`cursor-pointer border-l-2 px-4 py-2.5 text-left ${
+                      className={`cursor-pointer px-4 py-2.5 text-left ${
                         selected
-                          ? "border-signal bg-gray-50 dark:bg-gray-900/60"
-                          : "border-transparent"
+                          ? "bg-gray-50 shadow-[inset_3px_0_0_var(--signal)] dark:bg-gray-900/60"
+                          : ""
                       }`}
                     >
                       <span className="flex items-baseline justify-between gap-3">
@@ -777,7 +760,7 @@ export function PackageSearchForm({
                     type="button"
                     onClick={() => runSearch(name)}
                     disabled={disabled || loading}
-                    className="font-mono text-ink underline decoration-gray-400 underline-offset-4 transition-colors hover:decoration-signal hover:decoration-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-signal disabled:opacity-60"
+                    className="link font-mono focus:outline-none focus-visible:ring-2 focus-visible:ring-signal disabled:opacity-60"
                   >
                     {name}
                   </button>
@@ -844,124 +827,133 @@ export function PackageSearchForm({
           role="region"
           aria-labelledby="shell-settings-heading"
           tabIndex={-1}
-          className="mt-4 border border-rule bg-white p-4 sm:p-5 dark:bg-gray-800 space-y-4 outline-none"
+          className="mt-4 border border-rule bg-white px-4 sm:px-5 dark:bg-gray-800 outline-none"
         >
           <h2 id="shell-settings-heading" className="sr-only">
             Settings
           </h2>
-          <div className="flex items-center justify-between gap-4">
-            <p
-              id="ai-analysis-toggle-label"
-              className="text-sm font-medium text-gray-900 dark:text-white"
-            >
-              Include AI analysis?
-            </p>
-            {aiPrefReady ? (
-              <button
-                type="button"
-                role="switch"
-                aria-checked={aiEnabled}
-                aria-labelledby="ai-analysis-toggle-label"
-                onClick={() => setAiEnabled(!aiEnabled)}
-                className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-800 ${
-                  aiEnabled
-                    ? "bg-signal"
-                    : "bg-gray-300 dark:bg-gray-600"
-                }`}
-              >
+          <div className="divide-y divide-rule">
+            <div className="flex items-center justify-between gap-4 py-3.5">
+              <div>
+                <p
+                  id="ai-analysis-toggle-label"
+                  className="text-sm font-semibold text-ink"
+                >
+                  AI second opinion
+                </p>
+                <p className="mt-0.5 text-xs text-gray-600 dark:text-gray-400">
+                  Adds a model-written summary under the figures.
+                </p>
+              </div>
+              {aiPrefReady ? (
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={aiEnabled}
+                  aria-labelledby="ai-analysis-toggle-label"
+                  onClick={() => setAiEnabled(!aiEnabled)}
+                  className="inline-flex shrink-0 border border-ink font-mono text-xs uppercase tracking-[0.08em] focus:outline-none focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
+                >
+                  <span
+                    className={`px-2.5 py-1.5 ${aiEnabled ? "bg-ink text-paper" : "text-gray-600 dark:text-gray-400"}`}
+                    aria-hidden="true"
+                  >
+                    On
+                  </span>
+                  <span
+                    className={`px-2.5 py-1.5 ${aiEnabled ? "text-gray-600 dark:text-gray-400" : "bg-ink text-paper"}`}
+                    aria-hidden="true"
+                  >
+                    Off
+                  </span>
+                </button>
+              ) : (
                 <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
-                    aiEnabled ? "translate-x-6" : "translate-x-1"
-                  }`}
+                  className="inline-block h-7 w-20 shrink-0 bg-gray-200 dark:bg-gray-700"
                   aria-hidden="true"
                 />
-              </button>
-            ) : (
-              <span
-                className="inline-block h-6 w-11 shrink-0 rounded-full bg-gray-200 dark:bg-gray-700"
-                aria-hidden="true"
-              />
-            )}
-          </div>
-
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-            <p
-              id="theme-preference-label"
-              className="text-sm font-medium text-gray-900 dark:text-white"
-            >
-              Theme
-            </p>
-            {themePrefReady ? (
-              <div
-                role="radiogroup"
-                aria-labelledby="theme-preference-label"
-                className="inline-flex rounded-lg border border-gray-200 p-0.5 dark:border-gray-600"
-              >
-                {THEME_OPTIONS.map(({ value, label }) => {
-                  const selected = resolvedTheme === value;
-                  return (
-                    <button
-                      key={value}
-                      type="button"
-                      role="radio"
-                      aria-checked={selected}
-                      onClick={() => setThemePreference(value)}
-                      className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-800 ${
-                        selected
-                          ? "bg-ink text-paper"
-                          : "text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white"
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
-            ) : (
-              <span
-                className="inline-block h-9 w-32 shrink-0 rounded-lg bg-gray-200 dark:bg-gray-700"
-                aria-hidden="true"
-              />
-            )}
-          </div>
-
-          {pasteFeatures.npmPackageManagerSettings ? (
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-            <div>
-              <p
-                id="package-manager-preference-label"
-                className="text-sm font-medium text-gray-900 dark:text-white"
-              >
-                Node Package manager
-              </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                Used for npm upgrade install commands.
-              </p>
+              )}
             </div>
-            {packageManagerReady ? (
-              <select
-                id="package-manager-preference"
-                aria-labelledby="package-manager-preference-label"
-                value={packageManager}
-                onChange={(e) =>
-                  setPackageManager(e.target.value as PackageManagerPreference)
-                }
-                className="w-full sm:w-40 shrink-0 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+
+            <div className="flex items-center justify-between gap-4 py-3.5">
+              <p
+                id="theme-preference-label"
+                className="text-sm font-semibold text-ink"
               >
-                {PACKAGE_MANAGER_OPTIONS.map(({ value, label }) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <span
-                className="inline-block h-9 w-40 shrink-0 rounded-lg bg-gray-200 dark:bg-gray-700"
-                aria-hidden="true"
-              />
-            )}
+                Theme
+              </p>
+              {themePrefReady ? (
+                <div
+                  role="radiogroup"
+                  aria-labelledby="theme-preference-label"
+                  className="inline-flex shrink-0 border border-ink font-mono text-xs uppercase tracking-[0.08em]"
+                >
+                  {THEME_OPTIONS.map(({ value, label }) => {
+                    const selected = resolvedTheme === value;
+                    return (
+                      <button
+                        key={value}
+                        type="button"
+                        role="radio"
+                        aria-checked={selected}
+                        onClick={() => setThemePreference(value)}
+                        className={`px-2.5 py-1.5 uppercase transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-signal ${
+                          selected
+                            ? "bg-ink text-paper"
+                            : "text-gray-600 hover:text-ink dark:text-gray-400"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <span
+                  className="inline-block h-7 w-28 shrink-0 bg-gray-200 dark:bg-gray-700"
+                  aria-hidden="true"
+                />
+              )}
+            </div>
+
+            {pasteFeatures.npmPackageManagerSettings ? (
+              <div className="flex flex-col gap-2 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                <div>
+                  <p
+                    id="package-manager-preference-label"
+                    className="text-sm font-semibold text-ink"
+                  >
+                    npm client
+                  </p>
+                  <p className="mt-0.5 text-xs text-gray-600 dark:text-gray-400">
+                    Used for the install commands in upgrade advice.
+                  </p>
+                </div>
+                {packageManagerReady ? (
+                  <select
+                    id="package-manager-preference"
+                    aria-labelledby="package-manager-preference-label"
+                    value={packageManager}
+                    onChange={(e) =>
+                      setPackageManager(e.target.value as PackageManagerPreference)
+                    }
+                    className="w-full shrink-0 border border-gray-400 bg-transparent px-2.5 py-1.5 font-mono text-sm text-ink focus:border-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-signal sm:w-40 dark:border-gray-500"
+                  >
+                    {PACKAGE_MANAGER_OPTIONS.map(({ value, label }) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <span
+                    className="inline-block h-8 w-40 shrink-0 bg-gray-200 dark:bg-gray-700"
+                    aria-hidden="true"
+                  />
+                )}
+              </div>
+            ) : null}
           </div>
-          ) : null}
         </div>
       )}
     </div>

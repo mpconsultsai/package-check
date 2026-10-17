@@ -45,7 +45,7 @@ function RelatedPackagesSkeleton() {
         {Array.from({ length: 6 }, (_, i) => (
           <div
             key={i}
-            className="p-4 rounded-lg border border-gray-200 dark:border-gray-600"
+            className="p-4 rounded-lg border border-rule"
           >
             <div className="h-5 w-3/4 rounded bg-gray-200 dark:bg-gray-700 animate-pulse" />
             <div className="mt-2 h-3 w-14 rounded bg-gray-200 dark:bg-gray-700 animate-pulse" />
@@ -286,13 +286,13 @@ export function SimilarPackagesCard({
             return (
               <div
                 key={pkg.name}
-                className="rounded-lg border border-gray-200 dark:border-gray-600 p-4"
+                className="rounded-lg border border-rule p-4"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex items-center gap-2">
                     <Link
                       href={packagePagePath(ecosystem, pkg.name)}
-                      className="font-mono font-semibold text-ink underline decoration-gray-400 underline-offset-4 hover:decoration-signal truncate"
+                      className="link font-mono font-semibold truncate"
                     >
                       {pkg.name}
                     </Link>
@@ -301,7 +301,7 @@ export function SimilarPackagesCard({
                     htmlFor={compareId}
                     className={`hidden shrink-0 items-center gap-1.5 text-xs md:inline-flex ${
                       disabled
-                        ? "cursor-not-allowed text-gray-400 dark:text-gray-500"
+                        ? "cursor-not-allowed text-gray-400 dark:text-gray-400"
                         : "cursor-pointer text-gray-600 dark:text-gray-300"
                     }`}
                     title={
@@ -316,7 +316,7 @@ export function SimilarPackagesCard({
                       checked={checked}
                       disabled={disabled}
                       onChange={() => toggle(pkg.name)}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-40"
+                      className="rounded border-gray-300 accent-signal disabled:opacity-40"
                     />
                     Compare
                   </label>

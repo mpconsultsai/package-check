@@ -75,7 +75,7 @@ function PathBreadcrumb({
       {path.map((name, i) => (
         <span key={`${name}-${i}`}>
           {i > 0 ? (
-            <span className="text-gray-400 dark:text-gray-500"> › </span>
+            <span className="text-gray-400 dark:text-gray-400"> › </span>
           ) : null}
           {i === path.length - 1 ? (
             <span className="font-medium text-gray-700 dark:text-gray-300">
@@ -84,7 +84,7 @@ function PathBreadcrumb({
           ) : (
             <Link
               href={packagePagePath(ecosystem, name)}
-              className="text-blue-600 underline underline-offset-2 dark:text-blue-400"
+              className="link"
             >
               {name}
             </Link>
@@ -116,7 +116,7 @@ function DepTreeRow({
           <div className="flex flex-wrap items-center gap-2">
             <Link
               href={packagePagePath(ecosystem, node.name)}
-              className="font-medium text-blue-600 underline underline-offset-2 dark:text-blue-400"
+              className="link font-medium"
             >
               {node.name}
             </Link>
@@ -137,7 +137,7 @@ function DepTreeRow({
             type="button"
             onClick={() => setExpanded((v) => !v)}
             aria-expanded={expanded}
-            className="shrink-0 rounded-md px-2 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-950/40"
+            className="link shrink-0 rounded-md px-2 py-1 text-xs font-medium"
           >
             {expanded ? "Hide paths" : `+${extraCount} path${extraCount === 1 ? "" : "s"}`}
           </button>
@@ -152,11 +152,11 @@ function DepTreeRow({
           {visiblePaths.map((path, idx) => (
             <li key={pathSignature(path)} className="flex flex-wrap gap-x-1">
               {paths.length > 1 && expanded ? (
-                <span className="text-gray-400 dark:text-gray-500 shrink-0">
+                <span className="text-gray-400 dark:text-gray-400 shrink-0">
                   {idx + 1}.
                 </span>
               ) : (
-                <span className="text-gray-400 dark:text-gray-500 shrink-0">
+                <span className="text-gray-400 dark:text-gray-400 shrink-0">
                   Path:
                 </span>
               )}
@@ -310,13 +310,13 @@ export function TransitiveDepsPanel({
     <div className="space-y-4">
       <div className="rounded-lg border border-gray-200 bg-gray-50/80 p-3 text-sm text-gray-700 dark:border-gray-600 dark:bg-gray-900/40 dark:text-gray-300 space-y-2">
         <p>
-          <strong className="text-gray-900 dark:text-white">Direct</strong>{" "}
+          <strong className="text-ink">Direct</strong>{" "}
           dependencies are declared in this package&apos;s{" "}
           <span className="font-mono text-xs">package.json</span> - what Chart
           and List show from the registry.
         </p>
         <p>
-          <strong className="text-gray-900 dark:text-white">Transitive</strong>{" "}
+          <strong className="text-ink">Transitive</strong>{" "}
           dependencies are brought in by those packages (and their dependencies)
           when npm resolves the install tree - often most of what actually
           ships. Risks here don&apos;t appear in your top-level manifest. Each
@@ -333,7 +333,7 @@ export function TransitiveDepsPanel({
             href={data.depsDevUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-blue-600 underline underline-offset-2 dark:text-blue-400"
+            className="link"
           >
             deps.dev
           </a>
@@ -391,7 +391,7 @@ export function TransitiveDepsPanel({
         </p>
       ) : (
         <>
-          <ul className="divide-y divide-gray-100 dark:divide-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 max-h-[28rem] overflow-y-auto">
+          <ul className="divide-y divide-rule rounded-lg border border-rule max-h-[28rem] overflow-y-auto">
             {visibleNodes.map((node) => (
               <DepTreeRow
                 key={nodeKey(node)}
@@ -405,7 +405,7 @@ export function TransitiveDepsPanel({
             <button
               type="button"
               onClick={() => setVisibleCount((n) => n + PAGE_SIZE)}
-              className="text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+              className="link text-sm font-medium"
             >
               Show more ({listedNodes.length - visibleCount} remaining)
             </button>

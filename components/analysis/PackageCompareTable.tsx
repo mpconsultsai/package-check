@@ -103,13 +103,13 @@ export function PackageCompareTable({
         <button
           type="button"
           onClick={onClear}
-          className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline underline-offset-2"
+          className="link text-xs"
         >
           Clear comparison
         </button>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+      <div className="overflow-x-auto rounded-lg border border-rule">
         <table className="min-w-full text-left text-sm">
           <thead className="bg-gray-50 dark:bg-gray-900 text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
             <tr>
@@ -123,12 +123,12 @@ export function PackageCompareTable({
                 >
                   <Link
                     href={packagePagePath(ecosystem, column.name)}
-                    className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline underline-offset-2"
+                    className="link"
                   >
                     {column.name}
                   </Link>
                   {index === 0 && (
-                    <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
+                    <span className="mt-0.5 block text-[10px] font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-400">
                       Current
                     </span>
                   )}
@@ -136,7 +136,7 @@ export function PackageCompareTable({
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+          <tbody className="divide-y divide-rule">
             {visibleRows.map((row) => (
               <tr key={row.key} className="bg-white dark:bg-gray-800">
                 <th
@@ -157,7 +157,7 @@ export function PackageCompareTable({
                   return (
                     <td
                       key={column.name}
-                      className="px-3 py-2 text-gray-900 dark:text-gray-100 tabular-nums"
+                      className="px-3 py-2 text-ink tabular-nums"
                     >
                       {value ?? "-"}
                     </td>

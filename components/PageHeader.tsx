@@ -33,26 +33,23 @@ export function PageHeader({ showHomeLink = false }: PageHeaderProps) {
             }}
           >
             <AppLogo className="h-9 w-9 shrink-0 sm:h-11 sm:w-11" />
-            <span className="text-2xl font-semibold sm:text-3xl tracking-tight text-ink group-hover:underline group-hover:decoration-signal group-hover:decoration-2 group-hover:underline-offset-4">
+            <span className="text-2xl font-semibold sm:text-3xl tracking-tight text-ink underline-offset-4 group-hover:underline group-hover:decoration-signal group-hover:decoration-2">
               {SITE_NAME}
             </span>
           </Link>
         </h1>
-        <nav aria-label="Site" className="flex items-center gap-5 font-mono text-xs">
-          <span className="hidden text-gray-500 sm:inline dark:text-gray-400">
-            npm · PyPI · NuGet
-          </span>
+        <nav aria-label="Site" className="flex items-center text-sm">
           {githubUrl && (
             <a
               href={githubUrl}
               target="_blank"
               rel="noopener noreferrer"
               aria-label="View on GitHub"
-              className="inline-flex items-center gap-1.5 text-ink hover:text-signal"
+              className="group inline-flex items-center gap-1.5 text-ink"
             >
               <GitHubIcon className="h-4 w-4 shrink-0" />
-              <span className="underline decoration-gray-400 underline-offset-4">
-                source
+              <span className="font-medium underline-offset-4 group-hover:underline group-hover:decoration-signal group-hover:decoration-2">
+                GitHub
               </span>
             </a>
           )}

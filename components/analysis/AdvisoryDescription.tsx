@@ -4,7 +4,7 @@ import Markdown from "react-markdown";
 import type { Components } from "react-markdown";
 
 const headingClass =
-  "font-semibold text-gray-900 dark:text-white mt-3 mb-1 first:mt-0";
+  "font-semibold text-ink mt-3 mb-1 first:mt-0";
 
 const components: Components = {
   h1: ({ children }) => <h3 className={headingClass}>{children}</h3>,
@@ -24,7 +24,7 @@ const components: Components = {
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="text-blue-600 dark:text-blue-400 hover:underline"
+      className="link"
     >
       {children}
     </a>
@@ -49,7 +49,7 @@ const components: Components = {
       {children}
     </blockquote>
   ),
-  hr: () => <hr className="my-3 border-gray-200 dark:border-gray-600" />,
+  hr: () => <hr className="my-3 border-rule" />,
 };
 
 export function AdvisoryDescription({ markdown }: { markdown: string }) {

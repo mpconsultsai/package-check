@@ -15,8 +15,6 @@ import {
   packagePagePath,
   type PackageEcosystem,
 } from "@/lib/package-routes";
-import { TrashIcon } from "@/components/icons";
-
 function EcosystemBadge({ ecosystem }: { ecosystem: PackageEcosystem }) {
   const label =
     ecosystem === "pypi" ? "PyPI" : ecosystem === "nuget" ? "NuGet" : "npm";
@@ -64,8 +62,8 @@ const newVersionChip = (
     label,
     className:
       kind === "major"
-        ? "bg-blue-100 text-blue-950 dark:bg-blue-900/50 dark:text-blue-100"
-        : "bg-emerald-100 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100",
+        ? "border-ink text-ink"
+        : "border-emerald-600 text-emerald-800 dark:border-emerald-500 dark:text-emerald-300",
   };
 };
 
@@ -111,14 +109,14 @@ function AlertBadges({ entry }: { entry: WatchlistEntry }) {
     chips.push({
       label: `${n} vuln${n === 1 ? "" : "s"}`,
       className:
-        "bg-red-100 text-red-900 dark:bg-red-900/40 dark:text-red-100",
+        "border-red-600 text-red-800 dark:border-red-500 dark:text-red-300",
     });
   }
   if (alerts.newlyDeprecated) {
     chips.push({
       label: "Deprecated",
       className:
-        "bg-orange-100 text-orange-900 dark:bg-orange-900/40 dark:text-orange-100",
+        "border-orange-600 text-orange-800 dark:border-orange-500 dark:text-orange-300",
     });
   }
 
@@ -129,7 +127,7 @@ function AlertBadges({ entry }: { entry: WatchlistEntry }) {
       {chips.map((chip) => (
         <span
           key={chip.label}
-          className={`inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${chip.className}`}
+          className={`inline-flex border px-1.5 py-px font-mono text-[10px] font-medium uppercase tracking-[0.08em] ${chip.className}`}
         >
           {chip.label}
         </span>
@@ -152,7 +150,7 @@ export function WatchlistSection({
   if (entries.length === 0) {
     if (!embedded) return null;
     return (
-      <p className="text-sm text-gray-500 dark:text-gray-400 px-0.5 py-1">
+      <p className="py-1 text-sm text-gray-600 dark:text-gray-400">
         No packages watched yet. Use Watch on a package page to save it here.
       </p>
     );
@@ -162,13 +160,13 @@ export function WatchlistSection({
     <ul
       className={
         embedded
-          ? "divide-y divide-gray-100 dark:divide-gray-700"
-          : "bg-white dark:bg-gray-800 rounded-lg shadow divide-y divide-gray-100 dark:divide-gray-700"
+          ? "divide-y divide-rule"
+          : "divide-y divide-rule border-y border-rule"
       }
     >
       {checking && (
         <li
-          className="px-0.5 py-2 text-xs text-gray-500 dark:text-gray-400"
+          className="py-2 font-mono text-xs text-gray-600 dark:text-gray-400"
           role="status"
           aria-live="polite"
         >
@@ -179,20 +177,22 @@ export function WatchlistSection({
         <li
           key={`${entry.ecosystem ?? "npm"}:${entry.name}`}
           className={`flex items-center gap-3 py-3 ${
-            embedded ? "px-0.5 first:pt-1 last:pb-1" : "px-3 sm:px-4"
+            embedded ? "first:pt-1 last:pb-1" : ""
           }`}
         >
           <Link
             href={packagePagePath(entry.ecosystem ?? "npm", entry.name)}
-            className="min-w-0 flex-1 hover:opacity-90"
+            className="group min-w-0 flex-1"
           >
-            <p className="font-medium text-gray-900 dark:text-white truncate flex items-center gap-2">
+            <p className="flex items-center gap-2 truncate">
               <EcosystemBadge ecosystem={entry.ecosystem ?? "npm"} />
-              <span className="truncate">{entry.name}</span>
+              <span className="truncate font-mono text-sm font-medium text-ink underline decoration-gray-400 underline-offset-4 group-hover:decoration-signal">
+                {entry.name}
+              </span>
             </p>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+            <p className="mt-1 truncate text-xs text-gray-600 dark:text-gray-400">
               {statusLine(entry)}
-              <span className="mx-1.5 text-gray-300 dark:text-gray-600">·</span>
+              <span className="mx-1.5 text-gray-400 dark:text-gray-400">·</span>
               {formatCheckedAt(entry.lastCheckedAt)}
             </p>
             <AlertBadges entry={entry} />
@@ -202,9 +202,9 @@ export function WatchlistSection({
             onClick={() => remove(entry.name, entry.ecosystem ?? "npm")}
             title={`Remove ${entry.name} from watchlist`}
             aria-label={`Remove ${entry.name} from watchlist`}
-            className="shrink-0 inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-red-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-gray-400 dark:hover:bg-gray-700/80 dark:hover:text-red-400"
+            className="shrink-0 py-1 text-xs text-gray-600 underline decoration-gray-400 underline-offset-4 transition-colors hover:text-red-700 hover:decoration-red-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-signal dark:text-gray-400 dark:hover:text-red-400"
           >
-            <TrashIcon />
+            Remove
           </button>
         </li>
       ))}
@@ -218,7 +218,7 @@ export function WatchlistSection({
       <div className="mb-3">
         <h2
           id="watchlist-heading"
-          className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white"
+          className="text-lg sm:text-xl font-semibold text-ink"
         >
           My watchlist
         </h2>

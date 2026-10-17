@@ -626,7 +626,7 @@ function PackagePageContent({
                 ))}
 
               <div
-                className="border-t border-gray-200 dark:border-gray-700"
+                className="border-t border-rule"
                 role="separator"
                 aria-hidden="true"
               />
@@ -660,7 +660,7 @@ function PackagePageContent({
                                 aiAbort.current = controller;
                                 void loadAiAnalysis(nameFromPath, controller.signal);
                               }}
-                              className="mt-3 text-sm font-medium text-blue-600 dark:text-blue-400 underline hover:no-underline"
+                              className="link mt-3 text-sm font-medium"
                             >
                               Try again
                             </button>

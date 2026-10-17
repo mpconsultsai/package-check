@@ -55,7 +55,7 @@ function ScorecardAbout() {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="font-medium text-blue-600 underline underline-offset-2 dark:text-blue-400"
+          className="link font-medium"
         >
           What is this?
         </button>
@@ -71,7 +71,7 @@ function ScorecardAbout() {
           href="https://openssf.org/"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-blue-600 underline underline-offset-2 dark:text-blue-400"
+          className="link"
         >
           OpenSSF
         </a>
@@ -86,7 +86,7 @@ function ScorecardAbout() {
           href="https://scorecard.dev/"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-blue-600 underline underline-offset-2 dark:text-blue-400"
+          className="link"
         >
           scorecard.dev
         </a>
@@ -115,7 +115,7 @@ function CheckRow({
       href={check.documentationUrl}
       target="_blank"
       rel="noopener noreferrer"
-      className="text-blue-600 underline underline-offset-2 dark:text-blue-400"
+      className="link"
     >
       {check.name}
     </a>
@@ -124,7 +124,7 @@ function CheckRow({
   );
 
   return (
-    <li className="flex items-center justify-between gap-2 py-1 border-b border-gray-100 dark:border-gray-700/80 last:border-0 text-xs">
+    <li className="flex items-center justify-between gap-2 py-1 border-b border-rule last:border-0 text-xs">
       <div className="min-w-0 flex-1 truncate" title={check.name}>
         {label}
         {showReason && check.reason ? (
@@ -281,7 +281,7 @@ export function OpenSSFScorecardStrip({
             href={data.scorecardViewerUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-blue-600 underline underline-offset-2 dark:text-blue-400"
+            className="link"
           >
             Viewer
           </a>
@@ -291,7 +291,7 @@ export function OpenSSFScorecardStrip({
             type="button"
             onClick={() => setChecksExpanded((v) => !v)}
             aria-expanded={checksExpanded}
-            className="shrink-0 text-[11px] font-medium text-blue-600 dark:text-blue-400"
+            className="link shrink-0 text-[11px] font-medium"
           >
             {checksExpanded
               ? "Fewer checks"

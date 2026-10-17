@@ -44,9 +44,6 @@ export default function OpenGraphImage() {
               Package Check
             </div>
           </div>
-          <div style={{ display: "flex", fontSize: 26, color: "#7a7569" }}>
-            npm · PyPI · NuGet
-          </div>
         </div>
         <div
           style={{

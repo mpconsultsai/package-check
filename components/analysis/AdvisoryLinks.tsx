@@ -21,7 +21,7 @@ export function AdvisoryLinks({
   if (!githubUrl && !osvUrl && !snykHref) return null;
 
   const linkClass =
-    "inline-flex items-center gap-1.5 text-sm text-blue-600 dark:text-blue-400 hover:underline";
+    "link inline-flex items-center gap-1.5 text-sm";
 
   return (
     <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2">

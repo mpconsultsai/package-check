@@ -23,7 +23,7 @@ export function severityBadgeClass(severity: string): string {
       return "bg-red-500 text-white";
     case "moderate":
     case "medium":
-      return "bg-orange-500 text-white";
+      return "bg-orange-600 text-white";
     default:
       return "bg-yellow-400 text-yellow-950";
   }

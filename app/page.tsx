@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { PackageActivity } from "@/components/PackageActivity";
 import { WhatWeCheck } from "@/components/WhatWeCheck";
+import { loadPackageActivity } from "@/lib/db/package-activity";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE } from "@/lib/site-brand";
 import { getSiteUrl } from "@/lib/site-url";
 
@@ -34,17 +36,23 @@ const jsonLd = {
   ],
 };
 
-export default function Home() {
+export const revalidate = 300;
+
+export default async function Home() {
+  const activity = await loadPackageActivity();
   return (
-    <section aria-labelledby="home-features-heading">
+    <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <h2 id="home-features-heading" className="sr-only">
-        What {SITE_NAME} shows for each package
-      </h2>
-      <WhatWeCheck />
-    </section>
+      <PackageActivity activity={activity} />
+      <section aria-labelledby="home-features-heading">
+        <h2 id="home-features-heading" className="sr-only">
+          What {SITE_NAME} shows for each package
+        </h2>
+        <WhatWeCheck />
+      </section>
+    </>
   );
 }

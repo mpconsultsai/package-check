@@ -70,7 +70,7 @@ export function PypiDependenciesPanel({
     <div className="space-y-3 rounded-lg border border-gray-100 bg-gray-50/80 p-3 dark:border-gray-700 dark:bg-gray-900/40 sm:p-4">
       {meta.requiresPython ? (
         <p className="text-sm text-gray-700 dark:text-gray-300">
-          <span className="font-medium text-gray-900 dark:text-white">
+          <span className="font-medium text-ink">
             Requires Python:
           </span>{" "}
           <code className="rounded bg-white px-1.5 py-0.5 font-mono text-xs dark:bg-gray-800">

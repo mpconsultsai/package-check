@@ -103,7 +103,7 @@ function SeverityMix({ security }: { security: SecurityResult }) {
               aria-hidden="true"
             />
             {seg.label} {seg.count}
-            <span className="text-gray-400 dark:text-gray-500">
+            <span className="text-gray-400 dark:text-gray-400">
               ({Math.round((seg.count / total) * 100)}%)
             </span>
           </li>
@@ -212,7 +212,7 @@ export function SecurityCard({
       <div
         role="radiogroup"
         aria-label="Version source"
-        className="flex gap-5 mb-3 border-b border-gray-200 dark:border-gray-600"
+        className="flex gap-5 mb-3 border-b border-rule"
       >
         {(
           [
@@ -326,7 +326,7 @@ export function SecurityCard({
       )}
 
       {showSecurity && hasSecurity && !securityLoading && (
-        <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-600">
+        <div className="mt-6 pt-6 border-t border-rule">
           <h3 className="font-semibold text-lg mb-3">
             Security for {packageName}@{selectedVersion}
           </h3>

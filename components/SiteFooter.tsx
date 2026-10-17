@@ -15,7 +15,7 @@ export function SiteFooter() {
             <nav aria-label="Footer">
               <a
                 href={`mailto:${contact}`}
-                className="text-ink underline decoration-gray-400 underline-offset-4 hover:decoration-signal"
+                className="link"
               >
                 Contact
               </a>

@@ -457,7 +457,7 @@ export function UpgradeAdvisorPanel({
           </select>
         </div>
         <div
-          className="hidden sm:block pb-2 text-gray-400 dark:text-gray-500"
+          className="hidden sm:block pb-2 text-gray-400 dark:text-gray-400"
           aria-hidden="true"
         >
           →
@@ -466,7 +466,7 @@ export function UpgradeAdvisorPanel({
           <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
             Latest
           </p>
-          <p className="px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-700/40 text-sm font-semibold font-mono text-gray-900 dark:text-white">
+          <p className="px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-700/40 text-sm font-semibold font-mono text-ink">
             {latest}
           </p>
         </div>
@@ -685,10 +685,10 @@ export function UpgradeAdvisorPanel({
       )}
 
       {needsUpgrade && (
-        <div className="rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800/60 p-4 sm:p-5 space-y-3">
+        <div className="rounded-xl border border-rule bg-white dark:bg-gray-800/60 p-4 sm:p-5 space-y-3">
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-gray-900 dark:text-white">
+              <p className="text-sm font-semibold text-ink">
                 Agent brief
               </p>
               <p className="text-[11px] text-gray-500 dark:text-gray-400">
@@ -745,7 +745,7 @@ export function UpgradeAdvisorPanel({
           {agentBrief && (
             <div className="space-y-3">
               <div className="flex flex-wrap items-center gap-2">
-                <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                <p className="text-sm font-semibold text-ink">
                   {agentBrief.headline}
                 </p>
                 <span

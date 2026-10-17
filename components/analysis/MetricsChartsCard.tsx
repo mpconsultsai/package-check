@@ -120,7 +120,7 @@ function ChartExternalLink({
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="text-sm text-blue-600 underline underline-offset-2 dark:text-blue-400 shrink-0"
+      className="link text-sm shrink-0"
     >
       {children}
     </a>
@@ -770,7 +770,7 @@ export function MetricsChartsCard({
       <div
         role="radiogroup"
         aria-label="Chart type"
-        className="flex gap-5 mb-4 border-b border-gray-200 dark:border-gray-600"
+        className="flex gap-5 mb-4 border-b border-rule"
       >
         {chartTypeOptions.map((option) => {
           const selected = chartSection === option.id;

@@ -117,7 +117,7 @@ export function AgentGraphSteps({
   if (toolCalls.length === 0 && !activeStage) return null;
 
   return (
-    <div className="rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50/80 dark:bg-gray-900/40 p-3 space-y-3">
+    <div className="rounded-lg border border-rule bg-gray-50/80 dark:bg-gray-900/40 p-3 space-y-3">
       <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
         Graph path
       </p>
@@ -136,7 +136,7 @@ export function AgentGraphSteps({
                 className={`flex min-w-[5.5rem] max-w-[7.5rem] flex-col rounded-lg border px-2.5 py-2 ${
                   taken
                     ? `border-transparent text-white shadow-sm ${active ? "ring-2 ring-offset-1 ring-blue-400 dark:ring-offset-gray-900" : ""}`
-                    : "border-dashed border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/40 text-gray-400 dark:text-gray-500"
+                    : "border-dashed border-gray-300 dark:border-gray-600 bg-white/50 dark:bg-gray-800/40 text-gray-400 dark:text-gray-400"
                 }`}
                 style={taken ? { backgroundColor: station.color } : undefined}
               >

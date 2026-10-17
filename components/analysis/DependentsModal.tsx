@@ -147,13 +147,13 @@ export function DependentsModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="relative z-10 flex max-h-[85vh] w-full max-w-lg flex-col rounded-t-xl sm:rounded-xl bg-white dark:bg-gray-800 shadow-xl border border-gray-200 dark:border-gray-700"
+        className="relative z-10 flex max-h-[85vh] w-full max-w-lg flex-col rounded-t-xl sm:rounded-xl bg-white dark:bg-gray-800 shadow-xl border border-rule"
       >
-        <div className="flex items-start justify-between gap-3 border-b border-gray-200 dark:border-gray-700 px-4 py-3 sm:px-5">
+        <div className="flex items-start justify-between gap-3 border-b border-rule px-4 py-3 sm:px-5">
           <div className="min-w-0">
             <h2
               id={titleId}
-              className="text-base font-semibold text-gray-900 dark:text-white"
+              className="text-base font-semibold text-ink"
             >
               Dependents
             </h2>
@@ -171,7 +171,7 @@ export function DependentsModal({
               href={npmBrowseUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-1.5 inline-block text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline"
+              className="link mt-1.5 inline-block text-xs"
             >
               View all on npm
             </a>
@@ -224,13 +224,13 @@ export function DependentsModal({
           )}
 
           {!loading && packages.length > 0 && (
-            <ul className="divide-y divide-gray-100 dark:divide-gray-700/80">
+            <ul className="divide-y divide-rule">
               {packages.map((pkg) => (
                 <li key={pkg.name} className="py-3 first:pt-0 last:pb-0">
                   <div className="flex items-baseline justify-between gap-3">
                     <Link
                       href={packagePagePath("npm", pkg.name)}
-                      className="font-mono text-sm font-semibold text-ink underline decoration-gray-400 underline-offset-4 hover:decoration-signal truncate"
+                      className="link font-mono text-sm font-semibold truncate"
                       onClick={onClose}
                     >
                       {pkg.name}
@@ -253,7 +253,7 @@ export function DependentsModal({
         </div>
 
         {hasMore && !error && (
-          <div className="border-t border-gray-200 dark:border-gray-700 px-4 py-3 sm:px-5">
+          <div className="border-t border-rule px-4 py-3 sm:px-5">
             <button
               type="button"
               disabled={loadingMore || loading}

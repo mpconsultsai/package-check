@@ -420,7 +420,7 @@ export function PasteListPanel({
       <div>
         <label
           htmlFor={textareaId}
-          className="block text-sm font-medium text-gray-900 dark:text-white"
+          className="block text-sm font-medium text-ink"
         >
           {ecosystem === "pypi"
             ? "Analyse dependency file"
@@ -448,7 +448,7 @@ export function PasteListPanel({
                 ? "<Project>\n  <ItemGroup>\n    <PackageReference Include=\"Newtonsoft.Json\" Version=\"13.0.3\" />\n    <PackageReference Include=\"Serilog\" Version=\"4.0.0\" />\n  </ItemGroup>\n</Project>"
                 : `{\n  "dependencies": {\n    "react": "^19.0.0",\n    "lodash": "^4.17.21"\n  }\n}`
           }
-          className="mt-2 w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white px-3 py-2 font-mono outline-none focus:border-blue-500 focus:ring-2 focus:ring-inset focus:ring-blue-500/30 dark:focus:border-blue-400"
+          className="mt-2 w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-ink px-3 py-2 font-mono outline-none focus:border-blue-500 focus:ring-2 focus:ring-inset focus:ring-signal/30 dark:focus:border-blue-400"
           disabled={running}
         />
       </div>
@@ -512,7 +512,7 @@ export function PasteListPanel({
           <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
             <h3
               id={headingId}
-              className="text-sm font-medium text-gray-900 dark:text-white"
+              className="text-sm font-medium text-ink"
             >
               Results
             </h3>
@@ -533,7 +533,7 @@ export function PasteListPanel({
             </p>
           </div>
 
-          <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+          <div className="overflow-x-auto rounded-lg border border-rule">
             <table
               className="min-w-full text-left text-sm"
               aria-labelledby={headingId}
@@ -548,7 +548,7 @@ export function PasteListPanel({
                       checked={allSelected}
                       onChange={toggleSelectAll}
                       disabled={running || selectableNames.length === 0}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-50"
+                      className="rounded border-gray-300 accent-signal disabled:opacity-50"
                       aria-label="Select all analysed packages"
                       title="Select all"
                     />
@@ -561,7 +561,7 @@ export function PasteListPanel({
                   <th className="px-3 py-2 font-semibold">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+              <tbody className="divide-y divide-rule">
                 {rows.map((row) => {
                   const canSelect = row.status === "done";
                   return (
@@ -572,14 +572,14 @@ export function PasteListPanel({
                           checked={canSelect && selected.has(row.name)}
                           onChange={() => toggleSelected(row.name)}
                           disabled={running || !canSelect}
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-40"
+                          className="rounded border-gray-300 accent-signal disabled:opacity-40"
                           aria-label={`Select ${row.name}`}
                         />
                       </td>
                       <td className="px-3 py-2">
                         <Link
                           href={packagePagePath(ecosystem, row.name)}
-                          className="font-medium text-blue-600 dark:text-blue-400 hover:underline"
+                          className="link font-medium"
                         >
                           {row.name}
                         </Link>

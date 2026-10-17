@@ -189,7 +189,7 @@ export function PackageInfoCard({
       <div
         role="radiogroup"
         aria-label="Package details"
-        className="mb-4 flex gap-5 border-b border-gray-200 dark:border-gray-600"
+        className="mb-4 flex gap-5 border-b border-rule"
       >
         {(
           [
@@ -281,7 +281,7 @@ export function PackageInfoCard({
                               href={href}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-blue-600 underline underline-offset-2 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                              className="link"
                             >
                               {typeName}
                             </a>
@@ -375,7 +375,7 @@ export function PackageInfoCard({
                     href={licenseInfo.href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="underline decoration-gray-400 underline-offset-4 hover:decoration-signal"
+                    className="link"
                   >
                     {licenseInfo.id}
                   </a>
@@ -399,7 +399,7 @@ export function PackageInfoCard({
                     <button
                       type="button"
                       onClick={() => setDependentsOpen(true)}
-                      className="normal-case tracking-normal text-ink underline decoration-gray-400 underline-offset-4 hover:decoration-signal"
+                      className="link normal-case tracking-normal"
                       title="View dependents"
                       aria-label="View dependents"
                     >
@@ -432,7 +432,7 @@ export function PackageInfoCard({
               href={packageInfo.npmUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-ink underline decoration-gray-400 underline-offset-4 hover:decoration-signal"
+              className="link"
             >
               View on {registryName} ↗
             </a>
