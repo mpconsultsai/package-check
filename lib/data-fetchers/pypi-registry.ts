@@ -1,18 +1,18 @@
 import axios from "axios";
-import { resolvePypiLicense } from "@/lib/license-info";
+import { resolvePypiLicense } from "@/lib/packages/license-info";
 import {
   pickPypiDistributionSize,
   type DistributionSizeInfo,
 } from "@/lib/data-fetchers/pypi-distribution-size";
 import { errorMessage } from "@/lib/utils/error-message";
-import { validatePackageNameForEcosystem } from "@/lib/validation";
-import { sanitizeDescription } from "../sanitize";
+import { validatePackageNameForEcosystem } from "@/lib/packages/validation";
+import { sanitizeDescription } from "../packages/sanitize";
 import type { NpmPackageData } from "../types/package-data";
 import {
   coreDependenciesMap,
   parsePypiRequiresDist,
   type PypiInstallRequirements,
-} from "@/lib/pypi-requires-dist";
+} from "@/lib/pypi/pypi-requires-dist";
 
 const PYPI_JSON_URL = "https://pypi.org/pypi";
 const PYPI_SIMPLE_INDEX_URL = "https://pypi.org/simple/";

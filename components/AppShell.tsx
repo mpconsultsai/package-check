@@ -17,16 +17,16 @@ import { ShellEcosystemContext } from "@/components/shell-ecosystem";
 import { PageHeader } from "@/components/PageHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { PackageSearchForm } from "@/components/PackageSearchForm";
-import { smoothNavigate } from "@/lib/smooth-navigate";
+import { smoothNavigate } from "@/lib/prefs/smooth-navigate";
 import {
   packagePagePath,
   parsePackageRoute,
   type PackageEcosystem,
-} from "@/lib/package-routes";
+} from "@/lib/packages/package-routes";
 import {
   getEcosystemPreference,
   setEcosystemPreference,
-} from "@/lib/ecosystem-pref";
+} from "@/lib/prefs/ecosystem-pref";
 
 const SearchLoadingContext = createContext<Dispatch<
   SetStateAction<boolean>

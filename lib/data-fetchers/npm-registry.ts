@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { errorMessage } from '@/lib/utils/error-message';
-import { sanitizeDescription } from '../sanitize';
-import { extractPackageName, validatePackageName } from '../validation';
+import { sanitizeDescription } from '../packages/sanitize';
+import { extractPackageName, validatePackageName } from '../packages/validation';
 import type { NpmPackageData, NpmDownloadStats } from '../types/package-data';
 
 const NPM_REGISTRY_URL = 'https://registry.npmjs.org';

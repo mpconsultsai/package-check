@@ -14,12 +14,12 @@ import {
   fetchNpmPackageData,
   fetchSimilarPackages,
 } from "@/lib/data-fetchers/npm-registry";
-import { isDotnetInboxPackageId } from "@/lib/dotnet-platform";
-import type { PackageEcosystem } from "@/lib/package-routes";
+import { isDotnetInboxPackageId } from "@/lib/nuget/dotnet-platform";
+import type { PackageEcosystem } from "@/lib/packages/package-routes";
 import {
   normalizeNpmPackageName,
   validatePackageNameForEcosystem,
-} from "@/lib/validation";
+} from "@/lib/packages/validation";
 
 const FIRST_PAGE_SIZE = 6;
 const MORE_PAGE_SIZE = 5;

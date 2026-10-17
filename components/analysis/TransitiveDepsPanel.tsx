@@ -2,13 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { fetchJson } from "@/lib/fetch-client";
+import { fetchJson } from "@/lib/prefs/fetch-client";
 import { apiPaths } from "@/lib/api/paths";
 import { buildAllDependencyPathsFromRoot } from "@/lib/utils/dependency-paths";
 import {
   packagePagePath,
   type PackageEcosystem,
-} from "@/lib/package-routes";
+} from "@/lib/packages/package-routes";
 
 type TransitiveDepNode = {
   name: string;

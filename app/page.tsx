@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { PackageActivity } from "@/components/PackageActivity";
 import { WhatWeCheck } from "@/components/WhatWeCheck";
 import { loadPackageActivity } from "@/lib/db/package-activity";
-import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE } from "@/lib/site-brand";
-import { getSiteUrl } from "@/lib/site-url";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE } from "@/lib/site/site-brand";
+import { getSiteUrl } from "@/lib/site/site-url";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/" },

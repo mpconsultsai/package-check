@@ -1,8 +1,8 @@
 "use client";
 
 import { useShellEcosystem } from "@/components/shell-ecosystem";
-import { featuresForEcosystem } from "@/lib/ecosystem-features";
-import { registryLabel, type PackageEcosystem } from "@/lib/package-routes";
+import { featuresForEcosystem } from "@/lib/packages/ecosystem-features";
+import { registryLabel, type PackageEcosystem } from "@/lib/packages/package-routes";
 
 type Check = { term: string; detail: string };
 

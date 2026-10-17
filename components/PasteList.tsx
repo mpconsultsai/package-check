@@ -3,19 +3,19 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import semver from "semver";
-import { fetchJson } from "@/lib/fetch-client";
+import { fetchJson } from "@/lib/prefs/fetch-client";
 import { apiPaths } from "@/lib/api/paths";
-import { PASTE_LIST_MAX_PACKAGES } from "@/lib/parse-dependency-list";
-import { parseDependencyListForEcosystem } from "@/lib/parse-requirements";
+import { PASTE_LIST_MAX_PACKAGES } from "@/lib/parse/parse-dependency-list";
+import { parseDependencyListForEcosystem } from "@/lib/parse/parse-requirements";
 import {
   packagePagePath,
   type PackageEcosystem,
-} from "@/lib/package-routes";
-import { isNugetUpdateAvailable } from "@/lib/nuget-version";
-import { describeDependencySpec } from "@/lib/describe-dependency-spec";
-import { useWatchlistActions } from "@/lib/use-watchlist";
-import type { WatchlistSummary } from "@/lib/watchlist-store";
-import type { ClientAnalysisResponse } from "@/lib/analysis-response";
+} from "@/lib/packages/package-routes";
+import { isNugetUpdateAvailable } from "@/lib/nuget/nuget-version";
+import { describeDependencySpec } from "@/lib/parse/describe-dependency-spec";
+import { useWatchlistActions } from "@/lib/prefs/use-watchlist";
+import type { WatchlistSummary } from "@/lib/prefs/watchlist-store";
+import type { ClientAnalysisResponse } from "@/lib/packages/analysis-response";
 
 type RowStatus = "pending" | "loading" | "done" | "error";
 

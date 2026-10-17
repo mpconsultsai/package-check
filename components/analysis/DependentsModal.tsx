@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
-import { fetchJson, friendlyFetchError } from "@/lib/fetch-client";
+import { fetchJson, friendlyFetchError } from "@/lib/prefs/fetch-client";
 import { apiPaths } from "@/lib/api/paths";
-import { packagePagePath } from "@/lib/package-routes";
+import { packagePagePath } from "@/lib/packages/package-routes";
 
 type DependentRow = {
   name: string;

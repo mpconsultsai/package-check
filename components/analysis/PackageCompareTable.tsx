@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { formatBytes, formatCompactNumber } from "@/lib/utils/format";
-import type { CompareColumn } from "@/lib/package-compare";
+import type { CompareColumn } from "@/lib/packages/package-compare";
 import {
   packagePagePath,
   type PackageEcosystem,
-} from "@/lib/package-routes";
+} from "@/lib/packages/package-routes";
 
 const Pulse = () => (
   <span

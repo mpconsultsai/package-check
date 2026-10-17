@@ -9,7 +9,7 @@ import { fetchNugetPackageData } from "./nuget-registry";
 import { fetchGitHubDataFromUrl, parseGitHubUrl } from "./github";
 import { checkPackageSecurity } from "./security";
 import { fetchBundleSize } from "./bundlephobia";
-import { advisoryEcosystem } from "@/lib/package-routes";
+import { advisoryEcosystem } from "@/lib/packages/package-routes";
 
 /**
  * Analyze a package by fetching data from multiple sources

@@ -4,7 +4,7 @@ import { requirePackageFromQueryWithEcosystem } from "@/lib/api/params";
 import { fetchNpmPackageData } from "@/lib/data-fetchers/npm-registry";
 import { fetchPypiPackageData } from "@/lib/data-fetchers/pypi-registry";
 import { fetchNugetPackageData } from "@/lib/data-fetchers/nuget-registry";
-import { listPackageDependencies } from "@/lib/package-deps";
+import { listPackageDependencies } from "@/lib/packages/package-deps";
 
 /** GET /api/v1/packages/dependencies?package=&ecosystem= */
 export const GET = withHandler(

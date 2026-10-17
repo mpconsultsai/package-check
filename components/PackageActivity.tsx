@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useShellEcosystem } from "@/components/shell-ecosystem";
 import type { ActivePackage, PackageActivity as Activity } from "@/lib/db/package-activity";
-import { packagePagePath, type PackageEcosystem } from "@/lib/package-routes";
+import { packagePagePath, type PackageEcosystem } from "@/lib/packages/package-routes";
 
 function ActivityList({
   title,

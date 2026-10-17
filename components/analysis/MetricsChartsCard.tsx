@@ -8,7 +8,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { registryLabel } from "@/lib/package-routes";
+import { registryLabel } from "@/lib/packages/package-routes";
 import {
   Bar,
   BarChart,
@@ -21,13 +21,13 @@ import {
   YAxis,
 } from "recharts";
 import { formatCompactNumber, formatPublishDate } from "@/lib/utils/format";
-import { fetchJson } from "@/lib/fetch-client";
+import { fetchJson } from "@/lib/prefs/fetch-client";
 import { apiPaths } from "@/lib/api/paths";
 import {
   buildReleaseCadence,
   buildReleaseTypeMix,
   type ReleaseTypeMixResult,
-} from "@/lib/release-cadence";
+} from "@/lib/packages/release-cadence";
 
 interface ChartPoint {
   date: string;
@@ -519,7 +519,7 @@ export function MetricsChartsCard({
   competitors,
 }: {
   packageName: string;
-  ecosystem?: import("@/lib/package-routes").PackageEcosystem;
+  ecosystem?: import("@/lib/packages/package-routes").PackageEcosystem;
   showDownloads?: boolean;
   repository?: string | null;
   versionTimes?: Record<string, string>;

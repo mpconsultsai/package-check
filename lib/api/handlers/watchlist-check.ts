@@ -1,6 +1,6 @@
 import { jsonOk, withHandler } from "@/lib/api/http";
 import { readJsonBody } from "@/lib/api/params";
-import type { PackageEcosystem } from "@/lib/package-routes";
+import type { PackageEcosystem } from "@/lib/packages/package-routes";
 import {
   fetchWatchlistPackageStatus,
   mapPool,
@@ -8,7 +8,7 @@ import {
 import {
   extractPackageName,
   validatePackageNameForEcosystem,
-} from "@/lib/validation";
+} from "@/lib/packages/validation";
 
 const MAX_PACKAGES = 50;
 const CONCURRENCY = 4;

@@ -1,5 +1,5 @@
 import { after } from "next/server";
-import type { PackageEcosystem } from "@/lib/package-routes";
+import type { PackageEcosystem } from "@/lib/packages/package-routes";
 import { clientMetadata } from "@/lib/db/client-metadata";
 import { recordPackageSearch } from "@/lib/db/package-searches";
 

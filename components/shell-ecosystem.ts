@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext } from "react";
-import type { PackageEcosystem } from "@/lib/package-routes";
+import type { PackageEcosystem } from "@/lib/packages/package-routes";
 
 export const ShellEcosystemContext = createContext<PackageEcosystem>("npm");
 

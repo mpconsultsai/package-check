@@ -5,18 +5,15 @@ import { formatBytes } from '../utils/format';
 import {
   normalizeNpmPackageName,
   validatePackageNameForEcosystem,
-} from '../validation';
-import { registryLabel, type PackageEcosystem } from '../package-routes';
-import { isDotnetInboxPackageId, isStableDotnetPlatformPackage } from '../dotnet-platform';
-import { classifyRuntimeEnvironment } from '../runtime-environment';
-import type { RuntimeKind } from '../runtime-environment';
+} from '../packages/validation';
+import { registryLabel, type PackageEcosystem } from '../packages/package-routes';
+import { isDotnetInboxPackageId, isStableDotnetPlatformPackage } from '../nuget/dotnet-platform';
+import { classifyRuntimeEnvironment } from '../packages/runtime-environment';
+import type { RuntimeKind } from '../packages/runtime-environment';
 import { getGroqModel, groqModelLabel } from './groq-config';
 import { loadPackageUsageBrief } from '../db/package-usage';
-import {
-  fetchOpenSSFScorecard,
-  resolveGithubProjectId,
-  type OpenSSFScorecard,
-} from '../data-fetchers/openssf-scorecard';
+import type { OpenSSFScorecard } from '../data-fetchers/openssf-scorecard';
+import type { ReviewFacts } from './review-agent';
 
 /**
  * AI-generated package analysis and recommendations
@@ -419,8 +416,8 @@ function applyBundleSizeNotes(
 ): AIPackageAnalysis {
   const runtimeKind = packageRuntimeKind(data);
 
-  // Drop browser-bundle concerns for server-only packages (AI may still have added them).
-  if (!isBrowserBundleRelevant(runtimeKind)) {
+  // Browser bundle size comes from Bundlephobia and only exists for npm.
+  if ((data.ecosystem ?? "npm") !== "npm" || !isBrowserBundleRelevant(runtimeKind)) {
     const filtered = analysis.concerns.filter(
       (c) => c && c.toLowerCase() !== "none" && !isBundleConcernText(c),
     );
@@ -537,10 +534,23 @@ function filterScorecardBullets(items: string[] | undefined): string[] {
   return items.filter((item) => !mentionsScorecard(item));
 }
 
+function withoutBrowserBundleSentences(
+  text: string,
+  ecosystem: PackageEcosystem,
+): string {
+  if (ecosystem === "npm" || !text.trim()) return text;
+  const kept = text
+    .split(/(?<=[.!?])\s+/)
+    .map((sentence) => sentence.trim())
+    .filter((sentence) => sentence && !isBundleConcernText(sentence));
+  return kept.length > 0 ? kept.join(" ") : text;
+}
+
 function finalizeAiAnalysis(
   analysis: AIPackageAnalysis,
   data: PackageAnalysisResult,
 ): AIPackageAnalysis {
+  const ecosystem = data.ecosystem ?? "npm";
   const withHealth = applyStableDotnetPlatformReview(
     applyHealthRecommendationOverrides(
       analysis,
@@ -555,12 +565,20 @@ function finalizeAiAnalysis(
   );
   return {
     ...withBundle,
-    summary: softenScorecardProse(withBundle.summary),
-    strengths: filterScorecardBullets(withBundle.strengths),
+    summary: withoutBrowserBundleSentences(
+      softenScorecardProse(withBundle.summary),
+      ecosystem,
+    ),
+    strengths: filterScorecardBullets(withBundle.strengths).filter(
+      (item) => ecosystem === "npm" || !isBundleConcernText(item),
+    ),
     concerns,
-    reasoning: stripReasoningOverlap(
-      softenScorecardProse(withBundle.reasoning || ""),
-      concerns,
+    reasoning: withoutBrowserBundleSentences(
+      stripReasoningOverlap(
+        softenScorecardProse(withBundle.reasoning || ""),
+        concerns,
+      ),
+      ecosystem,
     ),
   };
 }
@@ -747,6 +765,7 @@ function createAnalysisPrompt(
   data: PackageAnalysisResult,
   scorecard: OpenSSFScorecard | null,
   usageLine: string | null = null,
+  facts: Pick<ReviewFacts, "advisoryLines" | "dependencyLines"> | null = null,
 ): string {
   const {
     packageName,
@@ -864,30 +883,40 @@ function createAnalysisPrompt(
       `Vulns total=${security.totalCount} (crit=${security.critical}, high=${security.high}, mod=${security.moderate}, low=${security.low})`,
     );
   }
+  if (facts?.advisoryLines.length) {
+    lines.push("Advisories affecting this version:");
+    for (const line of facts.advisoryLines) lines.push(`- ${line}`);
+  }
+  if (facts?.dependencyLines.length) {
+    lines.push("Dependencies:");
+    for (const line of facts.dependencyLines) lines.push(`- ${line}`);
+  }
 
-  const runtimeKind = packageRuntimeKind(data);
-  const runtimeLabel =
-    runtimeKind === "client"
-      ? "client (browser)"
-      : runtimeKind === "server"
-        ? "server / Node (not primarily browser)"
-        : runtimeKind === "both"
-          ? "client and server (isomorphic / dual)"
-          : "unclear (treat browser bundle cautiously if present)";
-  lines.push(`Runtime target (heuristic): ${runtimeLabel}`);
+  if (ecosystem === "npm") {
+    const runtimeKind = packageRuntimeKind(data);
+    const runtimeLabel =
+      runtimeKind === "client"
+        ? "client (browser)"
+        : runtimeKind === "server"
+          ? "server / Node (not primarily browser)"
+          : runtimeKind === "both"
+            ? "client and server (isomorphic / dual)"
+            : "unclear (treat browser bundle cautiously if present)";
+    lines.push(`Runtime target (heuristic): ${runtimeLabel}`);
 
-  const bundleAssessment = assessBundleSize(data);
-  if (bundleSize && bundleAssessment.gzip !== null && bundleAssessment.size !== null) {
-    let bundleLine = `Bundle: ${formatBytes(bundleAssessment.size)} min / ${formatBytes(bundleAssessment.gzip)} gzip (${bundleAssessment.level})`;
-    if (runtimeKind === "server") {
-      bundleLine +=
-        " - server-oriented package: do NOT list browser bundle size as a concern";
-    } else if (bundleAssessment.level === "large" || bundleAssessment.level === "very-large") {
-      bundleLine += " - MUST list in concerns for browser/client use; not a strength";
-    } else if (bundleAssessment.level === "notable") {
-      bundleLine += " - optional concern if front-end relevant";
+    const bundleAssessment = assessBundleSize(data);
+    if (bundleSize && bundleAssessment.gzip !== null && bundleAssessment.size !== null) {
+      let bundleLine = `Bundle: ${formatBytes(bundleAssessment.size)} min / ${formatBytes(bundleAssessment.gzip)} gzip (${bundleAssessment.level})`;
+      if (runtimeKind === "server") {
+        bundleLine +=
+          " - server-oriented package: do NOT list browser bundle size as a concern";
+      } else if (bundleAssessment.level === "large" || bundleAssessment.level === "very-large") {
+        bundleLine += " - MUST list in concerns for browser/client use; not a strength";
+      } else if (bundleAssessment.level === "notable") {
+        bundleLine += " - optional concern if front-end relevant";
+      }
+      lines.push(bundleLine);
     }
-    lines.push(bundleLine);
   }
 
   if (readme) {
@@ -912,7 +941,9 @@ function createAnalysisPrompt(
     "- <90d since publish is healthy. Widely adopted packages often go months between releases.",
     "- use-with-caution: concrete risk (unpatched high/crit vulns, likely malware/typosquat, niche + worrying signals).",
     "- do-not-use: deprecated, archived, README deprecation/migration, or clearly unmaintained.",
-    "- Large/very-large browser bundle → concerns only when runtime is client, both, or unclear. Server-only → ignore browser bundle size.",
+    ecosystem === "npm"
+      ? "- Large/very-large browser bundle → concerns only when runtime is client, both, or unclear. Server-only → ignore browser bundle size."
+      : "- Do not mention browser bundles, Bundlephobia, minified size, gzip payload, or client-side app load. This package is not distributed as a JavaScript bundle.",
     "- High open issues on huge repos ≠ red flag alone.",
     "- No cadence padding in concerns when healthy; use [\"None\"] if none. Score: no penalty for normal cadence on widely adopted.",
     "- Maintenance rating: excellent ~<90d or widely adopted + recent commits; good ~6mo (or longer if popular+secure); fair/poor only for real inactivity.",
@@ -1069,27 +1100,15 @@ function parseAIResponse(
  * Analyze a package using AI with automatic fallback:
  * Gemini Flash → Flash-Lite → Groq on rate limits / capacity errors (429, 503, etc.)
  */
-async function loadScorecardForAnalysis(
+async function synthesizePackageReview(
   data: PackageAnalysisResult,
-): Promise<OpenSSFScorecard | null> {
-  const projectId = resolveGithubProjectId(data.npm?.repository?.url);
-  if (!projectId) return null;
-  try {
-    return await fetchOpenSSFScorecard(projectId);
-  } catch {
-    return null;
-  }
-}
-
-export async function analyzePackageWithAI(
-  data: PackageAnalysisResult
+  facts: ReviewFacts,
 ): Promise<AIPackageAnalysis> {
-  const scorecard = await loadScorecardForAnalysis(data);
   const usageLine = await loadPackageUsageBrief(
     data.ecosystem ?? "npm",
     data.packageName,
   );
-  const prompt = createAnalysisPrompt(data, scorecard, usageLine);
+  const prompt = createAnalysisPrompt(data, facts.scorecard, usageLine, facts);
 
   const registryName = registryLabel(data.ecosystem ?? "npm");
   const systemPrompt =
@@ -1160,4 +1179,19 @@ export async function analyzePackageWithAI(
       }
     }
   }
+}
+
+/** Review graph plus the same AI analysis the package page already shows. */
+export async function reviewPackage(
+  data: PackageAnalysisResult,
+): Promise<{ analysis: AIPackageAnalysis; toolCalls: string[] }> {
+  const { runReviewGraph } = await import("./review-agent");
+  return runReviewGraph(data, (facts) => synthesizePackageReview(data, facts));
+}
+
+export async function analyzePackageWithAI(
+  data: PackageAnalysisResult,
+): Promise<AIPackageAnalysis> {
+  const { analysis } = await reviewPackage(data);
+  return analysis;
 }

@@ -1,9 +1,9 @@
-import { analyzePackageCached } from "@/lib/analysis-cache";
+import { analyzePackageCached } from "@/lib/packages/analysis-cache";
 import {
   buildAnalysisResponse,
   type ClientAnalysisResponse,
-} from "@/lib/analysis-response";
-import { analyzePackageWithAI } from "@/lib/ai/analyzer";
+} from "@/lib/packages/analysis-response";
+import { reviewPackage } from "@/lib/ai/analyzer";
 import { parseEcosystem, requirePackageNameForEcosystem } from "@/lib/api/params";
 import { checkPackageSecurity } from "@/lib/data-fetchers/security";
 import { searchNpmPackages } from "@/lib/data-fetchers/npm-registry";
@@ -13,8 +13,8 @@ import {
   fetchNugetPackageData,
   searchNugetPackages,
 } from "@/lib/data-fetchers/nuget-registry";
-import { listPackageDependencies, type PackageDependency } from "@/lib/package-deps";
-import { advisoryEcosystem, type PackageEcosystem } from "@/lib/package-routes";
+import { listPackageDependencies, type PackageDependency } from "@/lib/packages/package-deps";
+import { advisoryEcosystem, type PackageEcosystem } from "@/lib/packages/package-routes";
 import { clientMetadata } from "@/lib/db/client-metadata";
 import { recordPackageSearch } from "@/lib/db/package-searches";
 import { currentMcpHeaders } from "@/lib/mcp/request-context";
@@ -122,9 +122,12 @@ export async function analysePackage(rawName: string, rawEcosystem?: string) {
   const { packageName, ecosystem } = namedPackage(rawName, rawEcosystem);
   const data = await analyzePackageCached(packageName, ecosystem);
   let ai = null;
+  let reviewPath: string[] = [];
   let aiError: string | null = null;
   try {
-    ai = await analyzePackageWithAI(data);
+    const review = await reviewPackage(data);
+    ai = review.analysis;
+    reviewPath = review.toolCalls;
   } catch (error: unknown) {
     aiError = error instanceof Error ? error.message : "AI analysis failed";
   }
@@ -155,6 +158,7 @@ export async function analysePackage(rawName: string, rawEcosystem?: string) {
           model: ai.model ?? null,
         }
       : null,
+    reviewPath,
     aiError,
   };
 }

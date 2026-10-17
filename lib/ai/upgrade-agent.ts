@@ -1,18 +1,18 @@
 import { ChatGroq } from "@langchain/groq";
 import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
 import { z } from "zod";
-import { buildUpgradeAdvice, listStableVersions } from "@/lib/upgrade-advisor";
+import { buildUpgradeAdvice, listStableVersions } from "@/lib/upgrade/upgrade-advisor";
 import {
   loadUpgradeDetails,
   truncateUpgradeDetailsForAgent,
-} from "@/lib/upgrade-details";
+} from "@/lib/upgrade/upgrade-details";
 import { checkPackageSecurity } from "@/lib/data-fetchers/security";
 import { fetchNpmPackageData } from "@/lib/data-fetchers/npm-registry";
 import { getGroqUpgradeAgentModel, groqModelLabel } from "@/lib/ai/groq-config";
 import {
   formatInstallStep,
   type PackageManagerPreference,
-} from "@/lib/package-manager-pref";
+} from "@/lib/prefs/package-manager-pref";
 import { UPGRADE_AGENT_GENERIC_ERROR } from "@/lib/ai/upgrade-agent-messages";
 import type { UpgradeAgentStreamEvent } from "@/lib/ai/upgrade-agent-events";
 import {
@@ -22,7 +22,7 @@ import {
   setInflightUpgradeBrief,
   upgradeAgentCacheKey,
   type CachedUpgradeBrief,
-} from "@/lib/upgrade-agent-cache";
+} from "@/lib/upgrade/upgrade-agent-cache";
 
 export { UPGRADE_AGENT_GENERIC_ERROR } from "@/lib/ai/upgrade-agent-messages";
 export type { UpgradeAgentStreamEvent } from "@/lib/ai/upgrade-agent-events";

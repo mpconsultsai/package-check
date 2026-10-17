@@ -1,10 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE } from "@/lib/site-brand";
-import { getSiteUrl } from "@/lib/site-url";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE } from "@/lib/site/site-brand";
+import { getSiteUrl } from "@/lib/site/site-url";
 import { AppShell } from "@/components/AppShell";
 import { ThemeProvider } from "@/components/ThemeProvider";
-import { THEME_BOOT_SCRIPT } from "@/lib/theme-pref";
-import { monoFont, sansFont } from "@/lib/fonts";
+import { THEME_BOOT_SCRIPT } from "@/lib/prefs/theme-pref";
+import { monoFont, sansFont } from "@/lib/site/fonts";
 import "./globals.css";
 
 const siteName = SITE_NAME;

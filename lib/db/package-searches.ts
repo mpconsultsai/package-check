@@ -1,4 +1,4 @@
-import type { PackageEcosystem } from "@/lib/package-routes";
+import type { PackageEcosystem } from "@/lib/packages/package-routes";
 import type { Database } from "@/lib/db/client";
 import { databaseLogContext, getDb } from "@/lib/db/client";
 import { packageSearches, type PackageSearchSource } from "@/lib/db/schema";

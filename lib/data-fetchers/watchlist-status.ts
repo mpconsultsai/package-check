@@ -2,7 +2,7 @@ import axios from "axios";
 import {
   advisoryEcosystem,
   type PackageEcosystem,
-} from "@/lib/package-routes";
+} from "@/lib/packages/package-routes";
 import { checkPackageSecurity } from "./security";
 import { fetchPypiPackageData } from "./pypi-registry";
 import { fetchNugetPackageData } from "./nuget-registry";

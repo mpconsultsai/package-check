@@ -1,6 +1,6 @@
 "use client";
 
-import type { PackageDependency } from "@/lib/package-deps";
+import type { PackageDependency } from "@/lib/packages/package-deps";
 
 export type PypiDependenciesMeta = {
   requiresPython: string | null;

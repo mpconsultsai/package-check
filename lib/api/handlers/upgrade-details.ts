@@ -4,7 +4,7 @@ import {
   requireFromTo,
   requirePackageFromQuery,
 } from "@/lib/api/params";
-import { loadUpgradeDetails } from "@/lib/upgrade-details";
+import { loadUpgradeDetails } from "@/lib/upgrade/upgrade-details";
 
 /** GET /api/v1/upgrade?package=&from=&to= */
 export const GET = withHandler(

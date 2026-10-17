@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { fetchJson } from "@/lib/fetch-client";
+import { fetchJson } from "@/lib/prefs/fetch-client";
 import { apiPaths } from "@/lib/api/paths";
 
 type ScorecardCheck = {

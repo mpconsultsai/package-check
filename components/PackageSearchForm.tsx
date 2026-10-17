@@ -5,33 +5,33 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   extractPackageName,
   validatePackageNameForEcosystem,
-} from "@/lib/validation";
-import type { PackageEcosystem } from "@/lib/package-routes";
+} from "@/lib/packages/validation";
+import type { PackageEcosystem } from "@/lib/packages/package-routes";
 import {
   getEcosystemPreference,
   setEcosystemPreference,
-} from "@/lib/ecosystem-pref";
-import { parsePackageRoute } from "@/lib/package-routes";
-import { featuresForEcosystem } from "@/lib/ecosystem-features";
-import { smoothNavigate } from "@/lib/smooth-navigate";
-import { useAiAnalysisPref } from "@/lib/use-ai-analysis-pref";
+} from "@/lib/prefs/ecosystem-pref";
+import { parsePackageRoute } from "@/lib/packages/package-routes";
+import { featuresForEcosystem } from "@/lib/packages/ecosystem-features";
+import { smoothNavigate } from "@/lib/prefs/smooth-navigate";
+import { useAiAnalysisPref } from "@/lib/prefs/use-ai-analysis-pref";
 import {
   useThemePreference,
   useThemePrefReady,
   useSystemDark,
-} from "@/lib/use-theme-pref";
-import { resolveTheme, setThemePreference } from "@/lib/theme-pref";
+} from "@/lib/prefs/use-theme-pref";
+import { resolveTheme, setThemePreference } from "@/lib/prefs/theme-pref";
 import {
   type PackageManagerPreference,
-} from "@/lib/package-manager-pref";
-import { usePackageManagerPref } from "@/lib/use-package-manager-pref";
+} from "@/lib/prefs/package-manager-pref";
+import { usePackageManagerPref } from "@/lib/prefs/use-package-manager-pref";
 import { WatchlistSection } from "@/components/Watchlist";
 import { PasteListPanel } from "@/components/PasteList";
-import { useWatchlist } from "@/lib/use-watchlist";
-import { useWatchlistRefresh } from "@/lib/use-watchlist-refresh";
-import { summarizeWatchlistAlerts } from "@/lib/watchlist-store";
+import { useWatchlist } from "@/lib/prefs/use-watchlist";
+import { useWatchlistRefresh } from "@/lib/prefs/use-watchlist-refresh";
+import { summarizeWatchlistAlerts } from "@/lib/prefs/watchlist-store";
 import { apiPaths } from "@/lib/api/paths";
-import { EXAMPLE_PACKAGES } from "@/lib/example-packages";
+import { EXAMPLE_PACKAGES } from "@/lib/site/example-packages";
 import {
   ClearIcon,
   SearchIcon,

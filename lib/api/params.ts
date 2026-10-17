@@ -3,13 +3,13 @@ import { AppError } from "@/lib/api/errors";
 import {
   parsePackageManagerPreference,
   type PackageManagerPreference,
-} from "@/lib/package-manager-pref";
-import type { PackageEcosystem } from "@/lib/package-routes";
+} from "@/lib/prefs/package-manager-pref";
+import type { PackageEcosystem } from "@/lib/packages/package-routes";
 import {
   extractPackageName,
   validatePackageName,
   validatePackageNameForEcosystem,
-} from "@/lib/validation";
+} from "@/lib/packages/validation";
 
 export const parseEcosystem = (
   raw: string | null | undefined,

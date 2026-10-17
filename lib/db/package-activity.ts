@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   PACKAGE_ECOSYSTEMS,
   type PackageEcosystem,
-} from "@/lib/package-routes";
+} from "@/lib/packages/package-routes";
 import type { Database } from "@/lib/db/client";
 import { getDb } from "@/lib/db/client";
 

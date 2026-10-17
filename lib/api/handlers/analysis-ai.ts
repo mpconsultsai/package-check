@@ -1,5 +1,5 @@
-import { analyzePackageCached } from "@/lib/analysis-cache";
-import { buildAnalysisResponse } from "@/lib/analysis-response";
+import { analyzePackageCached } from "@/lib/packages/analysis-cache";
+import { buildAnalysisResponse } from "@/lib/packages/analysis-response";
 import { analyzePackageWithAI } from "@/lib/ai/analyzer";
 import { jsonOk, withHandler } from "@/lib/api/http";
 import {
@@ -11,7 +11,7 @@ import {
 
 const analyzeAi = async (
   packageName: string,
-  ecosystem: import("@/lib/package-routes").PackageEcosystem,
+  ecosystem: import("@/lib/packages/package-routes").PackageEcosystem,
 ) => {
   console.log(`Analyzing package with AI: ${ecosystem}|${packageName}`);
   const t0 = Date.now();

@@ -2,15 +2,15 @@
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
-import { fetchJson } from "@/lib/fetch-client";
+import { fetchJson } from "@/lib/prefs/fetch-client";
 import { apiPaths } from "@/lib/api/paths";
 import {
   snapshotFromAnalysis,
   type CompareColumn,
-} from "@/lib/package-compare";
+} from "@/lib/packages/package-compare";
 import { PackageCompareTable } from "./PackageCompareTable";
-import type { PackageEcosystem } from "@/lib/package-routes";
-import { packagePagePath } from "@/lib/package-routes";
+import type { PackageEcosystem } from "@/lib/packages/package-routes";
+import { packagePagePath } from "@/lib/packages/package-routes";
 
 const COMPARE_CAP = 2;
 

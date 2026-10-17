@@ -5,9 +5,9 @@ import { useRouter } from "next/navigation";
 import { AppLogo } from "@/components/AppLogo";
 import { GitHubIcon } from "@/components/BrandIcons";
 import { useHeaderGithubUrl } from "@/components/header-github";
-import { SITE_NAME, SITE_STRAPLINE } from "@/lib/site-brand";
-import { siteGithubUrl } from "@/lib/site-github";
-import { smoothNavigate } from "@/lib/smooth-navigate";
+import { SITE_NAME, SITE_STRAPLINE } from "@/lib/site/site-brand";
+import { siteGithubUrl } from "@/lib/site/site-github";
+import { smoothNavigate } from "@/lib/prefs/smooth-navigate";
 
 interface PageHeaderProps {
   /** When true (package results), title navigates home with a smooth transition. */

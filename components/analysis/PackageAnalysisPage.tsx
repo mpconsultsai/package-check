@@ -2,22 +2,22 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import semver from "semver";
-import { listStablePypiVersions } from "@/lib/pypi-version";
-import { listStableNugetVersions } from "@/lib/nuget-version";
-import type { PackageEcosystem } from "@/lib/package-routes";
-import { featuresForEcosystem } from "@/lib/ecosystem-features";
-import { setEcosystemPreference } from "@/lib/ecosystem-pref";
-import { fetchJson, friendlyFetchError, isServiceStartingError } from "@/lib/fetch-client";
+import { listStablePypiVersions } from "@/lib/pypi/pypi-version";
+import { listStableNugetVersions } from "@/lib/nuget/nuget-version";
+import type { PackageEcosystem } from "@/lib/packages/package-routes";
+import { featuresForEcosystem } from "@/lib/packages/ecosystem-features";
+import { setEcosystemPreference } from "@/lib/prefs/ecosystem-pref";
+import { fetchJson, friendlyFetchError, isServiceStartingError } from "@/lib/prefs/fetch-client";
 import { apiPaths } from "@/lib/api/paths";
 import { useShellSearchLoading } from "@/components/AppShell";
 import { ServiceStartingNotice } from "@/components/ServiceStartingNotice";
 import { usePackageGithubLink } from "@/components/header-github";
 import { WhatWeCheck } from "@/components/WhatWeCheck";
 import { WatchToggle } from "@/components/Watchlist";
-import { useWatchlistActions } from "@/lib/use-watchlist";
-import { useAiAnalysisEnabled, useAiAnalysisPrefReady } from "@/lib/use-ai-analysis-pref";
-import { getAiAnalysisEnabled } from "@/lib/ai-analysis-pref";
-import type { WatchlistSummary } from "@/lib/watchlist-store";
+import { useWatchlistActions } from "@/lib/prefs/use-watchlist";
+import { useAiAnalysisEnabled, useAiAnalysisPrefReady } from "@/lib/prefs/use-ai-analysis-pref";
+import { getAiAnalysisEnabled } from "@/lib/prefs/ai-analysis-pref";
+import type { WatchlistSummary } from "@/lib/prefs/watchlist-store";
 import {
   PackageInfoCard,
   MetricsChartsCard,
@@ -31,8 +31,8 @@ import {
   type OverviewTabId,
   type InsightTabId,
 } from "@/components/analysis";
-import { snapshotFromAnalysis } from "@/lib/package-compare";
-import type { ClientAnalysisResponse } from "@/lib/analysis-response";
+import { snapshotFromAnalysis } from "@/lib/packages/package-compare";
+import type { ClientAnalysisResponse } from "@/lib/packages/analysis-response";
 import type { SecuritySummary } from "@/lib/data-fetchers/security";
 
 type ApiErrorBody = { error?: string };

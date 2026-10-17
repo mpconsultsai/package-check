@@ -1,25 +1,25 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { fetchJson } from "@/lib/fetch-client";
+import { fetchJson } from "@/lib/prefs/fetch-client";
 import { formatPublishDate } from "@/lib/utils/format";
 import {
   buildUpgradeAdvice,
   listStableVersions,
   type UpgradeAdvice,
   type UpgradeVerdict,
-} from "@/lib/upgrade-advisor";
+} from "@/lib/upgrade/upgrade-advisor";
 import type {
   BreakingReleaseNote,
   PeerChange,
-} from "@/lib/upgrade-release-notes";
-import { usePackageManagerPreference } from "@/lib/use-package-manager-pref";
+} from "@/lib/upgrade/upgrade-release-notes";
+import { usePackageManagerPreference } from "@/lib/prefs/use-package-manager-pref";
 import { LinkifiedText } from "@/components/LinkifiedText";
 import { AgentGraphSteps } from "@/components/analysis/AgentGraphSteps";
 import { severityBadgeClass } from "@/lib/utils/severity";
 import { apiPaths } from "@/lib/api/paths";
 import { UPGRADE_AGENT_GENERIC_ERROR } from "@/lib/ai/upgrade-agent-messages";
-import { consumeUpgradeAgentSse } from "@/lib/upgrade-agent-stream-client";
+import { consumeUpgradeAgentSse } from "@/lib/upgrade/upgrade-agent-stream-client";
 
 const VERSION_OPTIONS = 40;
 

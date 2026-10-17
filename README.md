@@ -99,14 +99,21 @@ package-check/
 │   ├── page.tsx         # Home (search, most checked, what gets checked)
 │   └── layout.tsx
 ├── components/          # Search, analysis, and registry-specific panels
-└── lib/
-    ├── ai/              # Gemini and Groq analysis, upgrade agent
+├── lib/
+    ├── ai/              # Gemini and Groq analysis, review graph
     ├── api/             # Route handlers and path constants
     ├── data-fetchers/   # npm, PyPI, NuGet, GitHub, security, deps.dev
     ├── db/              # Drizzle client, search logging, usage and home page activity
-    └── ecosystem-features.ts
-supabase/
-└── migrations/          # package_searches table
+    ├── mcp/             # MCP server and tools
+    ├── packages/        # Routes, analysis response, ecosystem features, validation
+    ├── parse/           # package.json, requirements, and csproj list parsers
+    ├── prefs/           # Theme, registry, AI, and watchlist preferences
+    ├── site/            # Name, strapline, URL, and fonts
+    ├── upgrade/         # npm upgrade notes, cache, and the browser stream client
+    ├── nuget/           # NuGet version, description, and platform-package rules
+    └── pypi/            # PyPI version and Requires-Dist
+└── supabase/
+    └── migrations/      # package_searches table
 ```
 
 ## API

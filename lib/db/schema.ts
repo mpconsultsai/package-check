@@ -7,7 +7,7 @@ import {
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
-import type { PackageEcosystem } from "@/lib/package-routes";
+import type { PackageEcosystem } from "@/lib/packages/package-routes";
 
 export const PACKAGE_SEARCH_SOURCES = ["web", "mcp", "api"] as const;
 export type PackageSearchSource = (typeof PACKAGE_SEARCH_SOURCES)[number];

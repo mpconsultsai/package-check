@@ -6,15 +6,15 @@ import {
   useWatchlist,
   useWatchlistActions,
   useIsWatched,
-} from "@/lib/use-watchlist";
+} from "@/lib/prefs/use-watchlist";
 import {
   getWatchlistAlerts,
   type WatchlistEntry,
-} from "@/lib/watchlist-store";
+} from "@/lib/prefs/watchlist-store";
 import {
   packagePagePath,
   type PackageEcosystem,
-} from "@/lib/package-routes";
+} from "@/lib/packages/package-routes";
 function EcosystemBadge({ ecosystem }: { ecosystem: PackageEcosystem }) {
   const label =
     ecosystem === "pypi" ? "PyPI" : ecosystem === "nuget" ? "NuGet" : "npm";
@@ -235,8 +235,8 @@ export function WatchToggle({
   disabled = false,
 }: {
   packageName: string;
-  ecosystem?: import("@/lib/package-routes").PackageEcosystem;
-  summary?: import("@/lib/watchlist-store").WatchlistSummary;
+  ecosystem?: import("@/lib/packages/package-routes").PackageEcosystem;
+  summary?: import("@/lib/prefs/watchlist-store").WatchlistSummary;
   disabled?: boolean;
 }) {
   const watched = useIsWatched(packageName, ecosystem);

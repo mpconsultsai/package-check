@@ -1,6 +1,6 @@
 "use client";
 
-import { SITE_NAME } from "@/lib/site-brand";
+import { SITE_NAME } from "@/lib/site/site-brand";
 
 export function ServiceStartingNotice() {
   return (

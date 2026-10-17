@@ -2,19 +2,19 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { fetchJson } from "@/lib/fetch-client";
+import { fetchJson } from "@/lib/prefs/fetch-client";
 import { apiPaths } from "@/lib/api/paths";
 import {
   dependencyReactKey,
   type PackageDependency,
-} from "@/lib/package-deps";
-import { describeDependencySpec } from "@/lib/describe-dependency-spec";
+} from "@/lib/packages/package-deps";
+import { describeDependencySpec } from "@/lib/parse/describe-dependency-spec";
 import { TransitiveDepsPanel } from "@/components/analysis/TransitiveDepsPanel";
 import {
   packagePagePath,
   type PackageEcosystem,
-} from "@/lib/package-routes";
-import { featuresForEcosystem } from "@/lib/ecosystem-features";
+} from "@/lib/packages/package-routes";
+import { featuresForEcosystem } from "@/lib/packages/ecosystem-features";
 import {
   combinePypiDepsForView,
   normalizePypiMeta,

@@ -1,5 +1,5 @@
 import { beforeEach, describe, it, vi } from "vitest";
-import type { PackageEcosystem } from "@/lib/package-routes";
+import type { PackageEcosystem } from "@/lib/packages/package-routes";
 
 const recordPackageSearch = vi.hoisted(() => vi.fn(async () => {}));
 const after = vi.hoisted(() => vi.fn((task: () => unknown) => task()));

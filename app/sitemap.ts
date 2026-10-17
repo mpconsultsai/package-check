@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
-import { EXAMPLE_PACKAGES } from "@/lib/example-packages";
-import type { PackageEcosystem } from "@/lib/package-routes";
-import { getSiteUrl } from "@/lib/site-url";
+import { EXAMPLE_PACKAGES } from "@/lib/site/example-packages";
+import type { PackageEcosystem } from "@/lib/packages/package-routes";
+import { getSiteUrl } from "@/lib/site/site-url";
 
 function packageUrl(ecosystem: PackageEcosystem, name: string): string {
   return `${getSiteUrl()}/${ecosystem}/${encodeURIComponent(name)}`;

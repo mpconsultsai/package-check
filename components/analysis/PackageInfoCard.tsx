@@ -2,16 +2,16 @@
 
 import { useState, useCallback, type ReactNode } from "react";
 import { formatDaysSinceRelease } from "@/lib/utils/format";
-import { describeLicense } from "@/lib/license-info";
+import { describeLicense } from "@/lib/packages/license-info";
 import { MetricsCard } from "./MetricsCard";
 import { OpenSSFScorecardStrip } from "./OpenSSFScorecardStrip";
 import { UpgradeAdvisorPanel } from "./UpgradeAdvisorPanel";
 import { DependentsModal } from "./DependentsModal";
 import { CopyButton } from "@/components/CopyButton";
-import type { PackageEcosystem } from "@/lib/package-routes";
-import { registryLabel } from "@/lib/package-routes";
-import { featuresForEcosystem } from "@/lib/ecosystem-features";
-import { dotnetApiReferenceUrl } from "@/lib/nuget-description";
+import type { PackageEcosystem } from "@/lib/packages/package-routes";
+import { registryLabel } from "@/lib/packages/package-routes";
+import { featuresForEcosystem } from "@/lib/packages/ecosystem-features";
+import { dotnetApiReferenceUrl } from "@/lib/nuget/nuget-description";
 
 /** npm search `dependents` count - badge when widely depended-on. */
 const POPULAR_MIN_DEPENDENTS = 1000;

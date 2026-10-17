@@ -1,15 +1,15 @@
 import axios from "axios";
 import { errorMessage } from "@/lib/utils/error-message";
-import { validatePackageNameForEcosystem } from "@/lib/validation";
-import { sanitizeDescription } from "@/lib/sanitize";
-import { formatNugetDescription } from "@/lib/nuget-description";
+import { validatePackageNameForEcosystem } from "@/lib/packages/validation";
+import { sanitizeDescription } from "@/lib/packages/sanitize";
+import { formatNugetDescription } from "@/lib/nuget/nuget-description";
 import type { NpmPackageData } from "@/lib/types/package-data";
 import type { DistributionSizeInfo } from "@/lib/data-fetchers/pypi-distribution-size";
 import {
   compareNugetVersions,
   isNugetPrerelease,
-} from "@/lib/nuget-version";
-import { isDotnetInboxPackageId } from "@/lib/dotnet-platform";
+} from "@/lib/nuget/nuget-version";
+import { isDotnetInboxPackageId } from "@/lib/nuget/dotnet-platform";
 
 const REGISTRATION =
   "https://api.nuget.org/v3/registration5-gz-semver2";

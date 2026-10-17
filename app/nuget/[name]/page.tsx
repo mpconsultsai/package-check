@@ -4,7 +4,7 @@ import { recordOpenedPackage } from "@/lib/db/record-opened-package";
 import {
   decodePackageParam,
   packagePageMetadata,
-} from "@/lib/package-page-meta";
+} from "@/lib/packages/package-page-meta";
 
 type NugetPackagePageProps = {
   params: Promise<{ name: string }>;

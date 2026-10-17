@@ -1,5 +1,5 @@
-import { analyzePackageCached } from "@/lib/analysis-cache";
-import { buildAnalysisResponse } from "@/lib/analysis-response";
+import { analyzePackageCached } from "@/lib/packages/analysis-cache";
+import { buildAnalysisResponse } from "@/lib/packages/analysis-response";
 import { jsonOk, withHandler } from "@/lib/api/http";
 import {
   parseEcosystem,
@@ -10,7 +10,7 @@ import {
 
 const analyze = async (
   packageName: string,
-  ecosystem: import("@/lib/package-routes").PackageEcosystem,
+  ecosystem: import("@/lib/packages/package-routes").PackageEcosystem,
 ) => {
   console.log(`Analyzing package (metrics): ${ecosystem}|${packageName}`);
   const packageData = await analyzePackageCached(packageName, ecosystem);
