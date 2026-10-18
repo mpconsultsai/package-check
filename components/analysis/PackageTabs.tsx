@@ -1,5 +1,6 @@
 "use client";
 
+import type { KeyboardEvent, ReactNode } from "react";
 import {
   SecuritySeverityBadges,
   type SecurityCountSummary,
@@ -47,32 +48,83 @@ export function PackageNameHeader({
   );
 
   return (
-    <h2 className="font-mono text-3xl font-semibold tracking-tight break-all sm:text-4xl">
+    <h1 className="font-mono text-3xl font-semibold tracking-tight break-all sm:text-4xl">
       <span className="inline-flex min-w-0 items-center gap-2">
         {nameNode}
         <CopyButton value={packageName} label="Copy package name" />
       </span>
-    </h2>
+    </h1>
+  );
+}
+
+export function AnalysisPanel({
+  id,
+  title,
+  children,
+}: {
+  id: string;
+  title: string;
+  children: ReactNode;
+}) {
+  const headingId = `${id}-heading`;
+  return (
+    <section
+      role="tabpanel"
+      id={id}
+      aria-labelledby={headingId}
+      tabIndex={0}
+      className="outline-none focus-visible:ring-2 focus-visible:ring-signal"
+    >
+      <h2 id={headingId} className="sr-only">
+        {title}
+      </h2>
+      {children}
+    </section>
   );
 }
 
 function TabRow<T extends string>({
   label,
+  idPrefix,
   tabs,
   active,
   onChange,
   security,
 }: {
   label: string;
+  idPrefix: string;
   tabs: TabDef<T>[];
   active: T;
   onChange: (tab: T) => void;
   security?: SecurityCountSummary | null;
 }) {
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const buttons = Array.from(
+      event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]'),
+    );
+    if (buttons.length === 0) return;
+    const current = buttons.findIndex((tab) => tab === document.activeElement);
+    const index = current >= 0 ? current : tabs.findIndex((tab) => tab.id === active);
+    let nextIndex = index;
+    if (event.key === "ArrowRight") nextIndex = (index + 1) % buttons.length;
+    else if (event.key === "ArrowLeft") {
+      nextIndex = (index - 1 + buttons.length) % buttons.length;
+    } else if (event.key === "Home") nextIndex = 0;
+    else if (event.key === "End") nextIndex = buttons.length - 1;
+    else return;
+    event.preventDefault();
+    const next = buttons[nextIndex];
+    const nextId = next?.dataset.tabId;
+    if (nextId) onChange(nextId as T);
+    next?.focus();
+  };
+
   return (
     <div
       role="tablist"
       aria-label={label}
+      aria-orientation="horizontal"
+      onKeyDown={onKeyDown}
       className="flex gap-5 border-b border-rule sm:gap-7"
     >
       {tabs.map((tab) => {
@@ -81,11 +133,15 @@ function TabRow<T extends string>({
           <button
             key={tab.id}
             type="button"
+            id={`${idPrefix}-tab-${tab.id}`}
             role="tab"
+            data-tab-id={tab.id}
             aria-selected={selected}
+            aria-controls={`${idPrefix}-panel-${tab.id}`}
             aria-label={tab.label}
+            tabIndex={selected ? 0 : -1}
             onClick={() => onChange(tab.id)}
-            className={`-mb-px inline-flex min-w-0 items-center gap-2 border-b-2 pb-2 text-sm transition-colors sm:text-[0.9375rem] ${
+            className={`-mb-px inline-flex min-w-0 items-center gap-2 border-b-2 pb-2 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-signal sm:text-[0.9375rem] ${
               selected
                 ? "border-signal font-semibold text-ink"
                 : "border-transparent font-medium text-gray-500 hover:text-ink dark:text-gray-400"
@@ -141,6 +197,7 @@ export function OverviewTabs({
   return (
     <TabRow
       label="Package overview"
+      idPrefix="overview"
       tabs={tabs}
       active={active}
       onChange={onChange}
@@ -194,6 +251,7 @@ export function InsightTabs({
   return (
     <TabRow
       label="Package insights"
+      idPrefix="insights"
       tabs={tabs}
       active={active}
       onChange={onChange}

@@ -45,8 +45,12 @@ export interface NpmPackageData {
   exports?: unknown;
   /** CommonJS, ESM, or both, for the latest version. */
   moduleFormat?: NpmModuleFormat;
-  /** True when the latest version declares a TypeScript entry. */
+  /** True when the latest version publishes TypeScript declarations. */
   typesIncluded?: boolean;
+  /** When this package is `@types/*`, the package those definitions support. */
+  typesFor?: string | null;
+  /** DefinitelyTyped package that publishes types when this package does not. */
+  typesPackage?: string | null;
   maintainers?: Array<{ name: string; email: string }>;
   time?: {
     created: string;

@@ -1,5 +1,12 @@
 export { PackageAnalysisPage } from "./PackageAnalysisPage";
-export { OverviewTabs, InsightTabs, AnalysisTabs, DetailsTabs, PackageNameHeader } from "./PackageTabs";
+export {
+  OverviewTabs,
+  InsightTabs,
+  AnalysisTabs,
+  DetailsTabs,
+  PackageNameHeader,
+  AnalysisPanel,
+} from "./PackageTabs";
 export type {
   OverviewTabId,
   InsightTabId,

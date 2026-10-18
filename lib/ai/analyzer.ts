@@ -924,11 +924,18 @@ function createAnalysisPrompt(
         `Module format: ${npmModuleFormatLabel(data.npm.moduleFormat)}. State it as a fact. Do not lower the recommendation because a package is CommonJS.`,
       );
     }
-    if (typeof data.npm?.typesIncluded === "boolean") {
+    if (data.npm?.typesFor) {
+      lines.push(
+        `TypeScript types: this package is the type definitions for ${data.npm.typesFor}. Mention that package by name.`,
+      );
+    } else if (typeof data.npm?.typesIncluded === "boolean") {
+      const separate = data.npm.typesPackage
+        ? ` Published separately as ${data.npm.typesPackage}.`
+        : " A separate @types package may be required.";
       lines.push(
         data.npm.typesIncluded
           ? "TypeScript types: included in the package."
-          : "TypeScript types: not included. A separate @types package may be required. Mention this as a fact, not a concern, unless the package is a TypeScript library.",
+          : `TypeScript types: not included in this package.${separate} Mention this as a fact, not a concern, unless the package is a TypeScript library.`,
       );
     }
     const maintainers = npmMaintainerNames(data.npm?.maintainers);

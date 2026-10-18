@@ -54,15 +54,22 @@ function checksFor(ecosystem: PackageEcosystem): Check[] {
   return checks;
 }
 
-export function WhatWeCheck() {
+export function WhatWeCheck({ level = 2 }: { level?: 1 | 2 }) {
   const ecosystem = useShellEcosystem();
   const checks = checksFor(ecosystem);
+  const Heading = level === 1 ? "h1" : "h2";
 
   return (
-    <div className="border-t-2 border-ink pt-4">
-      <p className="font-mono text-xs uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">
+    <section
+      aria-labelledby="what-we-check-heading"
+      className="border-t-2 border-ink pt-4"
+    >
+      <Heading
+        id="what-we-check-heading"
+        className="font-mono text-xs uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400"
+      >
         What gets checked for {registryLabel(ecosystem)} packages
-      </p>
+      </Heading>
       <dl className="mt-2 divide-y divide-rule border-b border-rule">
         {checks.map((item, index) => (
           <div
@@ -82,6 +89,6 @@ export function WhatWeCheck() {
           </div>
         ))}
       </dl>
-    </div>
+    </section>
   );
 }

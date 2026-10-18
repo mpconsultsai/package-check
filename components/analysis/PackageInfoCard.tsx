@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, type ReactNode } from "react";
+import Link from "next/link";
 import { formatDaysSinceRelease } from "@/lib/utils/format";
 import { describeLicense } from "@/lib/packages/license-info";
 import { MetricsCard } from "./MetricsCard";
@@ -9,7 +10,7 @@ import { UpgradeAdvisorPanel } from "./UpgradeAdvisorPanel";
 import { DependentsModal } from "./DependentsModal";
 import { CopyButton } from "@/components/CopyButton";
 import type { PackageEcosystem } from "@/lib/packages/package-routes";
-import { registryLabel } from "@/lib/packages/package-routes";
+import { packagePagePath, registryLabel } from "@/lib/packages/package-routes";
 import { featuresForEcosystem } from "@/lib/packages/ecosystem-features";
 import { dotnetApiReferenceUrl } from "@/lib/nuget/nuget-description";
 import type { InstallScript } from "@/lib/packages/install-scripts";
@@ -42,6 +43,8 @@ interface PackageInfo {
   installScripts?: InstallScript[] | null;
   moduleFormat?: NpmModuleFormat | null;
   typesIncluded?: boolean | null;
+  typesFor?: string | null;
+  typesPackage?: string | null;
   maintainers?: string[] | null;
   supportedFrameworks?: string[] | null;
   commonlyUsedTypes?: string[] | null;
@@ -394,7 +397,33 @@ export function PackageInfoCard({
               typeof packageInfo.typesIncluded === "boolean" && (
                 <Fact label="TypeScript types">
                   {packageInfo.typesIncluded ? "Included" : "Not included"}
-                  {!packageInfo.typesIncluded && (
+                  {packageInfo.typesFor && (
+                    <span className="mt-1 block text-xs font-normal leading-relaxed text-gray-500 dark:text-gray-400">
+                      Type definitions for{" "}
+                      <Link
+                        href={packagePagePath("npm", packageInfo.typesFor)}
+                        scroll={false}
+                        className="link"
+                      >
+                        {packageInfo.typesFor}
+                      </Link>
+                      .
+                    </span>
+                  )}
+                  {!packageInfo.typesIncluded && packageInfo.typesPackage && (
+                    <span className="mt-1 block text-xs font-normal leading-relaxed text-gray-500 dark:text-gray-400">
+                      Published separately as{" "}
+                      <Link
+                        href={packagePagePath("npm", packageInfo.typesPackage)}
+                        scroll={false}
+                        className="link"
+                      >
+                        {packageInfo.typesPackage}
+                      </Link>
+                      .
+                    </span>
+                  )}
+                  {!packageInfo.typesIncluded && !packageInfo.typesPackage && (
                     <span className="mt-1 block text-xs font-normal leading-relaxed text-gray-500 dark:text-gray-400">
                       TypeScript projects may need a separate @types package.
                     </span>

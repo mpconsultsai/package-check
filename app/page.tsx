@@ -47,12 +47,7 @@ export default async function Home() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <PackageActivity activity={activity} />
-      <section aria-labelledby="home-features-heading">
-        <h2 id="home-features-heading" className="sr-only">
-          What {SITE_NAME} shows for each package
-        </h2>
-        <WhatWeCheck />
-      </section>
+      <WhatWeCheck />
     </>
   );
 }

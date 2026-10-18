@@ -2,7 +2,10 @@ import axios from 'axios';
 import { listInstallScripts } from "@/lib/packages/install-scripts";
 import {
   classifyNpmModuleFormat,
+  definitelyTypedPackageName,
   npmTypesIncluded,
+  publishedTypesPresent,
+  typesPackageTarget,
 } from "@/lib/packages/npm-package-facts";
 import { errorMessage } from '@/lib/utils/error-message';
 import { sanitizeDescription } from '../packages/sanitize';
@@ -52,6 +55,20 @@ export async function fetchNpmPackageData(packageName: string): Promise<{
     // Top of README usually has purpose + deprecation notices; keep prompt lean
     const readme = readmeRaw ? readmeRaw.substring(0, 2000) : null;
 
+    const packageId = typeof data.name === "string" ? data.name : packageName;
+    const declaredTypes = npmTypesIncluded(latestVersionData);
+    const typesFor = typesPackageTarget(packageId);
+    let typesIncluded = declaredTypes;
+    let typesPackage: string | null = null;
+    if (!declaredTypes && typeof latestVersion === "string" && latestVersion) {
+      const [published, separate] = await Promise.all([
+        fetchPublishedTypes(packageId, latestVersion),
+        fetchSeparateTypesPackage(packageId),
+      ]);
+      if (published === true) typesIncluded = true;
+      else if (published === false) typesPackage = separate;
+    }
+
     return {
       data: {
         name: data.name,
@@ -83,7 +100,9 @@ export async function fetchNpmPackageData(packageName: string): Promise<{
             : null,
         exports: latestVersionData.exports,
         moduleFormat: classifyNpmModuleFormat(latestVersionData),
-        typesIncluded: npmTypesIncluded(latestVersionData),
+        typesIncluded,
+        typesFor,
+        typesPackage,
         maintainers: data.maintainers,
         time: data.time,
         distTags: data["dist-tags"],
@@ -95,6 +114,53 @@ export async function fetchNpmPackageData(packageName: string): Promise<{
       throw new Error(`Package "${packageName}" not found on npm registry`);
     }
     throw new Error(`Failed to fetch npm data: ${errorMessage(error)}`);
+  }
+}
+
+/**
+ * TypeScript also pairs a resolved JavaScript file with a sibling `.d.ts`
+ * when package.json never sets `types`. A failed listing leaves the
+ * package.json result in place.
+ */
+async function fetchPublishedTypes(
+  packageName: string,
+  version: string,
+): Promise<boolean | null> {
+  try {
+    const response = await axios.get(
+      `https://data.jsdelivr.com/v1/packages/npm/${encodeURIComponent(packageName)}@${encodeURIComponent(version)}`,
+      {
+        timeout: 4_000,
+        params: { structure: "flat" },
+        validateStatus: (status) => status === 200 || status === 404,
+      },
+    );
+    if (response.status !== 200 || !Array.isArray(response.data?.files)) {
+      return null;
+    }
+    const names = response.data.files.flatMap((file: { name?: unknown }) =>
+      typeof file?.name === "string" ? [file.name] : [],
+    );
+    return publishedTypesPresent(names);
+  } catch {
+    return null;
+  }
+}
+
+/** `@types/*` package on the registry, when this package does not ship types. */
+async function fetchSeparateTypesPackage(
+  packageName: string,
+): Promise<string | null> {
+  const typesName = definitelyTypedPackageName(packageName);
+  if (!typesName) return null;
+  try {
+    const response = await axios.get(`${NPM_REGISTRY_URL}/${typesName}/latest`, {
+      timeout: 4_000,
+      validateStatus: (status) => status === 200 || status === 404,
+    });
+    return response.status === 200 ? typesName : null;
+  } catch {
+    return null;
   }
 }
 

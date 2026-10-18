@@ -1,10 +1,13 @@
 import { describe, it } from "vitest";
 import {
   classifyNpmModuleFormat,
+  definitelyTypedPackageName,
   npmMaintainerGithubUrl,
   npmMaintainerNames,
   npmTypesIncluded,
+  publishedTypesPresent,
   topBundleModules,
+  typesPackageTarget,
 } from "@/lib/packages/npm-package-facts";
 
 describe("classifyNpmModuleFormat", () => {
@@ -46,6 +49,32 @@ describe("npmTypesIncluded", () => {
 
   it("should be false when nothing declares types", () => {
     npmTypesIncluded({}).should.equal(false);
+  });
+});
+
+describe("types package names", () => {
+  it("should name the package an @types package supports", () => {
+    (typesPackageTarget("@types/express") ?? "").should.equal("express");
+    (typesPackageTarget("@types/babel__core") ?? "").should.equal("@babel/core");
+    (typesPackageTarget("express") === null).should.equal(true);
+  });
+
+  it("should name the DefinitelyTyped package for a runtime package", () => {
+    (definitelyTypedPackageName("react") ?? "").should.equal("@types/react");
+    (definitelyTypedPackageName("@babel/core") ?? "").should.equal(
+      "@types/babel__core",
+    );
+    (definitelyTypedPackageName("@types/node") === null).should.equal(true);
+  });
+
+  it("should treat a published declaration as included types", () => {
+    publishedTypesPresent(["index.js", "dist/index.d.ts"]).should.equal(true);
+    publishedTypesPresent(["index.js", "cjs/react.development.js"]).should.equal(
+      false,
+    );
+    publishedTypesPresent(["test/index.d.ts", "docs/api.d.ts"]).should.equal(
+      false,
+    );
   });
 });
 

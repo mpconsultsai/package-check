@@ -27,6 +27,7 @@ import {
   SimilarPackagesCard,
   OverviewTabs,
   InsightTabs,
+  AnalysisPanel,
   PackageNameHeader,
   type OverviewTabId,
   type InsightTabId,
@@ -559,71 +560,85 @@ function PackagePageContent({
             </div>
           ) : null}
 
+          {showResults && (
+            <div className="mb-4 flex flex-wrap items-start justify-between gap-3 sm:mb-6">
+              <PackageNameHeader
+                packageName={
+                  analysisData?.packageInfo?.name ?? packageDisplayName
+                }
+                homepage={analysisData?.packageInfo?.homepage}
+              />
+              <div className="hidden sm:block shrink-0">
+                <WatchToggle
+                  packageName={packageDisplayName}
+                  ecosystem={ecosystem}
+                  summary={watchSummary}
+                  disabled={!packageDisplayName}
+                />
+              </div>
+            </div>
+          )}
+
           {showResults && !serviceStarting && (
             <div className="space-y-4 sm:space-y-6 mb-4 sm:mb-8">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <PackageNameHeader
-                  packageName={
-                    analysisData?.packageInfo?.name ?? packageDisplayName
-                  }
-                  homepage={analysisData?.packageInfo?.homepage}
-                />
-                <div className="hidden sm:block shrink-0">
-                  <WatchToggle
-                    packageName={packageDisplayName}
-                    ecosystem={ecosystem}
-                    summary={watchSummary}
-                    disabled={!packageDisplayName}
-                  />
-                </div>
-              </div>
-
               <OverviewTabs
                 active={overviewTab}
                 onChange={handleOverviewTabChange}
                 showCharts={features.chartsTab}
               />
 
-              {overviewTab === "info" &&
-                (reportLoading || !analysisData?.packageInfo ? (
-                  <PanelSkeleton label="Loading package info" />
-                ) : (
-                  <PackageInfoCard
-                    packageInfo={analysisData.packageInfo}
-                    ecosystem={ecosystem}
-                    metrics={analysisData.metrics}
-                    metricsLoading={!analysisData.metrics}
-                    versionTimes={analysisData.npm?.time}
-                    latestSecurity={analysisData.security}
-                  />
-                ))}
+              {overviewTab === "info" && (
+                <AnalysisPanel id="overview-panel-info" title="Package info">
+                  {reportLoading || !analysisData?.packageInfo ? (
+                    <PanelSkeleton label="Loading package info" />
+                  ) : (
+                    <PackageInfoCard
+                      packageInfo={analysisData.packageInfo}
+                      ecosystem={ecosystem}
+                      metrics={analysisData.metrics}
+                      metricsLoading={!analysisData.metrics}
+                      versionTimes={analysisData.npm?.time}
+                      latestSecurity={analysisData.security}
+                    />
+                  )}
+                </AnalysisPanel>
+              )}
 
-              {features.chartsTab && overviewTab === "charts" &&
-                (reportLoading || !analysisData?.packageInfo ? (
-                  <PanelSkeleton label="Loading charts" />
-                ) : (
-                  <MetricsChartsCard
-                    packageName={analysisData.packageInfo.name}
-                    ecosystem={ecosystem}
-                    showDownloads={features.downloadCharts}
-                    repository={analysisData.packageInfo.repository}
-                    versionTimes={analysisData.npm?.time}
-                    keywords={analysisData.npm?.keywords}
-                    competitors={
-                      aiEnabled ? analysisData.ai?.competitors : undefined
-                    }
-                  />
-                ))}
+              {features.chartsTab && overviewTab === "charts" && (
+                <AnalysisPanel id="overview-panel-charts" title="Charts">
+                  {reportLoading || !analysisData?.packageInfo ? (
+                    <PanelSkeleton label="Loading charts" />
+                  ) : (
+                    <MetricsChartsCard
+                      packageName={analysisData.packageInfo.name}
+                      ecosystem={ecosystem}
+                      showDownloads={features.downloadCharts}
+                      repository={analysisData.packageInfo.repository}
+                      versionTimes={analysisData.npm?.time}
+                      keywords={analysisData.npm?.keywords}
+                      competitors={
+                        aiEnabled ? analysisData.ai?.competitors : undefined
+                      }
+                    />
+                  )}
+                </AnalysisPanel>
+              )}
 
-              {overviewTab === "dependencies" &&
-                (reportLoading || !analysisData?.packageInfo ? (
-                  <PanelSkeleton label="Loading dependencies" />
-                ) : (
-                  <DependenciesCard
-                    packageName={analysisData.packageInfo.name}
-                    ecosystem={ecosystem}
-                  />
-                ))}
+              {overviewTab === "dependencies" && (
+                <AnalysisPanel
+                  id="overview-panel-dependencies"
+                  title="Dependencies"
+                >
+                  {reportLoading || !analysisData?.packageInfo ? (
+                    <PanelSkeleton label="Loading dependencies" />
+                  ) : (
+                    <DependenciesCard
+                      packageName={analysisData.packageInfo.name}
+                      ecosystem={ecosystem}
+                    />
+                  )}
+                </AnalysisPanel>
+              )}
 
               <div
                 className="border-t border-rule"
@@ -641,6 +656,7 @@ function PackagePageContent({
               />
 
               {aiPrefReady && aiEnabled && insightTab === "ai" && (
+                <AnalysisPanel id="insights-panel-ai" title="AI analysis">
                 <div className="space-y-4 sm:space-y-6">
                   {reportLoading || !analysisData?.ai ? (
                     aiError && !aiLoading ? (
@@ -674,10 +690,12 @@ function PackagePageContent({
                     <AIAnalysisCard ai={analysisData.ai} />
                   )}
                 </div>
+                </AnalysisPanel>
               )}
 
-              {insightTab === "security" &&
-                (reportLoading || !analysisData?.packageInfo ? (
+              {insightTab === "security" && (
+                <AnalysisPanel id="insights-panel-security" title="Security">
+                {reportLoading || !analysisData?.packageInfo ? (
                   <PanelSkeleton label="Loading security" />
                 ) : (
                   <SecurityCard
@@ -693,12 +711,18 @@ function PackagePageContent({
                     securityLoading={versionSecurityLoading}
                     securityData={versionSecurityData}
                   />
-                ))}
+                )}
+                </AnalysisPanel>
+              )}
 
               {features.relatedPackages &&
                 insightTab === "related" &&
-                aiEnabled &&
-                (reportLoading || !analysisData ? (
+                aiEnabled && (
+                <AnalysisPanel
+                  id="insights-panel-related"
+                  title="Related packages"
+                >
+                {reportLoading || !analysisData ? (
                   <PanelSkeleton label="Loading related packages" />
                 ) : (
                   <SimilarPackagesCard
@@ -713,11 +737,13 @@ function PackagePageContent({
                       analysisData.packageInfo?.name ?? nameFromPath,
                     )}
                   />
-                ))}
+                )}
+                </AnalysisPanel>
+              )}
             </div>
           )}
 
-          {!showResults && <WhatWeCheck />}
+          {!showResults && <WhatWeCheck level={1} />}
     </>
   );
 }

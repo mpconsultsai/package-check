@@ -21,7 +21,7 @@ export function PageHeader({ showHomeLink = false }: PageHeaderProps) {
   return (
     <header className="mb-6 sm:mb-8">
       <div className="flex items-center justify-between gap-4 border-b-2 border-ink pb-3 sm:pb-4">
-        <h1 className="min-w-0">
+        <p className="min-w-0">
           <Link
             href="/"
             className="group inline-flex items-center gap-3"
@@ -32,12 +32,12 @@ export function PageHeader({ showHomeLink = false }: PageHeaderProps) {
               smoothNavigate(() => router.push("/"));
             }}
           >
-            <AppLogo className="h-9 w-9 shrink-0 sm:h-11 sm:w-11" />
-            <span className="text-2xl font-semibold sm:text-3xl tracking-tight text-ink underline-offset-4 group-hover:underline group-hover:decoration-signal group-hover:decoration-2">
+            <AppLogo className="h-12 w-12 shrink-0 sm:h-14 sm:w-14" />
+            <span className="text-3xl font-semibold sm:text-4xl tracking-tight text-ink underline-offset-4 group-hover:underline group-hover:decoration-signal group-hover:decoration-2">
               {SITE_NAME}
             </span>
           </Link>
-        </h1>
+        </p>
         <nav aria-label="Site" className="flex items-center text-sm">
           {githubUrl && (
             <a
@@ -56,9 +56,9 @@ export function PageHeader({ showHomeLink = false }: PageHeaderProps) {
         </nav>
       </div>
       {!showHomeLink && (
-        <p className="mt-6 max-w-3xl text-xl font-medium leading-snug tracking-tight text-balance text-ink sm:mt-10 sm:text-3xl">
+        <h1 className="mt-6 max-w-3xl text-xl font-medium leading-snug tracking-tight text-balance text-ink sm:mt-10 sm:text-3xl">
           {SITE_STRAPLINE}
-        </p>
+        </h1>
       )}
     </header>
   );

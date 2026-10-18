@@ -478,7 +478,12 @@ export function PackageSearchForm({
 
   return (
     <div ref={cardRef} className="mb-6 sm:mb-8">
-      <form onSubmit={handleSubmit} className="min-w-0 space-y-3">
+      <form
+        onSubmit={handleSubmit}
+        role="search"
+        aria-label="Find a package"
+        className="min-w-0 space-y-3"
+      >
           <div className="flex items-end justify-between gap-2">
             <div
               role="tablist"

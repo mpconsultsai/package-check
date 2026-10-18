@@ -95,6 +95,8 @@ export function compactPackage(report: ClientAnalysisResponse) {
       ? {
           moduleFormat: report.packageInfo.moduleFormat,
           typesIncluded: report.packageInfo.typesIncluded,
+          typesFor: report.packageInfo.typesFor ?? null,
+          typesPackage: report.packageInfo.typesPackage ?? null,
           maintainers: report.packageInfo.maintainers,
           bundleComposition: report.metrics.bundleComposition ?? null,
         }

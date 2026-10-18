@@ -89,12 +89,19 @@ export function AppShell({ children }: { children: ReactNode }) {
     <SearchLoadingContext.Provider value={setSearchLoading}>
       <ShellEcosystemContext.Provider value={toolbarEcosystem}>
       <HeaderGithubProvider>
-      <main className="min-h-screen bg-paper text-ink">
+      <div className="min-h-screen bg-paper text-ink">
+        <a
+          href="#content"
+          className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:bg-ink focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-paper"
+        >
+          Skip to content
+        </a>
         <div className="mx-auto px-4 pt-4 pb-6 sm:px-6 sm:pt-6 sm:pb-10">
           <div className="mx-auto max-w-5xl">
             <div className="site-chrome-header">
               <PageHeader showHomeLink={!isHome} />
             </div>
+            <main id="content" tabIndex={-1} className="outline-none">
             <div className="site-chrome-search relative z-30">
               <PackageSearchForm
                 value={query}
@@ -123,12 +130,13 @@ export function AppShell({ children }: { children: ReactNode }) {
               key={isHome ? pathname : `${pathname}:${toolbarEcosystem}`}
               className="route-panel relative z-0"
             >
-              {hideRoutePanel && route ? <WhatWeCheck /> : children}
+              {hideRoutePanel && route ? <WhatWeCheck level={1} /> : children}
             </div>
+            </main>
             <SiteFooter />
           </div>
         </div>
-      </main>
+      </div>
       </HeaderGithubProvider>
       </ShellEcosystemContext.Provider>
     </SearchLoadingContext.Provider>

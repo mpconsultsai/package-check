@@ -70,6 +70,44 @@ export function npmTypesIncluded(pkg: {
   return conditions.has("types");
 }
 
+const TYPES_PACKAGE_PREFIX = "@types/";
+
+/**
+ * Package an `@types/*` package describes.
+ * `@types/express` → `express`, `@types/babel__core` → `@babel/core`.
+ */
+export function typesPackageTarget(name: string): string | null {
+  const trimmed = name.trim();
+  if (!trimmed.startsWith(TYPES_PACKAGE_PREFIX)) return null;
+  const rest = trimmed.slice(TYPES_PACKAGE_PREFIX.length);
+  if (!rest || rest.includes("/") || rest.startsWith("@")) return null;
+  const scoped = rest.match(/^([^@/]+)__(.+)$/);
+  if (scoped?.[1] && scoped[2]) return `@${scoped[1]}/${scoped[2]}`;
+  return rest;
+}
+
+/** DefinitelyTyped name for a runtime package, or null when it already is one. */
+export function definitelyTypedPackageName(name: string): string | null {
+  const trimmed = name.trim();
+  if (!trimmed || trimmed.startsWith(TYPES_PACKAGE_PREFIX)) return null;
+  const scoped = trimmed.match(/^@([^/@]+)\/([^/@]+)$/);
+  if (scoped) return `${TYPES_PACKAGE_PREFIX}${scoped[1]}__${scoped[2]}`;
+  if (trimmed.startsWith("@") || trimmed.includes("/")) return null;
+  return `${TYPES_PACKAGE_PREFIX}${trimmed}`;
+}
+
+const SKIPPED_DECLARATION_DIR =
+  /^(?:|.*\/)(?:test|tests|__tests__|docs|doc|example|examples|fixtures)(?:\/|$)/i;
+
+/** True when a published file list contains a TypeScript declaration. */
+export function publishedTypesPresent(files: readonly string[]): boolean {
+  return files.some((file) => {
+    const path = file.trim().replace(/\\/g, "/").replace(/^\/+/, "");
+    if (!/\.d\.[cm]?ts$/.test(path)) return false;
+    return !SKIPPED_DECLARATION_DIR.test(path);
+  });
+}
+
 export function npmMaintainerNames(
   maintainers:
     | Array<{ name?: string | null } | null | undefined>
