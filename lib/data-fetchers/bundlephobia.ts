@@ -1,4 +1,8 @@
 import axios from "axios";
+import {
+  topBundleModules,
+  type BundleModuleShare,
+} from "@/lib/packages/npm-package-facts";
 
 const BUNDLEPHOBIA_SIZE_URL = "https://bundlephobia.com/api/size";
 
@@ -14,6 +18,8 @@ export interface BundleSizeInfo {
   size: number;
   gzip: number;
   version?: string;
+  /** Largest constituent modules, when Bundlephobia reports them. */
+  composition?: BundleModuleShare[];
 }
 
 /**
@@ -45,10 +51,13 @@ export async function fetchBundleSize(
       return null;
     }
 
+    const composition = topBundleModules(data?.dependencySizes, size);
+
     return {
       size,
       gzip,
       version: typeof data?.version === "string" ? data.version : version,
+      ...(composition.length > 0 ? { composition } : {}),
     };
   } catch (error: unknown) {
     const message =

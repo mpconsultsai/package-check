@@ -15,6 +15,7 @@ describe("reviewRoute", () => {
     reviewRoute(report()).should.deep.equal({
       advisories: false,
       dependencies: false,
+      installScripts: false,
       scorecard: false,
       transitive: false,
     });
@@ -44,6 +45,7 @@ describe("reviewRoute", () => {
     route.should.deep.equal({
       advisories: true,
       dependencies: true,
+      installScripts: false,
       scorecard: true,
       transitive: true,
     });
@@ -76,5 +78,20 @@ describe("reviewRoute", () => {
     route.dependencies.should.equal(true);
     route.scorecard.should.equal(false);
     route.transitive.should.equal(false);
+    route.installScripts.should.equal(false);
+  });
+
+  it("should include npm install scripts only when one runs during install", () => {
+    const route = reviewRoute(
+      report({
+        npm: {
+          name: "esbuild",
+          version: "0.25.0",
+          description: "bundler",
+          installScripts: [{ name: "postinstall", command: "node install.js" }],
+        },
+      }),
+    );
+    route.installScripts.should.equal(true);
   });
 });

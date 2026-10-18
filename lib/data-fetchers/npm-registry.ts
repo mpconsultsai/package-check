@@ -1,4 +1,9 @@
 import axios from 'axios';
+import { listInstallScripts } from "@/lib/packages/install-scripts";
+import {
+  classifyNpmModuleFormat,
+  npmTypesIncluded,
+} from "@/lib/packages/npm-package-facts";
 import { errorMessage } from '@/lib/utils/error-message';
 import { sanitizeDescription } from '../packages/sanitize';
 import { extractPackageName, validatePackageName } from '../packages/validation';
@@ -68,6 +73,7 @@ export async function fetchNpmPackageData(packageName: string): Promise<{
         dependencies: latestVersionData.dependencies,
         peerDependencies: latestVersionData.peerDependencies,
         devDependencies: latestVersionData.devDependencies,
+        installScripts: listInstallScripts(latestVersionData.scripts),
         browser: latestVersionData.browser,
         bin: latestVersionData.bin,
         engines:
@@ -76,6 +82,8 @@ export async function fetchNpmPackageData(packageName: string): Promise<{
             ? latestVersionData.engines
             : null,
         exports: latestVersionData.exports,
+        moduleFormat: classifyNpmModuleFormat(latestVersionData),
+        typesIncluded: npmTypesIncluded(latestVersionData),
         maintainers: data.maintainers,
         time: data.time,
         distTags: data["dist-tags"],

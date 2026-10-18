@@ -22,7 +22,7 @@ function checksFor(ecosystem: PackageEcosystem): Check[] {
     {
       term: "Dependencies",
       detail: features.transitiveDepsTree
-        ? "The direct and transitive tree, so you can see what actually comes along with it."
+        ? "The direct and transitive tree, including which direct dependencies have known advisories."
         : "What it depends on directly, before you add it to your project.",
     },
     {

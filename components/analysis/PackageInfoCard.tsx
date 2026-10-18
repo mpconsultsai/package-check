@@ -12,6 +12,13 @@ import type { PackageEcosystem } from "@/lib/packages/package-routes";
 import { registryLabel } from "@/lib/packages/package-routes";
 import { featuresForEcosystem } from "@/lib/packages/ecosystem-features";
 import { dotnetApiReferenceUrl } from "@/lib/nuget/nuget-description";
+import type { InstallScript } from "@/lib/packages/install-scripts";
+import {
+  npmMaintainerGithubUrl,
+  npmModuleFormatLabel,
+  type BundleModuleShare,
+  type NpmModuleFormat,
+} from "@/lib/packages/npm-package-facts";
 
 /** npm search `dependents` count - badge when widely depended-on. */
 const POPULAR_MIN_DEPENDENTS = 1000;
@@ -32,6 +39,10 @@ interface PackageInfo {
   dependents?: number;
   keywords?: string[];
   engines?: Record<string, string> | null;
+  installScripts?: InstallScript[] | null;
+  moduleFormat?: NpmModuleFormat | null;
+  typesIncluded?: boolean | null;
+  maintainers?: string[] | null;
   supportedFrameworks?: string[] | null;
   commonlyUsedTypes?: string[] | null;
   descriptionNote?: string | null;
@@ -47,6 +58,7 @@ interface PackageInfoCardProps {
     releaseCount?: number;
     bundleSize?: number;
     bundleGzip?: number;
+    bundleComposition?: BundleModuleShare[] | null;
     distributionSize?: number;
     distributionSizeKind?: string;
     distributionFilename?: string;
@@ -178,6 +190,8 @@ export function PackageInfoCard({
   const licenseInfo = describeLicense(packageInfo.license);
   const nodeEngine = packageInfo.engines?.node?.trim() || null;
   const npmEngine = packageInfo.engines?.npm?.trim() || null;
+  const installScripts =
+    ecosystem === "npm" ? (packageInfo.installScripts ?? []) : [];
   const pythonEngine = packageInfo.engines?.python?.trim() || null;
   const dotnetEngine = packageInfo.engines?.dotnet?.trim() || null;
   const supportedFrameworks = (packageInfo.supportedFrameworks ?? []).filter(
@@ -365,6 +379,65 @@ export function PackageInfoCard({
             {npmEngine && ecosystem === "npm" && (
               <Fact label="npm">
                 <span className="font-mono">{npmEngine}</span>
+              </Fact>
+            )}
+
+            {ecosystem === "npm" && packageInfo.moduleFormat && (
+              <Fact label="Module format">
+                <span className="font-mono">
+                  {npmModuleFormatLabel(packageInfo.moduleFormat)}
+                </span>
+              </Fact>
+            )}
+
+            {ecosystem === "npm" &&
+              typeof packageInfo.typesIncluded === "boolean" && (
+                <Fact label="TypeScript types">
+                  {packageInfo.typesIncluded ? "Included" : "Not included"}
+                  {!packageInfo.typesIncluded && (
+                    <span className="mt-1 block text-xs font-normal leading-relaxed text-gray-500 dark:text-gray-400">
+                      TypeScript projects may need a separate @types package.
+                    </span>
+                  )}
+                </Fact>
+              )}
+
+            {ecosystem === "npm" &&
+              (packageInfo.maintainers?.length ?? 0) > 0 && (
+                <Fact label="Maintainers">
+                  <span className="font-mono text-sm font-normal">
+                    {packageInfo.maintainers!.slice(0, 8).map((name, index) => (
+                      <span key={name}>
+                        {index > 0 ? ", " : ""}
+                        <a
+                          href={npmMaintainerGithubUrl(name)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="link"
+                        >
+                          {name}
+                        </a>
+                      </span>
+                    ))}
+                    {packageInfo.maintainers!.length > 8
+                      ? ` and ${packageInfo.maintainers!.length - 8} more`
+                      : ""}
+                  </span>
+                </Fact>
+              )}
+
+            {installScripts.length > 0 && (
+              <Fact label="Install scripts" wide>
+                <ul className="space-y-2" aria-label="Install scripts">
+                  {installScripts.map((script) => (
+                    <li key={script.name}>
+                      <span className="font-mono text-sm">{script.name}</span>
+                      <span className="mt-0.5 block whitespace-pre-wrap break-all font-mono text-xs font-normal leading-relaxed text-gray-600 dark:text-gray-400">
+                        {script.command}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
               </Fact>
             )}
 

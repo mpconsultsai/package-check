@@ -30,6 +30,7 @@ function ActivityList({
           >
             <Link
               href={packagePagePath(ecosystem, item.name)}
+              scroll={false}
               className="link min-w-0 truncate font-mono text-sm"
             >
               {item.name}

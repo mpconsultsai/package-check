@@ -8,6 +8,10 @@ import {
 } from '../packages/validation';
 import { registryLabel, type PackageEcosystem } from '../packages/package-routes';
 import { isDotnetInboxPackageId, isStableDotnetPlatformPackage } from '../nuget/dotnet-platform';
+import {
+  npmMaintainerNames,
+  npmModuleFormatLabel,
+} from '../packages/npm-package-facts';
 import { classifyRuntimeEnvironment } from '../packages/runtime-environment';
 import type { RuntimeKind } from '../packages/runtime-environment';
 import { getGroqModel, groqModelLabel } from './groq-config';
@@ -765,7 +769,7 @@ function createAnalysisPrompt(
   data: PackageAnalysisResult,
   scorecard: OpenSSFScorecard | null,
   usageLine: string | null = null,
-  facts: Pick<ReviewFacts, "advisoryLines" | "dependencyLines"> | null = null,
+  facts: Pick<ReviewFacts, "advisoryLines" | "dependencyLines" | "installScriptLines"> | null = null,
 ): string {
   const {
     packageName,
@@ -889,7 +893,18 @@ function createAnalysisPrompt(
   }
   if (facts?.dependencyLines.length) {
     lines.push("Dependencies:");
+    if (facts.dependencyLines.some((line) => line.includes("has advisories"))) {
+      lines.push(
+        "Mention a direct dependency in concerns when its line says it has advisories.",
+      );
+    }
     for (const line of facts.dependencyLines) lines.push(`- ${line}`);
+  }
+  if (facts?.installScriptLines.length) {
+    lines.push(
+      "Install scripts run on the user's machine during npm install. Mention one in concerns when it downloads or executes code:",
+    );
+    for (const line of facts.installScriptLines) lines.push(`- ${line}`);
   }
 
   if (ecosystem === "npm") {
@@ -904,12 +919,35 @@ function createAnalysisPrompt(
             : "unclear (treat browser bundle cautiously if present)";
     lines.push(`Runtime target (heuristic): ${runtimeLabel}`);
 
+    if (data.npm?.moduleFormat) {
+      lines.push(
+        `Module format: ${npmModuleFormatLabel(data.npm.moduleFormat)}. State it as a fact. Do not lower the recommendation because a package is CommonJS.`,
+      );
+    }
+    if (typeof data.npm?.typesIncluded === "boolean") {
+      lines.push(
+        data.npm.typesIncluded
+          ? "TypeScript types: included in the package."
+          : "TypeScript types: not included. A separate @types package may be required. Mention this as a fact, not a concern, unless the package is a TypeScript library.",
+      );
+    }
+    const maintainers = npmMaintainerNames(data.npm?.maintainers);
+    if (maintainers.length > 0) {
+      lines.push(
+        `Maintainers (${maintainers.length}): ${maintainers.slice(0, 12).join(", ")}`,
+      );
+    }
+
     const bundleAssessment = assessBundleSize(data);
     if (bundleSize && bundleAssessment.gzip !== null && bundleAssessment.size !== null) {
+      const composition = (data.bundleSize?.composition ?? [])
+        .map((mod) => `${mod.name} ${Math.round(mod.share * 100)}%`)
+        .join(", ");
       let bundleLine = `Bundle: ${formatBytes(bundleAssessment.size)} min / ${formatBytes(bundleAssessment.gzip)} gzip (${bundleAssessment.level})`;
+      if (composition) bundleLine += `. Largest modules: ${composition}`;
       if (runtimeKind === "server") {
         bundleLine +=
-          " - server-oriented package: do NOT list browser bundle size as a concern";
+          " - server-oriented package: do NOT list browser bundle size or these modules as a concern";
       } else if (bundleAssessment.level === "large" || bundleAssessment.level === "very-large") {
         bundleLine += " - MUST list in concerns for browser/client use; not a strength";
       } else if (bundleAssessment.level === "notable") {

@@ -1,5 +1,6 @@
 import { formatBytes } from "@/lib/utils/format";
 import { distributionSizeCaption } from "@/lib/data-fetchers/pypi-distribution-size";
+import type { BundleModuleShare } from "@/lib/packages/npm-package-facts";
 
 interface MetricsCardProps {
   metrics: {
@@ -10,6 +11,7 @@ interface MetricsCardProps {
     releaseCount?: number;
     bundleSize?: number;
     bundleGzip?: number;
+    bundleComposition?: BundleModuleShare[] | null;
     distributionSize?: number;
     distributionSizeKind?: string;
     distributionFilename?: string;
@@ -42,6 +44,9 @@ export function MetricsCard({
       : null;
   const hasReleaseCount =
     typeof metrics.releaseCount === "number" && metrics.releaseCount > 0;
+  const bundleComposition = (metrics.bundleComposition ?? []).filter(
+    (mod) => mod.share >= 0.05,
+  );
 
   const body = (
     <>
@@ -130,6 +135,18 @@ export function MetricsCard({
           </div>
         )}
       </div>
+      {bundleComposition.length > 0 && (
+        <p className="mt-4 text-sm text-gray-600 dark:text-gray-400">
+          <span className="font-mono text-[11px] uppercase tracking-[0.12em]">
+            Largest modules
+          </span>
+          <span className="mt-1 block font-mono text-sm text-ink">
+            {bundleComposition
+              .map((mod) => `${mod.name} ${Math.round(mod.share * 100)}%`)
+              .join(" · ")}
+          </span>
+        </p>
+      )}
       <p className="mt-4 text-xs text-gray-500 dark:text-gray-400">
         *Quality score is calculated from GitHub stars or dependents
         {showDownloads

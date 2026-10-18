@@ -6,6 +6,60 @@ export interface PackageDependency {
   kind: DependencyKind;
   /** PEP 508 environment marker (PyPI conditional requirements). */
   marker?: string;
+  /** Version deps.dev resolved for an npm direct dependency. */
+  resolvedVersion?: string;
+  /** Known advisories on that resolved version. npm only. */
+  advisoryCount?: number;
+  advisoryIds?: string[];
+}
+
+type DirectAdvisoryNode = {
+  name: string;
+  version: string;
+  relation: string;
+  advisoryCount: number;
+  advisoryIds: string[];
+};
+
+/** Copy advisory counts from a deps.dev graph onto matching direct dependencies. */
+export function attachDirectAdvisories(
+  dependencies: PackageDependency[],
+  nodes: DirectAdvisoryNode[],
+): PackageDependency[] {
+  const direct = new Map<string, DirectAdvisoryNode>();
+  for (const node of nodes) {
+    if (node.relation !== "DIRECT" || node.advisoryCount <= 0) continue;
+    const key = node.name.toLowerCase();
+    const existing = direct.get(key);
+    if (!existing || node.advisoryCount > existing.advisoryCount) {
+      direct.set(key, node);
+    }
+  }
+
+  return dependencies.map((dep) => {
+    const node = direct.get(dep.name.toLowerCase());
+    if (!node) return dep;
+    return {
+      ...dep,
+      resolvedVersion: node.version,
+      advisoryCount: node.advisoryCount,
+      advisoryIds: node.advisoryIds.slice(0, 4),
+    };
+  });
+}
+
+export function formatDirectAdvisoryLine(node: {
+  name: string;
+  version: string;
+  advisoryCount: number;
+  advisoryIds: string[];
+}): string {
+  const ids = node.advisoryIds.slice(0, 3).filter(Boolean);
+  if (ids.length > 0) {
+    return `${node.name}@${node.version} has advisories: ${ids.join(", ")}`;
+  }
+  const noun = node.advisoryCount === 1 ? "advisory" : "advisories";
+  return `${node.name}@${node.version} has ${node.advisoryCount} ${noun}`;
 }
 
 /** Stable list keys when the same package appears more than once (e.g. PyPI markers). */

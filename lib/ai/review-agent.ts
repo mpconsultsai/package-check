@@ -7,7 +7,10 @@ import {
   type OpenSSFScorecard,
 } from "@/lib/data-fetchers/openssf-scorecard";
 import { featuresForEcosystem } from "@/lib/packages/ecosystem-features";
-import { listPackageDependencies } from "@/lib/packages/package-deps";
+import {
+  formatDirectAdvisoryLine,
+  listPackageDependencies,
+} from "@/lib/packages/package-deps";
 import type { PackageAnalysisResult } from "@/lib/types/package-data";
 
 const ADVISORY_CAP = 8;
@@ -17,6 +20,7 @@ const TRANSITIVE_NAME_CAP = 8;
 export type ReviewRoute = {
   advisories: boolean;
   dependencies: boolean;
+  installScripts: boolean;
   scorecard: boolean;
   transitive: boolean;
 };
@@ -24,6 +28,7 @@ export type ReviewRoute = {
 export type ReviewFacts = {
   advisoryLines: string[];
   dependencyLines: string[];
+  installScriptLines: string[];
   scorecard: OpenSSFScorecard | null;
 };
 
@@ -33,6 +38,7 @@ const ReviewState = Annotation.Root({
   data: Annotation<PackageAnalysisResult>,
   advisoryLines: Annotation<string[]>,
   dependencyLines: Annotation<string[]>,
+  installScriptLines: Annotation<string[]>,
   scorecard: Annotation<OpenSSFScorecard | null>,
   toolCalls: Annotation<string[]>,
   analysis: Annotation<AIPackageAnalysis | null>,
@@ -51,9 +57,12 @@ export function reviewRoute(data: PackageAnalysisResult): ReviewRoute {
     data.npm?.peerDependencies,
   ).length;
   const dependencies = dependencyCount > 0;
+  const installScripts =
+    ecosystem === "npm" && (data.npm?.installScripts?.length ?? 0) > 0;
   return {
     advisories: (data.security?.totalCount ?? 0) > 0,
     dependencies,
+    installScripts,
     scorecard:
       ecosystem === "npm" &&
       resolveGithubProjectId(data.npm?.repository?.url) !== null,
@@ -131,6 +140,11 @@ async function enrichDependencies(state: typeof ReviewState.State) {
         const names = graph.nodes
           .filter((node) => node.relation !== "SELF" && node.advisoryCount > 0)
           .map((node) => `${node.name}@${node.version}`);
+        for (const node of graph.nodes) {
+          if (node.relation === "DIRECT" && node.advisoryCount > 0) {
+            lines.push(formatDirectAdvisoryLine(node));
+          }
+        }
         lines.push(transitiveLine(graph.stats, names));
         calls.push(`enrich_transitive:${graph.stats.withAdvisories}`);
       } catch {
@@ -141,6 +155,19 @@ async function enrichDependencies(state: typeof ReviewState.State) {
   return {
     dependencyLines: lines,
     toolCalls: [...(state.toolCalls ?? []), ...calls],
+  };
+}
+
+async function enrichInstallScripts(state: typeof ReviewState.State) {
+  if (!reviewRoute(state.data).installScripts) {
+    return { toolCalls: appendToolCall(state, "enrich_install_scripts:skip") };
+  }
+  const lines = (state.data.npm?.installScripts ?? []).map(
+    (script) => `${script.name}: ${script.command}`,
+  );
+  return {
+    installScriptLines: lines,
+    toolCalls: appendToolCall(state, `enrich_install_scripts:${lines.length}`),
   };
 }
 
@@ -168,11 +195,13 @@ function buildReviewGraph(synthesize: ReviewSynthesize) {
     .addNode("collect", collect)
     .addNode("advisories", enrichAdvisories)
     .addNode("dependencies", enrichDependencies)
+    .addNode("enrichInstallScripts", enrichInstallScripts)
     .addNode("enrichScorecard", enrichScorecard)
     .addNode("synthesize", async (state) => {
       const analysis = await synthesize({
         advisoryLines: state.advisoryLines ?? [],
         dependencyLines: state.dependencyLines ?? [],
+        installScriptLines: state.installScriptLines ?? [],
         scorecard: state.scorecard ?? null,
       });
       return {
@@ -183,7 +212,8 @@ function buildReviewGraph(synthesize: ReviewSynthesize) {
     .addEdge(START, "collect")
     .addEdge("collect", "advisories")
     .addEdge("advisories", "dependencies")
-    .addEdge("dependencies", "enrichScorecard")
+    .addEdge("dependencies", "enrichInstallScripts")
+    .addEdge("enrichInstallScripts", "enrichScorecard")
     .addEdge("enrichScorecard", "synthesize")
     .addEdge("synthesize", END)
     .compile();
@@ -199,6 +229,7 @@ export async function runReviewGraph(
     data,
     advisoryLines: [],
     dependencyLines: [],
+    installScriptLines: [],
     scorecard: null,
     toolCalls: [],
     analysis: null,

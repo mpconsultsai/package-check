@@ -84,6 +84,7 @@ function PathBreadcrumb({
           ) : (
             <Link
               href={packagePagePath(ecosystem, name)}
+              scroll={false}
               className="link"
             >
               {name}
@@ -116,6 +117,7 @@ function DepTreeRow({
           <div className="flex flex-wrap items-center gap-2">
             <Link
               href={packagePagePath(ecosystem, node.name)}
+              scroll={false}
               className="link font-medium"
             >
               {node.name}

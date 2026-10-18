@@ -6,12 +6,15 @@ import {
   extractPackageName,
   validatePackageNameForEcosystem,
 } from "@/lib/packages/validation";
-import type { PackageEcosystem } from "@/lib/packages/package-routes";
+import {
+  parsePackageRoute,
+  registryLabel,
+  type PackageEcosystem,
+} from "@/lib/packages/package-routes";
 import {
   getEcosystemPreference,
   setEcosystemPreference,
 } from "@/lib/prefs/ecosystem-pref";
-import { parsePackageRoute } from "@/lib/packages/package-routes";
 import { featuresForEcosystem } from "@/lib/packages/ecosystem-features";
 import { smoothNavigate } from "@/lib/prefs/smooth-navigate";
 import { useAiAnalysisPref } from "@/lib/prefs/use-ai-analysis-pref";
@@ -444,7 +447,9 @@ export function PackageSearchForm({
     setPreference: setPackageManager,
     ready: packageManagerReady,
   } = usePackageManagerPref();
-  const watchlist = useWatchlist();
+  const watchlist = useWatchlist().filter(
+    (entry) => (entry.ecosystem ?? "npm") === ecosystem,
+  );
   const watchCount = watchlist.length;
   const alertSummary = summarizeWatchlistAlerts(watchlist);
   const { checking: watchlistChecking } = useWatchlistRefresh(isHome);
@@ -779,7 +784,7 @@ export function PackageSearchForm({
       <div className="sr-only" aria-live="polite" aria-atomic="true">
           {utilityPanel === "watchlist"
             ? watchCount > 0
-              ? `Watchlist opened, ${watchCount} packages`
+              ? `Watchlist opened, ${watchCount} ${registryLabel(ecosystem)} packages`
               : "Watchlist opened, no packages yet"
             : utilityPanel === "paste"
               ? `${pasteLabel} opened`
@@ -800,7 +805,11 @@ export function PackageSearchForm({
           <h2 id="shell-watchlist-heading" className="sr-only">
             Watchlist
           </h2>
-          <WatchlistSection embedded checking={watchlistChecking} />
+          <WatchlistSection
+            embedded
+            ecosystem={ecosystem}
+            checking={watchlistChecking}
+          />
         </div>
       )}
 

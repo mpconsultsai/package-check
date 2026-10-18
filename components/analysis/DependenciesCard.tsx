@@ -144,11 +144,22 @@ function DependencyRow({
           <div className="flex flex-wrap items-center gap-2">
             <Link
               href={packagePagePath(ecosystem, dep.name)}
+              scroll={false}
               className="link font-medium truncate"
             >
               {dep.name}
             </Link>
             <KindBadge kind={dep.kind} ecosystem={ecosystem} />
+            {ecosystem === "npm" && (dep.advisoryCount ?? 0) > 0 ? (
+              <span
+                className="inline-flex shrink-0 border border-signal px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-[0.08em] text-signal"
+                title={dep.advisoryIds?.join(", ") || undefined}
+              >
+                {dep.advisoryCount === 1
+                  ? "1 advisory"
+                  : `${dep.advisoryCount} advisories`}
+              </span>
+            ) : null}
             {dep.marker ? (
               <span
                 className="inline-flex max-w-[12rem] truncate rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-medium text-amber-900 dark:bg-amber-950/40 dark:text-amber-100"
@@ -288,7 +299,7 @@ function DependenciesGraph({
               strokeWidth={1.25}
             />
           ))}
-          <a href={packagePagePath(ecosystem, packageName)}>
+          <Link href={packagePagePath(ecosystem, packageName)} scroll={false}>
             <circle
               cx={cx}
               cy={cy}
@@ -307,22 +318,26 @@ function DependenciesGraph({
                 ? `${packageName.slice(0, 11)}…`
                 : packageName}
             </text>
-          </a>
+          </Link>
           {nodes.map((node) => {
             const peer = node.kind === "peer";
+            const advisory = (node.advisoryCount ?? 0) > 0;
             return (
-              <a
+              <Link
                 key={`node-${dependencyReactKey(node, node.graphIndex)}`}
                 href={packagePagePath(ecosystem, node.name)}
+                scroll={false}
               >
                 <circle
                   cx={node.x}
                   cy={node.y}
                   r={nodeR}
                   className={
-                    peer
-                      ? "fill-violet-500 dark:fill-violet-400"
-                      : "fill-gray-700 dark:fill-gray-300"
+                    advisory
+                      ? "fill-signal"
+                      : peer
+                        ? "fill-violet-500 dark:fill-violet-400"
+                        : "fill-gray-700 dark:fill-gray-300"
                   }
                 />
                 <title>
@@ -333,6 +348,9 @@ function DependenciesGraph({
                       ? "peer"
                       : "runtime"}
                   )
+                  {advisory
+                    ? `, ${node.advisoryCount === 1 ? "1 advisory" : `${node.advisoryCount} advisories`}`
+                    : ""}
                 </title>
                 <text
                   x={node.lx}
@@ -343,7 +361,7 @@ function DependenciesGraph({
                 >
                   {node.name}
                 </text>
-              </a>
+              </Link>
             );
           })}
         </svg>
@@ -358,6 +376,12 @@ function DependenciesGraph({
             <span className="inline-flex items-center gap-1.5">
               <span className="inline-block size-2.5 rounded-full bg-violet-500" />
               Peer
+            </span>
+          ) : null}
+          {nodes.some((node) => (node.advisoryCount ?? 0) > 0) ? (
+            <span className="inline-flex items-center gap-1.5">
+              <span className="inline-block size-2.5 rounded-full bg-signal" />
+              Advisory
             </span>
           ) : null}
         </div>
@@ -472,6 +496,11 @@ export function DependenciesCard({
     }
   }, [hasDepsToPlot, view]);
 
+  const advisoryDeps = (deps ?? []).filter(
+    (dep) => ecosystem === "npm" && (dep.advisoryCount ?? 0) > 0,
+  );
+  const namedAdvisories = advisoryDeps.slice(0, 8);
+  const extraAdvisories = advisoryDeps.length - namedAdvisories.length;
   const coreCount = pypiMeta?.core?.length ?? 0;
   const conditionalCount = pypiMeta?.conditional?.length ?? 0;
   const runtimeCount = (deps ?? []).filter((d) => d.kind === "runtime").length;
@@ -571,6 +600,27 @@ export function DependenciesCard({
         </div>
         ) : null}
       </div>
+
+      {namedAdvisories.length > 0 ? (
+        <p className="text-sm text-ink">
+          {advisoryDeps.length === 1
+            ? "1 direct dependency has a known advisory: "
+            : `${advisoryDeps.length} direct dependencies have known advisories: `}
+          {namedAdvisories.map((dep, index) => (
+            <span key={dep.name}>
+              {index > 0 ? ", " : ""}
+              <Link
+                href={packagePagePath(ecosystem, dep.name)}
+                scroll={false}
+                className="link font-mono"
+              >
+                {dep.name}
+              </Link>
+            </span>
+          ))}
+          {extraAdvisories > 0 ? ` and ${extraAdvisories} more` : ""}
+        </p>
+      ) : null}
 
       {ecosystem === "pypi" && pypiMeta ? (
         <PypiDependenciesPanel

@@ -4,7 +4,11 @@ import { requirePackageFromQueryWithEcosystem } from "@/lib/api/params";
 import { fetchNpmPackageData } from "@/lib/data-fetchers/npm-registry";
 import { fetchPypiPackageData } from "@/lib/data-fetchers/pypi-registry";
 import { fetchNugetPackageData } from "@/lib/data-fetchers/nuget-registry";
-import { listPackageDependencies } from "@/lib/packages/package-deps";
+import { fetchTransitiveDependencyGraph } from "@/lib/data-fetchers/deps-dev";
+import {
+  attachDirectAdvisories,
+  listPackageDependencies,
+} from "@/lib/packages/package-deps";
 
 /** GET /api/v1/packages/dependencies?package=&ecosystem= */
 export const GET = withHandler(
@@ -39,10 +43,21 @@ export const GET = withHandler(
       }
 
       const { data } = await fetchNpmPackageData(packageName);
-      const dependencies = listPackageDependencies(
+      let dependencies = listPackageDependencies(
         data.dependencies,
         data.peerDependencies,
       );
+      if (dependencies.length > 0 && data.version) {
+        try {
+          const graph = await fetchTransitiveDependencyGraph(
+            data.name || packageName,
+            data.version,
+          );
+          dependencies = attachDirectAdvisories(dependencies, graph.nodes);
+        } catch {
+          // The declared list still stands when deps.dev is unavailable.
+        }
+      }
       return jsonOk({
         name: data.name || packageName,
         version: data.version,

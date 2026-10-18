@@ -148,7 +148,14 @@ async function fetchVersionAdvisories(
 async function enrichAdvisories(
   nodes: TransitiveDepNode[],
 ): Promise<TransitiveDepNode[]> {
-  const targets = nodes.filter((n) => n.relation !== "SELF").slice(0, MAX_ADVISORY_LOOKUPS);
+  const targets = nodes
+    .filter((n) => n.relation !== "SELF")
+    .sort((a, b) => {
+      const rank = (relation: TransitiveDepNode["relation"]) =>
+        relation === "DIRECT" ? 0 : 1;
+      return rank(a.relation) - rank(b.relation);
+    })
+    .slice(0, MAX_ADVISORY_LOOKUPS);
   const chunkSize = 8;
   const advisoryById = new Map<string, string[]>();
 

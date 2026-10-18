@@ -230,6 +230,7 @@ export function DependentsModal({
                   <div className="flex items-baseline justify-between gap-3">
                     <Link
                       href={packagePagePath("npm", pkg.name)}
+                      scroll={false}
                       className="link font-mono text-sm font-semibold truncate"
                       onClick={onClose}
                     >

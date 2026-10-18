@@ -13,17 +13,9 @@ import {
 } from "@/lib/prefs/watchlist-store";
 import {
   packagePagePath,
+  registryLabel,
   type PackageEcosystem,
 } from "@/lib/packages/package-routes";
-function EcosystemBadge({ ecosystem }: { ecosystem: PackageEcosystem }) {
-  const label =
-    ecosystem === "pypi" ? "PyPI" : ecosystem === "nuget" ? "NuGet" : "npm";
-  return (
-    <span className="inline-flex shrink-0 border border-rule px-1 py-px font-mono text-[10px] text-gray-500 dark:text-gray-400">
-      {label}
-    </span>
-  );
-}
 
 type VersionBumpKind = "major" | "minor" | "patch";
 
@@ -139,19 +131,26 @@ function AlertBadges({ entry }: { entry: WatchlistEntry }) {
 export function WatchlistSection({
   embedded = false,
   checking = false,
+  ecosystem = "npm",
 }: {
   /** Compact list for the search-card Watchlist panel */
   embedded?: boolean;
   checking?: boolean;
+  /** Show only packages from this registry. */
+  ecosystem?: PackageEcosystem;
 }) {
-  const entries = useWatchlist();
+  const entries = useWatchlist().filter(
+    (entry) => (entry.ecosystem ?? "npm") === ecosystem,
+  );
   const { remove } = useWatchlistActions();
+  const registry = registryLabel(ecosystem);
 
   if (entries.length === 0) {
     if (!embedded) return null;
     return (
       <p className="py-1 text-sm text-gray-600 dark:text-gray-400">
-        No packages watched yet. Use Watch on a package page to save it here.
+        No {registry} packages watched yet. Use Watch on a {registry} package
+        page to save it here.
       </p>
     );
   }
@@ -182,11 +181,11 @@ export function WatchlistSection({
         >
           <Link
             href={packagePagePath(entry.ecosystem ?? "npm", entry.name)}
+            scroll={false}
             className="group min-w-0 flex-1"
           >
-            <p className="flex items-center gap-2 truncate">
-              <EcosystemBadge ecosystem={entry.ecosystem ?? "npm"} />
-              <span className="truncate font-mono text-sm font-medium text-ink underline decoration-gray-400 underline-offset-4 group-hover:decoration-signal">
+            <p className="truncate font-mono text-sm font-medium">
+              <span className="text-ink underline decoration-gray-400 underline-offset-4 group-hover:decoration-signal">
                 {entry.name}
               </span>
             </p>

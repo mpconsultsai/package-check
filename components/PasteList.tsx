@@ -579,6 +579,7 @@ export function PasteListPanel({
                       <td className="px-3 py-2">
                         <Link
                           href={packagePagePath(ecosystem, row.name)}
+                          scroll={false}
                           className="link font-medium"
                         >
                           {row.name}

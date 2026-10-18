@@ -91,6 +91,14 @@ export function compactPackage(report: ClientAnalysisResponse) {
     stars: report.metrics.stars,
     openIssues: report.metrics.openIssues,
     dependents: report.packageInfo.dependents ?? null,
+    ...(report.ecosystem === "npm"
+      ? {
+          moduleFormat: report.packageInfo.moduleFormat,
+          typesIncluded: report.packageInfo.typesIncluded,
+          maintainers: report.packageInfo.maintainers,
+          bundleComposition: report.metrics.bundleComposition ?? null,
+        }
+      : {}),
     qualityScore: report.metrics.qualityScore,
     daysSinceLastRelease: report.packageInfo.daysSinceLastRelease,
     supportedFrameworks: report.packageInfo.supportedFrameworks,

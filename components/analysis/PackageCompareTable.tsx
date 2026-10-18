@@ -123,6 +123,7 @@ export function PackageCompareTable({
                 >
                   <Link
                     href={packagePagePath(ecosystem, column.name)}
+                    scroll={false}
                     className="link"
                   >
                     {column.name}

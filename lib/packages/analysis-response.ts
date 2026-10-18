@@ -6,6 +6,7 @@ import type {
 import type { AIPackageAnalysis } from "@/lib/ai/analyzer";
 import { classifyRuntimeEnvironment } from "@/lib/packages/runtime-environment";
 import { licenseDisplayName } from "@/lib/packages/license-info";
+import { npmMaintainerNames } from "@/lib/packages/npm-package-facts";
 import { registryPackageUrl } from "@/lib/packages/package-routes";
 import { isStableDotnetPlatformPackage } from "@/lib/nuget/dotnet-platform";
 
@@ -170,6 +171,15 @@ export function buildAnalysisResponse(
         (k): k is string => typeof k === "string" && k.trim().length > 0,
       ),
       engines: packageData.npm?.engines ?? null,
+      installScripts: packageData.npm?.installScripts ?? null,
+      moduleFormat:
+        ecosystem === "npm" ? (packageData.npm?.moduleFormat ?? null) : null,
+      typesIncluded:
+        ecosystem === "npm" ? (packageData.npm?.typesIncluded ?? null) : null,
+      maintainers:
+        ecosystem === "npm"
+          ? npmMaintainerNames(packageData.npm?.maintainers)
+          : null,
       supportedFrameworks: packageData.npm?.supportedFrameworks ?? null,
       commonlyUsedTypes: packageData.npm?.commonlyUsedTypes ?? null,
       descriptionNote: packageData.npm?.descriptionNote ?? null,
@@ -190,6 +200,7 @@ export function buildAnalysisResponse(
         ? {
             bundleSize: packageData.bundleSize.size,
             bundleGzip: packageData.bundleSize.gzip,
+            bundleComposition: packageData.bundleSize.composition ?? null,
           }
         : {}),
       ...(packageData.distributionSize

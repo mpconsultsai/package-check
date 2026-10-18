@@ -292,6 +292,7 @@ export function SimilarPackagesCard({
                   <div className="min-w-0 flex items-center gap-2">
                     <Link
                       href={packagePagePath(ecosystem, pkg.name)}
+                      scroll={false}
                       className="link font-mono font-semibold truncate"
                     >
                       {pkg.name}

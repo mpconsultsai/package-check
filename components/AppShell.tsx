@@ -17,7 +17,7 @@ import { ShellEcosystemContext } from "@/components/shell-ecosystem";
 import { PageHeader } from "@/components/PageHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { PackageSearchForm } from "@/components/PackageSearchForm";
-import { smoothNavigate } from "@/lib/prefs/smooth-navigate";
+import { scrollToTop, smoothNavigate } from "@/lib/prefs/smooth-navigate";
 import {
   packagePagePath,
   parsePackageRoute,
@@ -63,6 +63,11 @@ export function AppShell({ children }: { children: ReactNode }) {
     }
   }, [pathPackage, route?.ecosystem, pathname]);
 
+  useEffect(() => {
+    if (!route?.name) return;
+    scrollToTop();
+  }, [pathname, route?.name]);
+
   const routeEcosystem = route?.ecosystem;
   const hideRoutePanel = Boolean(
     routeEcosystem && routeEcosystem !== toolbarEcosystem,
@@ -99,7 +104,9 @@ export function AppShell({ children }: { children: ReactNode }) {
                 onSearch={(name, ecosystem) => {
                   setSearchLoading(true);
                   smoothNavigate(() =>
-                    router.push(packagePagePath(ecosystem, name)),
+                    router.push(packagePagePath(ecosystem, name), {
+                      scroll: false,
+                    }),
                   );
                 }}
                 loading={searchLoading}

@@ -20,3 +20,15 @@ export function smoothNavigate(update: () => void) {
 
   update();
 }
+
+/** Move the window to the top. Skips the animation when the reader prefers reduced motion. */
+export function scrollToTop() {
+  if (typeof window === "undefined" || window.scrollY <= 0) return;
+  const reduceMotion = window.matchMedia(
+    "(prefers-reduced-motion: reduce)",
+  ).matches;
+  window.scrollTo({
+    top: 0,
+    behavior: reduceMotion ? "auto" : "smooth",
+  });
+}
