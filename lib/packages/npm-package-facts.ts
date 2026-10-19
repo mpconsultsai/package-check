@@ -132,6 +132,28 @@ export function npmMaintainerNames(
   return names;
 }
 
+/** `owner/repo` from a GitHub repository URL, or the URL itself. */
+export function provenanceRepoLabel(repositoryUrl: string): string {
+  const match = repositoryUrl.match(/github\.com[/:]([^/\s#?]+)\/([^/\s#?]+)/i);
+  if (!match) return repositoryUrl;
+  return `${match[1]}/${match[2].replace(/\.git$/i, "")}`;
+}
+
+/** Commit page for a provenance statement, when the source is a GitHub repo. */
+export function provenanceCommitUrl(
+  repositoryUrl: string,
+  commit: string,
+): string | null {
+  const base = repositoryUrl
+    .trim()
+    .replace(/^git\+/, "")
+    .replace(/\.git$/i, "")
+    .replace(/\/$/, "");
+  if (!/^https:\/\/github\.com\/[^/]+\/[^/]+$/i.test(base)) return null;
+  if (!/^[0-9a-f]{7,64}$/i.test(commit)) return null;
+  return `${base}/commit/${commit}`;
+}
+
 export function npmMaintainerGithubUrl(name: string): string {
   return `https://github.com/${encodeURIComponent(name)}`;
 }

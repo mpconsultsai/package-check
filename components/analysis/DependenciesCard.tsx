@@ -421,7 +421,7 @@ export function DependenciesCard({
   const [pypiExtra, setPypiExtra] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [view, setView] = useState<"chart" | "list" | "transitive">("chart");
+  const [view, setView] = useState<"chart" | "list" | "transitive">("list");
 
   useEffect(() => {
     const controller = new AbortController();
@@ -430,7 +430,7 @@ export function DependenciesCard({
     setDeps(null);
     setPypiMeta(null);
     setPypiExtra(null);
-    setView("chart");
+    setView("list");
 
     void fetchJson<{
       dependencies?: PackageDependency[];
@@ -570,12 +570,17 @@ export function DependenciesCard({
             [
               ...(showChartList
                 ? [
-                    { id: "chart" as const, label: "Chart" },
-                    { id: "list" as const, label: "List" },
+                    {
+                      id: "list" as const,
+                      label: `List ${(deps ?? []).length}`,
+                    },
                   ]
                 : []),
               ...(showTransitiveTab
-                ? [{ id: "transitive" as const, label: "Full tree" }]
+                ? [{ id: "transitive" as const, label: "Tree" }]
+                : []),
+              ...(showChartList
+                ? [{ id: "chart" as const, label: "Chart" }]
                 : []),
             ] as const
           ).map((option) => {

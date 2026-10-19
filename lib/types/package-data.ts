@@ -5,6 +5,7 @@ import type { BundleSizeInfo } from '../data-fetchers/bundlephobia';
 import type { DistributionSizeInfo } from '../data-fetchers/pypi-distribution-size';
 import type { InstallScript } from "../packages/install-scripts";
 import type { NpmModuleFormat } from "../packages/npm-package-facts";
+import type { NpmProvenance } from "../packages/npm-provenance";
 import type { PackageEcosystem } from "../packages/package-routes";
 
 export type { PackageEcosystem };
@@ -51,6 +52,8 @@ export interface NpmPackageData {
   typesFor?: string | null;
   /** DefinitelyTyped package that publishes types when this package does not. */
   typesPackage?: string | null;
+  /** Signed link from the latest version back to the CI build that published it. */
+  provenance?: NpmProvenance | null;
   maintainers?: Array<{ name: string; email: string }>;
   time?: {
     created: string;

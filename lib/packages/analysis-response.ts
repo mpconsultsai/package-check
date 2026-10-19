@@ -179,6 +179,8 @@ export function buildAnalysisResponse(
       typesFor: ecosystem === "npm" ? (packageData.npm?.typesFor ?? null) : null,
       typesPackage:
         ecosystem === "npm" ? (packageData.npm?.typesPackage ?? null) : null,
+      provenance:
+        ecosystem === "npm" ? (packageData.npm?.provenance ?? null) : null,
       maintainers:
         ecosystem === "npm"
           ? npmMaintainerNames(packageData.npm?.maintainers)

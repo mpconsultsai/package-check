@@ -939,6 +939,21 @@ function createAnalysisPrompt(
           : `TypeScript types: not included in this package.${separate} Mention this as a fact, not a concern, unless the package is a TypeScript library.`,
       );
     }
+    if (data.npm?.provenance) {
+      const source = data.npm.provenance;
+      const where = [
+        source.repositoryUrl,
+        source.commit ? `commit ${source.commit.slice(0, 12)}` : "",
+        source.ref ? `ref ${source.ref}` : "",
+      ]
+        .filter(Boolean)
+        .join(", ");
+      lines.push(
+        source.verified
+          ? `Provenance: the latest version was published from a verified CI build${where ? ` (${where})` : ""}. State it as a fact. Do not raise or lower the recommendation because provenance is present.`
+          : "Provenance: the latest version has no signed provenance attestation. State it as a fact. Do not lower the recommendation because it is missing.",
+      );
+    }
     const maintainers = npmMaintainerNames(data.npm?.maintainers);
     if (maintainers.length > 0) {
       lines.push(

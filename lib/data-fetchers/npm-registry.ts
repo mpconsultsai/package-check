@@ -8,6 +8,13 @@ import {
   publishedTypesPresent,
   typesPackageTarget,
 } from "@/lib/packages/npm-package-facts";
+import {
+  emptyNpmProvenance,
+  npmAttestationsUrl,
+  npmHasProvenanceAttestation,
+  provenanceFromAttestationDocument,
+  type NpmProvenance,
+} from "@/lib/packages/npm-provenance";
 import { errorMessage } from '@/lib/utils/error-message';
 import { sanitizeDescription } from '../packages/sanitize';
 import { extractPackageName, validatePackageName } from '../packages/validation';
@@ -57,6 +64,7 @@ export async function fetchNpmPackageData(packageName: string): Promise<{
     const readme = readmeRaw ? readmeRaw.substring(0, 2000) : null;
 
     const packageId = typeof data.name === "string" ? data.name : packageName;
+    const provenancePromise = resolveNpmProvenance(latestVersionData?.dist);
     const declaredTypes = npmTypesIncluded(latestVersionData);
     const typesFor = typesPackageTarget(packageId);
     let typesIncluded = declaredTypes;
@@ -69,6 +77,7 @@ export async function fetchNpmPackageData(packageName: string): Promise<{
       if (published === true) typesIncluded = true;
       else if (published === false) typesPackage = separate;
     }
+    const provenance = await provenancePromise;
 
     return {
       data: {
@@ -104,6 +113,7 @@ export async function fetchNpmPackageData(packageName: string): Promise<{
         typesIncluded,
         typesFor,
         typesPackage,
+        provenance,
         maintainers: data.maintainers,
         time: data.time,
         distTags: data["dist-tags"],
@@ -145,6 +155,34 @@ async function fetchPublishedTypes(
     return publishedTypesPresent(names);
   } catch {
     return null;
+  }
+}
+
+/**
+ * Signed provenance for this version. A failed detail lookup still counts
+ * as verified when the registry already recorded the attestation.
+ */
+async function resolveNpmProvenance(dist: unknown): Promise<NpmProvenance> {
+  if (!npmHasProvenanceAttestation(dist)) return emptyNpmProvenance();
+  const url = npmAttestationsUrl(dist);
+  if (!url) {
+    return { verified: true, repositoryUrl: null, commit: null, ref: null };
+  }
+  try {
+    const response = await axios.get(url, {
+      timeout: 4_000,
+      validateStatus: (status) => status === 200,
+    });
+    return (
+      provenanceFromAttestationDocument(response.data) ?? {
+        verified: true,
+        repositoryUrl: null,
+        commit: null,
+        ref: null,
+      }
+    );
+  } catch {
+    return { verified: true, repositoryUrl: null, commit: null, ref: null };
   }
 }
 

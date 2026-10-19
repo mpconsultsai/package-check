@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { fetchJson } from "@/lib/prefs/fetch-client";
 import { apiPaths } from "@/lib/api/paths";
 import { compareScorecardChecks } from "@/lib/data-fetchers/openssf-scorecard";
+import { scorecardImprovement } from "@/lib/packages/scorecard-remediation";
 
 type ScorecardCheck = {
   name: string;
@@ -100,6 +101,69 @@ function ScorecardAbout() {
           Hide
         </button>
       </p>
+    </div>
+  );
+}
+
+function ScorecardImprove({ checks }: { checks: ScorecardCheck[] }) {
+  const [open, setOpen] = useState(false);
+  const low = checks
+    .filter((check) => check.score >= 0 && check.score < 5)
+    .sort((a, b) => a.score - b.score || a.name.localeCompare(b.name));
+  if (low.length === 0) return null;
+
+  return (
+    <div className="border-t border-rule pt-2">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls="scorecard-improvements"
+        onClick={() => setOpen((value) => !value)}
+        className="link text-[11px] font-medium"
+      >
+        {open
+          ? "Hide how to raise scores under 5"
+          : `How to raise scores under 5 (${low.length})`}
+      </button>
+      {open ? (
+        <div id="scorecard-improvements" className="mt-2">
+          <p className="text-[11px] leading-relaxed text-gray-500 dark:text-gray-400">
+            If this is your repository, these are the OpenSSF steps that move a
+            score under 5.
+          </p>
+          <ul className="mt-1">
+            {low.map((check) => (
+              <li
+                key={check.name}
+                className="border-b border-rule py-1.5 text-xs last:border-0"
+              >
+                <span className="flex items-baseline justify-between gap-2">
+                  {check.documentationUrl ? (
+                    <a
+                      href={check.documentationUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="link"
+                    >
+                      {check.name}
+                    </a>
+                  ) : (
+                    <span className="text-ink">{check.name}</span>
+                  )}
+                  <span
+                    className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-semibold tabular-nums ${scoreTone(check.score)}`}
+                  >
+                    {formatScore(check.score)}
+                  </span>
+                </span>
+                <p className="mt-0.5 text-[11px] leading-relaxed text-gray-600 dark:text-gray-400">
+                  {scorecardImprovement(check.name)}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -317,6 +381,7 @@ export function OpenSSFScorecardStrip({
           ))}
         </ul>
       ) : null}
+      <ScorecardImprove checks={orderedChecks} />
     </div>,
   );
 }

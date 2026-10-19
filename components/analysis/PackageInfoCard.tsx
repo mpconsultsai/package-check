@@ -18,9 +18,12 @@ import {
   isNpmTypesPackage,
   npmMaintainerGithubUrl,
   npmModuleFormatLabel,
+  provenanceCommitUrl,
+  provenanceRepoLabel,
   type BundleModuleShare,
   type NpmModuleFormat,
 } from "@/lib/packages/npm-package-facts";
+import type { NpmProvenance } from "@/lib/packages/npm-provenance";
 
 /** npm search `dependents` count - badge when widely depended-on. */
 const POPULAR_MIN_DEPENDENTS = 1000;
@@ -46,6 +49,7 @@ interface PackageInfo {
   typesIncluded?: boolean | null;
   typesFor?: string | null;
   typesPackage?: string | null;
+  provenance?: NpmProvenance | null;
   maintainers?: string[] | null;
   supportedFrameworks?: string[] | null;
   commonlyUsedTypes?: string[] | null;
@@ -433,6 +437,12 @@ export function PackageInfoCard({
                 </Fact>
               )}
 
+            {ecosystem === "npm" && packageInfo.provenance && (
+              <Fact label="Provenance">
+                <ProvenanceFact provenance={packageInfo.provenance} />
+              </Fact>
+            )}
+
             {ecosystem === "npm" &&
               (packageInfo.maintainers?.length ?? 0) > 0 && (
                 <Fact label="Maintainers">
@@ -544,6 +554,54 @@ export function PackageInfoCard({
         </>
       )}
     </div>
+  );
+}
+
+function ProvenanceFact({ provenance }: { provenance: NpmProvenance }) {
+  const noteClass =
+    "mt-1 block text-xs font-normal leading-relaxed text-gray-500 dark:text-gray-400";
+  if (!provenance.verified) {
+    return (
+      <>
+        No signed build
+        <span className={noteClass}>
+          The latest version has no signed link to a public CI build.
+        </span>
+      </>
+    );
+  }
+
+  const commitUrl =
+    provenance.repositoryUrl && provenance.commit
+      ? provenanceCommitUrl(provenance.repositoryUrl, provenance.commit)
+      : null;
+  const repoLabel = provenance.repositoryUrl
+    ? provenanceRepoLabel(provenance.repositoryUrl)
+    : null;
+  const shortCommit = provenance.commit?.slice(0, 7);
+
+  return (
+    <>
+      Verified build
+      {commitUrl && repoLabel && shortCommit ? (
+        <span className={noteClass}>
+          Built from{" "}
+          <a
+            href={commitUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="link"
+          >
+            {repoLabel}@{shortCommit}
+          </a>
+          {provenance.ref ? ` (${provenance.ref})` : ""}.
+        </span>
+      ) : (
+        <span className={noteClass}>
+          Signed build recorded by the registry.
+        </span>
+      )}
+    </>
   );
 }
 
