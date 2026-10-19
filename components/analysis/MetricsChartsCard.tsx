@@ -8,6 +8,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { SelectField } from "@/components/SelectField";
 import { registryLabel } from "@/lib/packages/package-routes";
 import {
   Bar,
@@ -807,11 +808,11 @@ export function MetricsChartsCard({
                 <label htmlFor="downloadsCompareSelect" className="sr-only">
                   Compare
                 </label>
-                <select
+                <SelectField
                   id="downloadsCompareSelect"
                   value={compareWith}
                   onChange={(e) => setCompareWith(e.target.value)}
-                  className="w-full md:w-1/2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white text-sm"
+                  className="w-full md:w-1/2"
                 >
                   <option value="">Select package to compare</option>
                   {relatedNames.map((name) => (
@@ -819,7 +820,7 @@ export function MetricsChartsCard({
                       {name}
                     </option>
                   ))}
-                </select>
+                </SelectField>
                 {loadingCompare && (
                   <span className="text-xs text-gray-500 dark:text-gray-400">
                     Loading…

@@ -37,6 +37,17 @@ type DepsDevScorecardPayload = {
 
 const cache = new Map<string, { expires: number; data: OpenSSFScorecard }>();
 
+/** Highest scores first. Unset checks (negative) stay at the end. */
+export function compareScorecardChecks(
+  a: ScorecardCheck,
+  b: ScorecardCheck,
+): number {
+  const rank = (score: number) => (score < 0 ? -1 : score);
+  const delta = rank(b.score) - rank(a.score);
+  if (delta !== 0) return delta;
+  return a.name.localeCompare(b.name);
+}
+
 export function resolveGithubProjectId(
   repositoryUrl: string | null | undefined,
 ): string | null {
@@ -75,12 +86,7 @@ export async function fetchOpenSSFScorecard(
       reason: (c.reason ?? "").trim(),
       documentationUrl: c.documentation?.url?.trim() || undefined,
     }))
-    .sort((a, b) => {
-      const rank = (s: number) => (s < 0 ? 999 : s);
-      const dr = rank(a.score) - rank(b.score);
-      if (dr !== 0) return dr;
-      return a.name.localeCompare(b.name);
-    });
+    .sort(compareScorecardChecks);
 
   const result: OpenSSFScorecard = {
     projectId,

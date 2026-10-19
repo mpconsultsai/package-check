@@ -15,6 +15,7 @@ import type {
 } from "@/lib/upgrade/upgrade-release-notes";
 import { usePackageManagerPreference } from "@/lib/prefs/use-package-manager-pref";
 import { LinkifiedText } from "@/components/LinkifiedText";
+import { SelectField } from "@/components/SelectField";
 import { AgentGraphSteps } from "@/components/analysis/AgentGraphSteps";
 import { severityBadgeClass } from "@/lib/utils/severity";
 import { apiPaths } from "@/lib/api/paths";
@@ -441,11 +442,11 @@ export function UpgradeAdvisorPanel({
           >
             Current version
           </label>
-          <select
+          <SelectField
             id="upgradeFromVersion"
             value={fromVersion}
             onChange={(e) => setFromVersion(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white text-sm"
+            className="w-full"
           >
             <option value="">Select version</option>
             {selectVersions.map((v) => (
@@ -454,7 +455,7 @@ export function UpgradeAdvisorPanel({
                 {v === latest ? " (latest)" : ""}
               </option>
             ))}
-          </select>
+          </SelectField>
         </div>
         <div
           className="hidden sm:block pb-2 text-gray-400 dark:text-gray-400"

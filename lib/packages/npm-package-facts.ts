@@ -72,6 +72,11 @@ export function npmTypesIncluded(pkg: {
 
 const TYPES_PACKAGE_PREFIX = "@types/";
 
+/** True for DefinitelyTyped packages such as `@types/react`. */
+export function isNpmTypesPackage(name: string): boolean {
+  return name.trim().toLowerCase().startsWith(TYPES_PACKAGE_PREFIX);
+}
+
 /**
  * Package an `@types/*` package describes.
  * `@types/express` → `express`, `@types/babel__core` → `@babel/core`.

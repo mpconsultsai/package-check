@@ -9,6 +9,7 @@ import {
 import { registryLabel, type PackageEcosystem } from '../packages/package-routes';
 import { isDotnetInboxPackageId, isStableDotnetPlatformPackage } from '../nuget/dotnet-platform';
 import {
+  isNpmTypesPackage,
   npmMaintainerNames,
   npmModuleFormatLabel,
 } from '../packages/npm-package-facts';
@@ -1007,7 +1008,7 @@ function createAnalysisPrompt(
       ? `- competitors: 4-6 real PyPI alternatives (same job, not plugins/wrappers of this). Exact PyPI project names. Lowercase, no versions. Never "${packageName}".`
       : ecosystem === "nuget"
         ? `- competitors: 4-6 real NuGet alternatives (same job, not plugins/wrappers of this). Exact NuGet package ids. No versions. Never "${packageName}". Never System.* or Microsoft.* package ids.`
-        : `- competitors: 4-6 real npm alternatives (same job, not plugins/wrappers of this). Exact registry names with @ if scoped. Lowercase, no versions. Never "${packageName}".`,
+        : `- competitors: 4-6 real npm alternatives (same job, not plugins/wrappers of this). Exact registry names with @ if scoped. Lowercase, no versions. Never "${packageName}". Never @types/* packages.`,
     "",
     "JSON shape:",
     '{"summary":"","recommendation":"","strengths":[],"concerns":[],"overallScore":0,"securityRating":"","qualityRating":"","maintenanceRating":"","reasoning":"","competitors":[]}',
@@ -1057,6 +1058,7 @@ function parseCompetitorNames(
       !name ||
       seen.has(key) ||
       (ecosystem === "nuget" && isDotnetInboxPackageId(name)) ||
+      (ecosystem === "npm" && isNpmTypesPackage(name)) ||
       !validatePackageNameForEcosystem(name, ecosystem).valid
     )
       continue;

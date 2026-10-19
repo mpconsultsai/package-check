@@ -14,6 +14,7 @@ import {
   fetchNpmPackageData,
   fetchSimilarPackages,
 } from "@/lib/data-fetchers/npm-registry";
+import { isNpmTypesPackage } from "@/lib/packages/npm-package-facts";
 import { isDotnetInboxPackageId } from "@/lib/nuget/dotnet-platform";
 import type { PackageEcosystem } from "@/lib/packages/package-routes";
 import {
@@ -42,6 +43,7 @@ const parseNameList = (
       !name ||
       seen.has(key) ||
       (ecosystem === "nuget" && isDotnetInboxPackageId(name)) ||
+      (ecosystem === "npm" && isNpmTypesPackage(name)) ||
       !validatePackageNameForEcosystem(name, ecosystem).valid
     ) {
       continue;
@@ -133,7 +135,8 @@ export const GET = withHandler(
     const relatedOnly = related.filter(
       (pkg) =>
         !competitorSet.has(pkg.name.toLowerCase()) &&
-        !(ecosystem === "nuget" && isDotnetInboxPackageId(pkg.name)),
+        !(ecosystem === "nuget" && isDotnetInboxPackageId(pkg.name)) &&
+        !(ecosystem === "npm" && isNpmTypesPackage(pkg.name)),
     );
 
     if (isFirstPage) {

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { fetchJson } from "@/lib/prefs/fetch-client";
 import { apiPaths } from "@/lib/api/paths";
+import { compareScorecardChecks } from "@/lib/data-fetchers/openssf-scorecard";
 
 type ScorecardCheck = {
   name: string;
@@ -205,12 +206,15 @@ export function OpenSSFScorecardStrip({
     return () => controller.abort();
   }, [packageName, repository]);
 
-  const previewChecks = useMemo(() => {
-    if (!data) return [];
-    return data.checks.filter((c) => c.score >= 0).slice(0, PREVIEW_CHECK_COUNT);
-  }, [data]);
+  const orderedChecks = useMemo(
+    () => (data ? [...data.checks].sort(compareScorecardChecks) : []),
+    [data],
+  );
+  const previewChecks = orderedChecks
+    .filter((check) => check.score >= 0)
+    .slice(0, PREVIEW_CHECK_COUNT);
 
-  const visibleChecks = checksExpanded ? data?.checks ?? [] : previewChecks;
+  const visibleChecks = checksExpanded ? orderedChecks : previewChecks;
   const extraChecks =
     data && !checksExpanded
       ? Math.max(0, data.checks.length - previewChecks.length)

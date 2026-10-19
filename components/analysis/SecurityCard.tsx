@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { SelectField } from "@/components/SelectField";
 import { AdvisoryLinks } from "./AdvisoryLinks";
 import { AdvisoryDescription } from "./AdvisoryDescription";
 import {
@@ -248,12 +249,12 @@ export function SecurityCard({
           >
             Version
           </label>
-          <select
+          <SelectField
             id="securityVersionSelect"
             value={listedVersion}
             onChange={(e) => applyListedVersion(e.target.value)}
             disabled={versions.length === 0 || securityLoading}
-            className="w-full md:w-1/4 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white disabled:opacity-60"
+            className="w-full md:w-1/4"
           >
             {versions.map((v) => (
               <option key={v} value={v}>
@@ -261,7 +262,7 @@ export function SecurityCard({
                 {v === latestVersion ? " (latest)" : ""}
               </option>
             ))}
-          </select>
+          </SelectField>
         </div>
       ) : (
         <div>

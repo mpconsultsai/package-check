@@ -15,6 +15,7 @@ import { featuresForEcosystem } from "@/lib/packages/ecosystem-features";
 import { dotnetApiReferenceUrl } from "@/lib/nuget/nuget-description";
 import type { InstallScript } from "@/lib/packages/install-scripts";
 import {
+  isNpmTypesPackage,
   npmMaintainerGithubUrl,
   npmModuleFormatLabel,
   type BundleModuleShare,
@@ -394,7 +395,8 @@ export function PackageInfoCard({
             )}
 
             {ecosystem === "npm" &&
-              typeof packageInfo.typesIncluded === "boolean" && (
+              typeof packageInfo.typesIncluded === "boolean" &&
+              !isNpmTypesPackage(packageInfo.name) && (
                 <Fact label="TypeScript types">
                   {packageInfo.typesIncluded ? "Included" : "Not included"}
                   {packageInfo.typesFor && (

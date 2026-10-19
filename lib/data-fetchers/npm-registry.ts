@@ -3,6 +3,7 @@ import { listInstallScripts } from "@/lib/packages/install-scripts";
 import {
   classifyNpmModuleFormat,
   definitelyTypedPackageName,
+  isNpmTypesPackage,
   npmTypesIncluded,
   publishedTypesPresent,
   typesPackageTarget,
@@ -760,7 +761,7 @@ export async function fetchSimilarPackages(
       if (result.status !== "fulfilled") continue;
       for (const entry of result.value) {
         const name = entry.package?.name;
-        if (!name) continue;
+        if (!name || isNpmTypesPackage(name)) continue;
         const key = name.toLowerCase();
         if (seen.has(key)) continue;
         seen.add(key);

@@ -16,6 +16,7 @@ import {
   setEcosystemPreference,
 } from "@/lib/prefs/ecosystem-pref";
 import { featuresForEcosystem } from "@/lib/packages/ecosystem-features";
+import { SelectField } from "@/components/SelectField";
 import { smoothNavigate } from "@/lib/prefs/smooth-navigate";
 import { useAiAnalysisPref } from "@/lib/prefs/use-ai-analysis-pref";
 import {
@@ -944,21 +945,21 @@ export function PackageSearchForm({
                   </p>
                 </div>
                 {packageManagerReady ? (
-                  <select
+                  <SelectField
                     id="package-manager-preference"
                     aria-labelledby="package-manager-preference-label"
                     value={packageManager}
                     onChange={(e) =>
                       setPackageManager(e.target.value as PackageManagerPreference)
                     }
-                    className="w-full shrink-0 border border-gray-400 bg-transparent px-2.5 py-1.5 font-mono text-sm text-ink focus:border-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-signal sm:w-40 dark:border-gray-500"
+                    className="w-full shrink-0 font-mono sm:w-40"
                   >
                     {PACKAGE_MANAGER_OPTIONS.map(({ value, label }) => (
                       <option key={value} value={value}>
                         {label}
                       </option>
                     ))}
-                  </select>
+                  </SelectField>
                 ) : (
                   <span
                     className="inline-block h-8 w-40 shrink-0 bg-gray-200 dark:bg-gray-700"

@@ -2,6 +2,7 @@ import { describe, it } from "vitest";
 import {
   classifyNpmModuleFormat,
   definitelyTypedPackageName,
+  isNpmTypesPackage,
   npmMaintainerGithubUrl,
   npmMaintainerNames,
   npmTypesIncluded,
@@ -57,6 +58,12 @@ describe("types package names", () => {
     (typesPackageTarget("@types/express") ?? "").should.equal("express");
     (typesPackageTarget("@types/babel__core") ?? "").should.equal("@babel/core");
     (typesPackageTarget("express") === null).should.equal(true);
+  });
+
+  it("should recognise a DefinitelyTyped package name", () => {
+    isNpmTypesPackage("@types/react").should.equal(true);
+    isNpmTypesPackage(" @TYPES/node ").should.equal(true);
+    isNpmTypesPackage("react").should.equal(false);
   });
 
   it("should name the DefinitelyTyped package for a runtime package", () => {
