@@ -249,6 +249,15 @@ export function defaultFromVersion(
   versions: string[],
 ): string {
   if (!versions.length) return "";
+  const latestClean = latest && semver.valid(latest) ? latest : null;
+  if (latestClean) {
+    const latestMajor = semver.major(latestClean);
+    const previousLine = versions.find(
+      (version) =>
+        Boolean(semver.valid(version)) && semver.major(version) < latestMajor,
+    );
+    if (previousLine) return previousLine;
+  }
   if (latest && versions[0] === latest && versions.length > 1) {
     return versions[1];
   }

@@ -44,9 +44,7 @@ export function MetricsCard({
       : null;
   const hasReleaseCount =
     typeof metrics.releaseCount === "number" && metrics.releaseCount > 0;
-  const bundleComposition = (metrics.bundleComposition ?? []).filter(
-    (mod) => mod.share >= 0.05,
-  );
+  const bundleComposition = metrics.bundleComposition ?? [];
 
   const body = (
     <>
@@ -142,8 +140,15 @@ export function MetricsCard({
           </span>
           <span className="mt-1 block font-mono text-sm text-ink">
             {bundleComposition
-              .map((mod) => `${mod.name} ${Math.round(mod.share * 100)}%`)
+              .map(
+                (mod) =>
+                  `${mod.name} ${Math.min(100, Math.round(mod.share * 100))}%`,
+              )
               .join(" · ")}
+          </span>
+          <span className="mt-1 block text-xs text-gray-500 dark:text-gray-400">
+            Each figure is that module&apos;s share of the approximate sizes
+            Bundlephobia measured, before minification.
           </span>
         </p>
       )}

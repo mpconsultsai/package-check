@@ -9,6 +9,8 @@ import {
   type UpgradeAdvice,
   type UpgradeVerdict,
 } from "@/lib/upgrade/upgrade-advisor";
+import { advisoryStillAffects } from "@/lib/upgrade/upgrade-manifest";
+import type { RangedRelease } from "@/lib/upgrade/upgrade-release-notes";
 import type {
   BreakingReleaseNote,
   PeerChange,
@@ -53,6 +55,11 @@ interface UpgradeDetailsPayload {
     available: boolean;
     changes: PeerChange[];
   };
+  manifest?: UpgradeManifestPayload | null;
+  releases?: {
+    total: number;
+    shown: RangedRelease[];
+  };
 }
 
 interface SecuritySummary {
@@ -61,6 +68,26 @@ interface SecuritySummary {
   high?: number;
   moderate?: number;
   low?: number;
+  vulnerabilities?: UpgradeAdvisory[];
+}
+
+interface UpgradeAdvisory {
+  id: string;
+  title: string;
+  severity: string;
+  url?: string;
+  cveId?: string | null;
+  vulnerableVersionRange?: string | null;
+  patchedVersions?: string | null;
+}
+
+interface UpgradeManifestPayload {
+  available: boolean;
+  deprecation: { from: string | null; to: string | null };
+  moduleType: { from: string | null; to: string | null } | null;
+  engines: PeerChange[];
+  dependencies: PeerChange[];
+  dependencyCount: number;
 }
 
 function verdictStyles(verdict: UpgradeVerdict): string {
@@ -115,6 +142,12 @@ function PeerChangeRow({ change }: { change: PeerChange }) {
   );
 }
 
+function moduleFormatLabel(value: string | null): string {
+  if (value === "module") return "ES module";
+  if (value === "commonjs") return "CommonJS";
+  return "Unspecified";
+}
+
 function formatVulnCount(security: SecuritySummary | null | undefined): string {
   if (!security || typeof security.totalCount !== "number") return "-";
   if (security.totalCount === 0) return "none";
@@ -157,6 +190,7 @@ export function UpgradeAdvisorPanel({
   const [agentError, setAgentError] = useState<string | null>(null);
   const packageManager = usePackageManagerPreference();
   const agentAbortRef = useRef<AbortController | null>(null);
+  const changeNotesRef = useRef<HTMLDetailsElement | null>(null);
 
   const resetAgentState = () => {
     setAgentBrief(null);
@@ -356,6 +390,18 @@ export function UpgradeAdvisorPanel({
     }
   };
 
+  const hasChangeDetail =
+    (details?.releases?.total ?? 0) > 0 ||
+    (details?.breaking?.notes.length ?? 0) > 0 ||
+    (details?.manifest?.dependencyCount ?? 0) > 0 ||
+    (details?.peers?.changes.length ?? 0) > 0;
+
+  useEffect(() => {
+    if (changeNotesRef.current && hasChangeDetail) {
+      changeNotesRef.current.open = true;
+    }
+  }, [packageName, fromVersion, latest, details, hasChangeDetail]);
+
   // Clear brief when the upgrade range or package manager changes.
   useEffect(() => {
     agentAbortRef.current?.abort();
@@ -415,12 +461,27 @@ export function UpgradeAdvisorPanel({
     if (detailsLoading) return "Loading details…";
     if (detailsError) return "Details unavailable";
     const bits: string[] = [];
+    const releaseTotal = details?.releases?.total ?? 0;
+    if (releaseTotal > 0) {
+      bits.push(
+        `${releaseTotal} release${releaseTotal === 1 ? "" : "s"}`,
+      );
+    }
     if (breakingNotes.length > 0) {
       bits.push(
-        `${breakingNotes.length} breaking release${breakingNotes.length === 1 ? "" : "s"}`,
+        `${breakingNotes.length} breaking`,
       );
-    } else {
+    } else if (releaseTotal === 0) {
       bits.push("No breaking notes");
+    }
+    const dependencyCount = details?.manifest?.dependencyCount ?? 0;
+    if (dependencyCount > 0) {
+      bits.push(
+        `${dependencyCount} dependency change${dependencyCount === 1 ? "" : "s"}`,
+      );
+    }
+    if ((details?.manifest?.engines.length ?? 0) > 0) {
+      bits.push("runtime changed");
     }
     if (details?.peers?.available) {
       bits.push(
@@ -509,6 +570,83 @@ export function UpgradeAdvisorPanel({
                 {factLine}
               </p>
             )}
+            {needsUpgrade && details?.manifest?.deprecation.from && (
+              <p className="mt-3 text-sm leading-relaxed">
+                <span className="font-semibold">Deprecated. </span>
+                {details.manifest.deprecation.from}
+              </p>
+            )}
+            {needsUpgrade && details?.manifest?.moduleType && (
+              <p className="mt-3 text-sm leading-relaxed">
+                <span className="font-semibold">Module format. </span>
+                {moduleFormatLabel(details.manifest.moduleType.from)}
+                <span className="mx-1 opacity-50">→</span>
+                {moduleFormatLabel(details.manifest.moduleType.to)}
+              </p>
+            )}
+            {needsUpgrade && (details?.manifest?.engines.length ?? 0) > 0 && (
+              <div className="mt-3">
+                <p className="text-xs font-semibold uppercase tracking-wide opacity-60">
+                  Runtime
+                </p>
+                <ul className="mt-1 space-y-1">
+                  {details!.manifest!.engines.map((change) => (
+                    <PeerChangeRow
+                      key={`${change.kind}:${change.name}`}
+                      change={change}
+                    />
+                  ))}
+                </ul>
+              </div>
+            )}
+            {needsUpgrade && fromSecurity?.vulnerabilities && fromSecurity.vulnerabilities.length > 0 && (
+              <div className="mt-3">
+                <p className="text-xs font-semibold uppercase tracking-wide opacity-60">
+                  Advisories on {advice.fromClean ?? advice.from}
+                </p>
+                <ul className="mt-1 space-y-1.5">
+                  {fromSecurity.vulnerabilities.slice(0, 6).map((advisory) => {
+                    const still = advisoryStillAffects(
+                      advice.toClean ?? advice.to,
+                      advisory.vulnerableVersionRange,
+                    );
+                    const status =
+                      still === true
+                        ? `Still open on ${advice.toClean ?? advice.to}`
+                        : still === false
+                          ? `Cleared on ${advice.toClean ?? advice.to}`
+                          : advisory.patchedVersions
+                            ? `Patched in ${advisory.patchedVersions}`
+                            : "Range not stated";
+                    return (
+                      <li key={advisory.id} className="text-sm leading-snug">
+                        {advisory.url ? (
+                          <a
+                            href={advisory.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="underline underline-offset-2"
+                          >
+                            {advisory.title}
+                          </a>
+                        ) : (
+                          advisory.title
+                        )}
+                        <span className="mt-0.5 block text-xs opacity-70">
+                          {advisory.cveId ? `${advisory.cveId} · ` : ""}
+                          {advisory.severity} · {status}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+                {fromSecurity.vulnerabilities.length > 6 && (
+                  <p className="mt-1 text-xs opacity-70">
+                    {fromSecurity.vulnerabilities.length - 6} more on this version.
+                  </p>
+                )}
+              </div>
+            )}
             {advice.intermediateMajors.length > 0 && (
               <p className="mt-2 font-mono text-xs opacity-80">
                 Path: {advice.fromClean}
@@ -525,7 +663,10 @@ export function UpgradeAdvisorPanel({
           </div>
 
           {needsUpgrade && (
-            <details className="border-t border-black/10 dark:border-white/10 group">
+            <details
+              ref={changeNotesRef}
+              className="border-t border-black/10 dark:border-white/10 group"
+            >
               <summary className="cursor-pointer list-none px-4 py-3 sm:px-5 text-sm font-medium flex items-center justify-between gap-3 hover:bg-black/[0.03] dark:hover:bg-white/[0.04] [&::-webkit-details-marker]:hidden">
                 <span className="inline-flex items-center gap-2">
                   <span
@@ -547,6 +688,68 @@ export function UpgradeAdvisorPanel({
 
                 {!detailsLoading && !detailsError && details && (
                   <>
+                    {(details.releases?.shown.length ?? 0) > 0 && (
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide opacity-60 mb-2">
+                          Releases
+                          {details.releases &&
+                          details.releases.total > details.releases.shown.length
+                            ? ` · ${details.releases.shown.length} of ${details.releases.total}`
+                            : ""}
+                        </p>
+                        <ul className="space-y-1">
+                          {details.releases?.shown.map((release) => (
+                            <li
+                              key={release.version}
+                              className="flex flex-wrap items-baseline gap-x-2 text-sm"
+                            >
+                              <span className="font-mono font-semibold">
+                                {release.version}
+                              </span>
+                              {release.url ? (
+                                <a
+                                  href={release.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="underline underline-offset-2 opacity-80"
+                                >
+                                  {release.title}
+                                </a>
+                              ) : (
+                                <span className="opacity-80">{release.title}</span>
+                              )}
+                              {release.publishedAt && (
+                                <span className="text-xs opacity-60">
+                                  {formatPublishDate(release.publishedAt)}
+                                </span>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {(details.manifest?.dependencyCount ?? 0) > 0 && (
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide opacity-60 mb-2">
+                          Dependencies
+                          {details.manifest &&
+                          details.manifest.dependencyCount >
+                            details.manifest.dependencies.length
+                            ? ` · ${details.manifest.dependencies.length} of ${details.manifest.dependencyCount}`
+                            : ""}
+                        </p>
+                        <ul className="space-y-1.5">
+                          {details.manifest?.dependencies.map((change) => (
+                            <PeerChangeRow
+                              key={`${change.kind}:${change.name}`}
+                              change={change}
+                            />
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
                     <div>
                       <div className="flex flex-wrap items-baseline justify-between gap-2 mb-2">
                         <p className="text-xs font-semibold uppercase tracking-wide opacity-60">

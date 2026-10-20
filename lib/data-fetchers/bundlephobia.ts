@@ -51,7 +51,7 @@ export async function fetchBundleSize(
       return null;
     }
 
-    const composition = topBundleModules(data?.dependencySizes, size);
+    const composition = topBundleModules(data?.dependencySizes);
 
     return {
       size,

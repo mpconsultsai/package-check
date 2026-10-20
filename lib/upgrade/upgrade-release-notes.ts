@@ -232,6 +232,43 @@ export const extractBreakingItems = (
   return unique;
 };
 
+export interface RangedRelease {
+  version: string;
+  title: string;
+  url?: string;
+  publishedAt: string | null;
+}
+
+/** Newest releases strictly after `from` and up to `to`. */
+export function releasesInRange(input: {
+  from: string;
+  to: string;
+  releases: GitHubReleaseData[];
+  packageName?: string;
+  limit?: number;
+}): { total: number; shown: RangedRelease[] } {
+  const from = semver.clean(input.from) ?? (semver.valid(input.from) ? input.from : null);
+  const to = semver.clean(input.to) ?? (semver.valid(input.to) ? input.to : null);
+  if (!from || !to || !semver.lt(from, to)) return { total: 0, shown: [] };
+
+  const matched: RangedRelease[] = [];
+  for (const release of input.releases) {
+    if (release.draft || release.prerelease) continue;
+    const version = versionFromTag(release.tag_name, input.packageName);
+    if (!version) continue;
+    if (!semver.gt(version, from) || !semver.lte(version, to)) continue;
+    matched.push({
+      version,
+      title: release.name || release.tag_name,
+      url: release.html_url,
+      publishedAt: release.published_at || null,
+    });
+  }
+  matched.sort((a, b) => semver.rcompare(a.version, b.version));
+  const limit = input.limit ?? 6;
+  return { total: matched.length, shown: matched.slice(0, limit) };
+}
+
 export const collectBreakingNotes = (input: {
   from: string;
   to: string;

@@ -103,21 +103,40 @@ describe("npmMaintainerNames", () => {
 });
 
 describe("topBundleModules", () => {
-  it("should keep the modules that take at least 5 percent", () => {
-    topBundleModules(
-      [
-        { name: "iconv-lite", approximateSize: 470 },
-        { name: "mime-db", approximateSize: 260 },
-        { name: "qs", approximateSize: 30 },
-        { name: "tiny", approximateSize: 5 },
-      ],
-      1000,
-    ).map((mod) => mod.name).should.deep.equal(["iconv-lite", "mime-db"]);
+  it("should keep modules that are at least 1 percent of the approximate sizes", () => {
+    const modules = topBundleModules([
+      { name: "iconv-lite", approximateSize: 470 },
+      { name: "mime-db", approximateSize: 260 },
+      { name: "qs", approximateSize: 30 },
+      { name: "tiny", approximateSize: 5 },
+    ]);
+    modules.map((mod) => mod.name).should.deep.equal([
+      "iconv-lite",
+      "mime-db",
+      "qs",
+    ]);
+    modules[0].share.should.be.below(1);
   });
 
-  it("should return nothing when the total size is missing", () => {
-    topBundleModules([{ name: "qs", approximateSize: 10 }], 0).should.deep.equal(
-      [],
-    );
+  it("should list the whole mix when one module is most of the bundle", () => {
+    const modules = topBundleModules([
+      { name: "yup", approximateSize: 77314 },
+      { name: "tiny-case", approximateSize: 2388 },
+      { name: "property-expr", approximateSize: 1439 },
+      { name: "toposort", approximateSize: 1042 },
+    ]);
+    modules.map((mod) => mod.name).should.deep.equal([
+      "yup",
+      "tiny-case",
+      "property-expr",
+      "toposort",
+    ]);
+    Math.round(modules[0].share * 100).should.equal(94);
+    modules.every((mod) => mod.share <= 1).should.equal(true);
+  });
+
+  it("should return nothing when no module has a size", () => {
+    topBundleModules([{ name: "qs", approximateSize: 0 }]).should.deep.equal([]);
+    topBundleModules(null).should.deep.equal([]);
   });
 });

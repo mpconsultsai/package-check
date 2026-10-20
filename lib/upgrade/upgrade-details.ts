@@ -9,9 +9,17 @@ import { fetchNpmPackageData } from "@/lib/data-fetchers/npm-registry";
 import {
   collectBreakingNotes,
   diffPeerDependencies,
+  releasesInRange,
   type BreakingReleaseNote,
   type PeerChange,
+  type RangedRelease,
 } from "@/lib/upgrade/upgrade-release-notes";
+import {
+  compareManifests,
+  manifestFromVersionDoc,
+  type ManifestComparison,
+  type VersionManifest,
+} from "@/lib/upgrade/upgrade-manifest";
 import {
   extractChangelogBreakingNotes,
   fetchPackageChangelog,
@@ -43,12 +51,26 @@ export type UpgradeDetailsResult = {
     available: boolean;
     changes: PeerChange[];
   };
+  manifest: {
+    available: boolean;
+    deprecation: ManifestComparison["deprecation"];
+    moduleType: ManifestComparison["moduleType"];
+    engines: PeerChange[];
+    dependencies: PeerChange[];
+    dependencyCount: number;
+  } | null;
+  releases: {
+    total: number;
+    shown: RangedRelease[];
+  };
 };
 
-async function fetchVersionPeers(
+const DEPENDENCY_CHANGE_CAP = 12;
+
+async function fetchVersionManifest(
   packageName: string,
   version: string,
-): Promise<Record<string, string> | null> {
+): Promise<VersionManifest | null> {
   try {
     const encodedName = packageName.startsWith("@")
       ? packageName.replace("/", "%2F")
@@ -57,11 +79,7 @@ async function fetchVersionPeers(
       `https://registry.npmjs.org/${encodedName}/${encodeURIComponent(version)}`,
       { timeout: 12_000 },
     );
-    const peers = response.data?.peerDependencies;
-    if (peers && typeof peers === "object") {
-      return peers as Record<string, string>;
-    }
-    return {};
+    return manifestFromVersionDoc(response.data);
   } catch {
     return null;
   }
@@ -156,11 +174,11 @@ export async function loadUpgradeDetails(
   const parsed = repoUrl ? parseGitHubUrl(repoUrl) : null;
   const allVersions = listStableVersions(npm.time);
 
-  const [peerPair, recentReleases, taggedReleases, changelog] =
+  const [manifestPair, recentReleases, taggedReleases, changelog] =
     await Promise.all([
       Promise.all([
-        fetchVersionPeers(packageName, from),
-        fetchVersionPeers(packageName, to),
+        fetchVersionManifest(packageName, from),
+        fetchVersionManifest(packageName, to),
       ]),
       parsed
         ? fetchGitHubReleases(parsed.owner, parsed.repo, 100, {
@@ -190,9 +208,18 @@ export async function loadUpgradeDetails(
         : Promise.resolve(null),
     ]);
 
-  const [fromPeers, toPeers] = peerPair;
+  const [fromManifest, toManifest] = manifestPair;
+  const compared =
+    fromManifest && toManifest
+      ? compareManifests(fromManifest, toManifest)
+      : null;
   const peerChanges =
-    fromPeers && toPeers ? diffPeerDependencies(fromPeers, toPeers) : [];
+    fromManifest && toManifest
+      ? diffPeerDependencies(
+          fromManifest.peerDependencies,
+          toManifest.peerDependencies,
+        )
+      : [];
 
   const releases = mergeReleases([recentReleases, taggedReleases]);
   const fromGithub = collectBreakingNotes({
@@ -259,9 +286,25 @@ export async function loadUpgradeDetails(
       hasNotes: notes.some((n) => n.items.length > 0 && !n.inferredMajor),
     },
     peers: {
-      available: Boolean(fromPeers && toPeers),
+      available: Boolean(fromManifest && toManifest),
       changes: peerChanges,
     },
+    manifest: compared
+      ? {
+          available: true,
+          deprecation: compared.deprecation,
+          moduleType: compared.moduleType,
+          engines: compared.engines,
+          dependencies: compared.dependencies.slice(0, DEPENDENCY_CHANGE_CAP),
+          dependencyCount: compared.dependencies.length,
+        }
+      : null,
+    releases: releasesInRange({
+      from,
+      to,
+      releases,
+      packageName,
+    }),
   };
 }
 
@@ -300,6 +343,23 @@ export function truncateUpgradeDetailsForAgent(
     peers: {
       available: details.peers.available,
       changes: details.peers.changes.slice(0, 20),
+    },
+    manifest: details.manifest
+      ? {
+          deprecation: details.manifest.deprecation,
+          moduleType: details.manifest.moduleType,
+          engines: details.manifest.engines,
+          dependencyCount: details.manifest.dependencyCount,
+          dependencies: details.manifest.dependencies.slice(0, 8),
+        }
+      : null,
+    releases: {
+      total: details.releases.total,
+      shown: details.releases.shown.slice(0, 6).map((release) => ({
+        version: release.version,
+        title: release.title,
+        url: release.url ?? null,
+      })),
     },
   };
 }

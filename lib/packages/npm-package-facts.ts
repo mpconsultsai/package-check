@@ -158,24 +158,30 @@ export function npmMaintainerGithubUrl(name: string): string {
   return `https://github.com/${encodeURIComponent(name)}`;
 }
 
-/** Modules that account for a real share of the minified bundle. */
+/**
+ * Largest modules by Bundlephobia's approximate size.
+ * Share is that module's fraction of those approximate sizes, so it stays within 100%.
+ * Those sizes are measured before minification and are not slices of the minified bundle.
+ */
 export function topBundleModules(
   modules:
     | Array<{ name?: string; approximateSize?: number } | null | undefined>
     | null
     | undefined,
-  totalSize: number,
   limit = 4,
 ): BundleModuleShare[] {
-  if (!Number.isFinite(totalSize) || totalSize <= 0) return [];
-  return (modules ?? [])
+  const ranked = (modules ?? [])
     .flatMap((mod) => {
       const name = mod?.name?.trim() ?? "";
       const bytes = Number(mod?.approximateSize);
       if (!name || !Number.isFinite(bytes) || bytes <= 0) return [];
-      return [{ name, bytes, share: bytes / totalSize }];
+      return [{ name, bytes }];
     })
-    .sort((a, b) => b.bytes - a.bytes)
+    .sort((a, b) => b.bytes - a.bytes);
+  const total = ranked.reduce((sum, mod) => sum + mod.bytes, 0);
+  if (total <= 0) return [];
+  return ranked
     .slice(0, limit)
-    .filter((mod) => mod.share >= 0.05);
+    .map((mod) => ({ ...mod, share: mod.bytes / total }))
+    .filter((mod) => mod.share >= 0.01);
 }

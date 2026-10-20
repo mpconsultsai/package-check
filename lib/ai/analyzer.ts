@@ -967,7 +967,9 @@ function createAnalysisPrompt(
         .map((mod) => `${mod.name} ${Math.round(mod.share * 100)}%`)
         .join(", ");
       let bundleLine = `Bundle: ${formatBytes(bundleAssessment.size)} min / ${formatBytes(bundleAssessment.gzip)} gzip (${bundleAssessment.level})`;
-      if (composition) bundleLine += `. Largest modules: ${composition}`;
+      if (composition) {
+        bundleLine += `. Largest modules, as a share of approximate sizes before minification: ${composition}`;
+      }
       if (runtimeKind === "server") {
         bundleLine +=
           " - server-oriented package: do NOT list browser bundle size or these modules as a concern";

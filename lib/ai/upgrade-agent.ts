@@ -478,7 +478,7 @@ function nextStepsGuidance(packageManager: PackageManagerPreference): string {
 1. FIRST: review release notes / breaking-change notes and peer risks - use a real URL from facts.enrichment.migration.urls or details when available; otherwise say to check the package's changelog for this range. Do not invent URLs. Call out named breaking changes from the facts when present.
 2. THEN: install/upgrade to the target version. ${installGuidance(packageManager)} Only install after reviewing what may break.
 3. If facts.enrichment.peers is present, include aligning those peers (name the packages from enrichment.peers.align).
-4. If facts.enrichment.securityDelta shows more advisories on the target, call that out before or with the install step.
+4. If facts.enrichment.securityDelta shows more advisories on the target, call that out before or with the install step. If details.manifest shows a deprecation, an engines change, or a module type change, mention that fact. Name dependency changes from details.manifest.dependencies when they are present.
 5. Run the project's tests and typecheck (or build) to catch breakages.
 Do NOT invent vague steps like "monitor application logs", "update the package lock and rebuild" as a separate step (the lockfile updates with install), or generic "confirm compatibility" without saying how.
 Write in UK English. Do not use "you" or "your". Use enrichment summaries when present - they are deterministic facts.`;

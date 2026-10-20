@@ -572,7 +572,7 @@ export function DependenciesCard({
                 ? [
                     {
                       id: "list" as const,
-                      label: `List ${(deps ?? []).length}`,
+                      label: `List (${(deps ?? []).length})`,
                     },
                   ]
                 : []),

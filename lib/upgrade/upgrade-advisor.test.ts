@@ -79,8 +79,11 @@ describe("defaultFromVersion", () => {
     defaultFromVersion("1.0.0", []).should.equal("");
   });
 
-  it("should pick the release before latest", () => {
+  it("should pick the newest release of the previous major", () => {
     defaultFromVersion("2.0.0", ["2.0.0", "1.0.0"]).should.equal("1.0.0");
     defaultFromVersion("9.0.0", ["2.0.0", "1.0.0"]).should.equal("2.0.0");
+    defaultFromVersion("5.1.0", ["5.1.0", "5.0.0", "4.21.2", "4.0.0"]).should.equal(
+      "4.21.2",
+    );
   });
 });
