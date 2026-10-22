@@ -1,5 +1,5 @@
 import { describe, it } from "vitest";
-import { githubRepoUrl } from "@/scripts/render-release.cjs";
+import { githubRepoUrl, releaseRepoUrl } from "@/scripts/render-release.cjs";
 
 describe("githubRepoUrl", () => {
   it("should read an ssh remote", () => {
@@ -19,6 +19,14 @@ describe("githubRepoUrl", () => {
   it("should reject a remote that is not on GitHub", () => {
     (githubRepoUrl("https://gitlab.com/acme/package-check.git") === null).should.equal(
       true,
+    );
+  });
+});
+
+describe("releaseRepoUrl", () => {
+  it("should use the Render repo slug when the checkout has no origin", () => {
+    (releaseRepoUrl("", "mpconsultsai/package-check") ?? "").should.equal(
+      "https://github.com/mpconsultsai/package-check",
     );
   });
 });

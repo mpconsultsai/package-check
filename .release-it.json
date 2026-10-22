@@ -9,6 +9,7 @@
     "requireUpstream": false,
     "requireBranch": false,
     "push": true,
+    "pushRepo": "origin",
     "pushArgs": ["--follow-tags"]
   },
   "npm": {

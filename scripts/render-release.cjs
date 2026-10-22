@@ -10,6 +10,15 @@ function githubRepoUrl(remote) {
   return null;
 }
 
+/** Render's checkout often has no origin remote. The slug is owner/repo. */
+function releaseRepoUrl(remote, slug) {
+  const fromRemote = githubRepoUrl(remote);
+  if (fromRemote) return fromRemote;
+  const name = String(slug ?? "").trim().replace(/\.git$/, "");
+  if (/^[\w.-]+\/[\w.-]+$/.test(name)) return `https://github.com/${name}`;
+  return null;
+}
+
 function git(args, options = {}) {
   return execFileSync("git", args, { encoding: "utf8", ...options });
 }
@@ -31,15 +40,23 @@ function main() {
     process.exit(1);
   }
 
-  const repo = githubRepoUrl(git(["remote", "get-url", "origin"]));
+  let remote = "";
+  try {
+    remote = git(["remote", "get-url", "origin"]).trim();
+  } catch {
+    remote = "";
+  }
+  const repo = releaseRepoUrl(remote, process.env.RENDER_GIT_REPO_SLUG);
   if (!repo) {
-    console.error("Origin is not a GitHub repository, so the release cannot be pushed.");
+    console.error("Could not determine the GitHub repository to push the release to.");
     process.exit(1);
   }
 
   git(["config", "user.email", "package-check-release@users.noreply.github.com"]);
   git(["config", "user.name", "package-check release"]);
-  git(["remote", "set-url", "origin", `${repo}.git`]);
+  const url = `${repo}.git`;
+  if (remote) git(["remote", "set-url", "origin", url]);
+  else git(["remote", "add", "origin", url]);
   git(["checkout", "-B", branch]);
 
   process.env.GIT_ASKPASS = path.join(__dirname, "git-askpass.sh");
@@ -56,4 +73,4 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = { githubRepoUrl };
+module.exports = { githubRepoUrl, releaseRepoUrl };
