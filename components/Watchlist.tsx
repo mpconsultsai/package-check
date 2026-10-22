@@ -193,8 +193,8 @@ export function WatchlistSection({
       ? `${otherAlertCount} update${otherAlertCount === 1 ? "" : "s"} on another registry`
       : null;
 
-  const controls = onCheck ? (
-    <div className="mt-3 flex items-center gap-3" aria-live="polite">
+  const checkButton =
+    onCheck && entries.length > 0 ? (
       <button
         type="button"
         onClick={onCheck}
@@ -203,16 +203,22 @@ export function WatchlistSection({
       >
         {checking ? "Checking…" : "Check now"}
       </button>
-      {statusNote ? (
-        <p
-          className={`text-xs ${checkError ? "text-red-700 dark:text-red-300" : "text-gray-500 dark:text-gray-400"}`}
-          role={checkError ? "alert" : undefined}
-        >
-          {statusNote}
-        </p>
-      ) : null}
-    </div>
-  ) : null;
+    ) : null;
+
+  const controls =
+    checkButton || statusNote ? (
+      <div className="mt-3 flex items-center gap-3" aria-live="polite">
+        {checkButton}
+        {statusNote ? (
+          <p
+            className={`text-xs ${checkError ? "text-red-700 dark:text-red-300" : "text-gray-500 dark:text-gray-400"}`}
+            role={checkError ? "alert" : undefined}
+          >
+            {statusNote}
+          </p>
+        ) : null}
+      </div>
+    ) : null;
 
   if (entries.length === 0) {
     if (!embedded) return null;

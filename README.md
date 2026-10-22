@@ -237,7 +237,7 @@ Module format, missing TypeScript types, bundle size, dependency count, and npm 
 
 On Render, create a **Web Service** (this app serves API routes, so it is not a static site).
 
-- **Build command**: `rm -rf .next && npm install && npm run build`
+- **Build command**: `rm -rf .next && npm ci --include=dev && npm run release && npm run build`. On Render, `npm run release` runs [release-it](https://github.com/release-it/release-it), which bumps the patch, commits it, and tags `v0.1.1`, `v0.1.2`, and so on. The commit message includes `[skip render]`, so that push does not start a second deploy. The build then reads the new version from `package.json` for the footer. Set `RELEASE_GITHUB_TOKEN` to a GitHub token that can push commits and tags to the deploy branch. Pull before the next push, because main moves forward by that version commit.
 - **Start command**: `npm start`
 - **Health check path**: `/api/v1/health`
 - **Root directory**: leave blank
@@ -248,7 +248,7 @@ Set `MCP_API_KEY` on the service to open `/api/mcp`. Clients and tool list are i
 
 A free Render instance sleeps after about 15 minutes idle. The first request can take about half a minute. While the service is starting, the package page shows **Package Check is starting up** and a **Reload** button. A paid instance stays up. Keep the health check path as `/api/v1/health`.
 
-To run tests during a Render build, use `rm -rf .next && npm install --include=dev && npm test && npm run build`. A production install skips devDependencies, so Vitest is otherwise omitted. A failed build leaves the previous deploy in place. Clearing `.next` avoids a cached server manifest that still omits `/api/mcp`.
+To run tests during a Render build, use `rm -rf .next && npm ci --include=dev && npm run release && npm test && npm run build`. A production install skips devDependencies, so Vitest is otherwise omitted. A failed build leaves the previous deploy in place. Clearing `.next` avoids a cached server manifest that still omits `/api/mcp`.
 
 ## License
 
