@@ -448,12 +448,16 @@ export function PackageSearchForm({
     setPreference: setPackageManager,
     ready: packageManagerReady,
   } = usePackageManagerPref();
-  const watchlist = useWatchlist().filter(
+  const savedPackages = useWatchlist();
+  const watchlist = savedPackages.filter(
     (entry) => (entry.ecosystem ?? "npm") === ecosystem,
   );
   const watchCount = watchlist.length;
-  const alertSummary = summarizeWatchlistAlerts(watchlist);
-  const { checking: watchlistChecking } = useWatchlistRefresh(isHome);
+  const alertSummary = summarizeWatchlistAlerts(savedPackages);
+  const visibleAlerts = summarizeWatchlistAlerts(watchlist).total;
+  const otherAlertCount = Math.max(0, alertSummary.total - visibleAlerts);
+  const { checking: watchlistChecking, error: watchlistCheckError, checkNow } =
+    useWatchlistRefresh(isHome);
 
   useEffect(() => {
     if (!showPasteList && utilityPanel === "paste") {
@@ -466,9 +470,11 @@ export function PackageSearchForm({
   const watchlistLabel =
     watchCount === 0
       ? `${watchlistAction} watchlist`
-      : alertSummary.total > 0
-        ? `${watchlistAction} watchlist (${watchedPackages}, ${alertSummary.total} with updates)`
-        : `${watchlistAction} watchlist (${watchedPackages})`;
+      : visibleAlerts > 0
+        ? `${watchlistAction} watchlist (${watchedPackages}, ${visibleAlerts} with updates)`
+        : otherAlertCount > 0
+          ? `${watchlistAction} watchlist (${watchedPackages}, updates on another registry)`
+          : `${watchlistAction} watchlist (${watchedPackages})`;
 
   const utilityButtonClass = (active: boolean) =>
     `inline-flex items-center gap-1.5 border-b-2 pb-1 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-signal ${
@@ -815,6 +821,9 @@ export function PackageSearchForm({
             embedded
             ecosystem={ecosystem}
             checking={watchlistChecking}
+            checkError={watchlistCheckError}
+            onCheck={checkNow}
+            otherAlertCount={otherAlertCount}
           />
         </div>
       )}

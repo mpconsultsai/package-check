@@ -9,6 +9,7 @@ import {
   isWatched,
   toggleWatchlist,
   addToWatchlist,
+  acknowledgeWatchlist,
   updateWatchlistSummary,
   removeFromWatchlist,
   type WatchlistSummary,
@@ -63,6 +64,12 @@ export function useWatchlistActions() {
     },
     [],
   );
+  const acknowledge = useCallback(
+    (packageName: string, ecosystem: PackageEcosystem = "npm") => {
+      acknowledgeWatchlist(packageName, ecosystem);
+    },
+    [],
+  );
   const updateSummary = useCallback(
     (
       packageName: string,
@@ -75,5 +82,5 @@ export function useWatchlistActions() {
     [],
   );
 
-  return { toggle, add, remove, updateSummary };
+  return { toggle, add, remove, acknowledge, updateSummary };
 }

@@ -1,82 +1,97 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchJson } from "@/lib/prefs/fetch-client";
 import { apiPaths } from "@/lib/api/paths";
 import {
   applyWatchlistFreshStatuses,
   getWatchlistEntriesNeedingCheck,
+  listWatchlist,
   type WatchlistFresh,
 } from "@/lib/prefs/watchlist-store";
+import type { PackageEcosystem } from "@/lib/packages/package-routes";
 import { useWatchlist } from "@/lib/prefs/use-watchlist";
 
 interface CheckResponse {
   packages?: Array<
     WatchlistFresh & {
       name: string;
+      ecosystem?: PackageEcosystem;
     }
   >;
   checkedAt?: number;
   error?: string;
 }
 
+const CHECK_FAILED = "Could not check the watchlist";
+
 /**
  * On the homepage, refresh stale watchlist packages at most once per day each.
+ * checkNow ignores that interval.
  */
-export function useWatchlistRefresh(enabled: boolean) {
+export function useWatchlistRefresh(auto: boolean) {
   const entries = useWatchlist();
   const [checking, setChecking] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const inFlight = useRef(false);
 
-  useEffect(() => {
-    if (!enabled || inFlight.current) return;
-
-    const needing = getWatchlistEntriesNeedingCheck();
+  const runCheck = useCallback(async (force: boolean, signal?: AbortSignal) => {
+    if (inFlight.current) return;
+    const needing = force ? listWatchlist() : getWatchlistEntriesNeedingCheck();
     if (needing.length === 0) return;
 
-    const controller = new AbortController();
     inFlight.current = true;
     setChecking(true);
+    if (force) setError(null);
 
-    void (async () => {
-      try {
-        const { ok, data } = await fetchJson<CheckResponse>(
-          apiPaths.watchlist.check,
-          {
-            init: {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                packages: needing.map((entry) => ({
-                  name: entry.name,
-                  ecosystem: entry.ecosystem ?? "npm",
-                })),
-              }),
-            },
-            signal: controller.signal,
-            timeoutMs: 90_000,
-            retries: 1,
+    try {
+      const { ok, data } = await fetchJson<CheckResponse>(
+        apiPaths.watchlist.check,
+        {
+          init: {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              packages: needing.map((entry) => ({
+                name: entry.name,
+                ecosystem: entry.ecosystem ?? "npm",
+              })),
+            }),
           },
-        );
-        if (controller.signal.aborted || !ok) return;
-        const updates = (data.packages ?? []).filter(
-          (pkg): pkg is WatchlistFresh & { name: string } =>
-            Boolean(pkg?.name && pkg.version),
-        );
-        applyWatchlistFreshStatuses(updates, data.checkedAt ?? Date.now());
-      } catch {
-        // Silent - watchlist still usable offline / on failure
-      } finally {
-        if (!controller.signal.aborted) setChecking(false);
-        inFlight.current = false;
+          signal,
+          timeoutMs: 90_000,
+          retries: 1,
+        },
+      );
+      if (signal?.aborted) return;
+      const updates = (data.packages ?? []).filter(
+        (pkg): pkg is WatchlistFresh & { name: string; ecosystem?: PackageEcosystem } =>
+          Boolean(pkg?.name && pkg.version),
+      );
+      if (!ok || updates.length === 0) {
+        setError(data.error || CHECK_FAILED);
+        return;
       }
-    })();
-
-    return () => {
-      controller.abort();
+      setError(null);
+      applyWatchlistFreshStatuses(updates, data.checkedAt ?? Date.now());
+    } catch {
+      if (!signal?.aborted) setError(CHECK_FAILED);
+    } finally {
+      setChecking(false);
       inFlight.current = false;
-    };
-  }, [enabled, entries.length]);
+    }
+  }, []);
 
-  return { checking };
+  useEffect(() => {
+    if (!auto) return;
+    const controller = new AbortController();
+    void runCheck(false, controller.signal);
+    return () => controller.abort();
+  }, [auto, entries.length, runCheck]);
+
+  const checkNow = useCallback(() => {
+    void runCheck(true);
+  }, [runCheck]);
+
+  return { checking, error, checkNow };
 }

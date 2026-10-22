@@ -2,38 +2,34 @@
 
 import type { PackageEcosystem } from "@/lib/packages/package-routes";
 import { watchlistEntryKey } from "@/lib/packages/package-routes";
+import {
+  getWatchlistAlerts,
+  summarizeWatchlistAlerts,
+  watchlistAfterAcknowledge,
+  watchlistAfterPoll,
+  watchlistAfterVisit,
+  watchlistEntryHasAlerts,
+  type WatchlistAdvisory,
+  type WatchlistAlerts,
+  type WatchlistDependencyAdvisory,
+  type WatchlistEntry,
+  type WatchlistFresh,
+  type WatchlistSummary,
+} from "@/lib/prefs/watchlist-alerts";
 
-export interface WatchlistSummary {
-  version?: string;
-  qualityScore?: number;
-  vulnerabilityCount?: number;
-  deprecated?: boolean;
-  recommendation?: string;
-}
-
-/** Latest polled registry/security snapshot (may differ from last reviewed summary). */
-export type WatchlistFresh = Pick<
+export type {
+  WatchlistAdvisory,
+  WatchlistAlerts,
+  WatchlistDependencyAdvisory,
+  WatchlistEntry,
+  WatchlistFresh,
   WatchlistSummary,
-  "version" | "vulnerabilityCount" | "deprecated"
->;
-
-export interface WatchlistAlerts {
-  newVersion: boolean;
-  newVulns: boolean;
-  newlyDeprecated: boolean;
-}
-
-export interface WatchlistEntry {
-  name: string;
-  ecosystem?: PackageEcosystem;
-  pinnedAt: number;
-  /** When we last polled npm/security for this package */
-  lastCheckedAt?: number;
-  /** Snapshot from last package-page analyse (user review baseline) */
-  summary?: WatchlistSummary;
-  /** Latest poll result */
-  fresh?: WatchlistFresh;
-}
+};
+export {
+  getWatchlistAlerts,
+  summarizeWatchlistAlerts,
+  watchlistEntryHasAlerts,
+};
 
 /** Poll at most once per day - typical npm releases are weeks/months apart. */
 export const WATCHLIST_CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000;
@@ -186,69 +182,8 @@ export function isWatched(
   );
 }
 
-export function getWatchlistAlerts(entry: WatchlistEntry): WatchlistAlerts {
-  const baseline = entry.summary;
-  const fresh = entry.fresh;
-  if (!baseline || !fresh) {
-    return { newVersion: false, newVulns: false, newlyDeprecated: false };
-  }
-
-  const baseVulns = baseline.vulnerabilityCount ?? 0;
-  const freshVulns = fresh.vulnerabilityCount ?? 0;
-
-  return {
-    newVersion: Boolean(
-      baseline.version &&
-        fresh.version &&
-        baseline.version !== fresh.version,
-    ),
-    newVulns: freshVulns > baseVulns,
-    newlyDeprecated: Boolean(fresh.deprecated && !baseline.deprecated),
-  };
-}
-
-export function watchlistEntryHasAlerts(entry: WatchlistEntry): boolean {
-  const alerts = getWatchlistAlerts(entry);
-  return alerts.newVersion || alerts.newVulns || alerts.newlyDeprecated;
-}
-
 export function countWatchlistAlerts(entries: WatchlistEntry[] = listWatchlist()): number {
   return entries.filter(watchlistEntryHasAlerts).length;
-}
-
-/** Counts packages with each change type - for the watchlist icon badge. */
-export function summarizeWatchlistAlerts(
-  entries: WatchlistEntry[] = listWatchlist(),
-): {
-  total: number;
-  newVulns: number;
-  newVersion: number;
-  newlyDeprecated: number;
-  /** Prefer security (red) over version (green) over deprecated (orange). */
-  tone: "none" | "vulns" | "version" | "deprecated";
-} {
-  let newVulns = 0;
-  let newVersion = 0;
-  let newlyDeprecated = 0;
-
-  for (const entry of entries) {
-    const alerts = getWatchlistAlerts(entry);
-    if (alerts.newVulns) newVulns += 1;
-    if (alerts.newVersion) newVersion += 1;
-    if (alerts.newlyDeprecated) newlyDeprecated += 1;
-  }
-
-  const total = entries.filter(watchlistEntryHasAlerts).length;
-  const tone =
-    newVulns > 0
-      ? "vulns"
-      : newVersion > 0
-        ? "version"
-        : newlyDeprecated > 0
-          ? "deprecated"
-          : "none";
-
-  return { total, newVulns, newVersion, newlyDeprecated, tone };
 }
 
 export function getWatchlistEntriesNeedingCheck(
@@ -285,6 +220,8 @@ export function addToWatchlist(
         ? {
             version: summary.version,
             vulnerabilityCount: summary.vulnerabilityCount,
+            advisories: summary.advisories,
+            dependencyAdvisories: summary.dependencyAdvisories,
             deprecated: summary.deprecated,
           }
         : undefined,
@@ -335,15 +272,11 @@ export function updateWatchlistSummary(
   );
   if (!existing) return;
 
-  const nextFresh: WatchlistFresh = {
-    version: summary.version,
-    vulnerabilityCount: summary.vulnerabilityCount,
-    deprecated: summary.deprecated,
-  };
-
+  const next = watchlistAfterVisit(existing, summary, now);
   if (
-    summariesEqual(existing.summary, summary) &&
-    freshEqual(existing.fresh, nextFresh)
+    summariesEqual(existing.summary, next.summary) &&
+    freshEqual(existing.fresh, next.fresh) &&
+    existing.lastCheckedAt === next.lastCheckedAt
   ) {
     return;
   }
@@ -351,12 +284,30 @@ export function updateWatchlistSummary(
   writeRaw(
     current.map((entry) =>
       watchlistEntryKey(entry.ecosystem ?? "npm", entry.name) === key
-        ? {
-            ...entry,
-            lastCheckedAt: now,
-            summary,
-            fresh: nextFresh,
-          }
+        ? next
+        : entry,
+    ),
+  );
+}
+
+/** Accept the latest poll, which clears notices for this package. */
+export function acknowledgeWatchlist(
+  packageName: string,
+  ecosystem: PackageEcosystem = "npm",
+): void {
+  const key = watchlistEntryKey(ecosystem, packageName);
+  const current = ensureHydrated();
+  const existing = current.find(
+    (entry) =>
+      watchlistEntryKey(entry.ecosystem ?? "npm", entry.name) === key,
+  );
+  if (!existing) return;
+  const next = watchlistAfterAcknowledge(existing);
+  if (summariesEqual(existing.summary, next.summary)) return;
+  writeRaw(
+    current.map((entry) =>
+      watchlistEntryKey(entry.ecosystem ?? "npm", entry.name) === key
+        ? next
         : entry,
     ),
   );
@@ -386,36 +337,17 @@ export function applyWatchlistFreshStatuses(
     );
     if (!update) return entry;
 
-    const fresh: WatchlistFresh = {
-      version: update.version,
-      vulnerabilityCount: update.vulnerabilityCount,
-      deprecated: update.deprecated,
-    };
-
-    // First successful poll with no baseline - adopt as reviewed snapshot
-    const summary =
-      entry.summary ??
-      ({
-        version: fresh.version,
-        vulnerabilityCount: fresh.vulnerabilityCount,
-        deprecated: fresh.deprecated,
-      } satisfies WatchlistSummary);
-
+    const next = watchlistAfterPoll(entry, update, checkedAt);
     if (
-      entry.lastCheckedAt === checkedAt &&
-      freshEqual(entry.fresh, fresh) &&
-      summariesEqual(entry.summary, summary)
+      entry.lastCheckedAt === next.lastCheckedAt &&
+      freshEqual(entry.fresh, next.fresh) &&
+      summariesEqual(entry.summary, next.summary)
     ) {
       return entry;
     }
 
     changed = true;
-    return {
-      ...entry,
-      lastCheckedAt: checkedAt,
-      summary: entry.summary ?? summary,
-      fresh,
-    };
+    return next;
   });
 
   if (changed) writeRaw(next);
@@ -432,8 +364,24 @@ function summariesEqual(
     a.qualityScore === b.qualityScore &&
     a.vulnerabilityCount === b.vulnerabilityCount &&
     a.deprecated === b.deprecated &&
-    a.recommendation === b.recommendation
+    a.recommendation === b.recommendation &&
+    advisoryKey(a.advisories) === advisoryKey(b.advisories) &&
+    dependencyKey(a.dependencyAdvisories) === dependencyKey(b.dependencyAdvisories)
   );
+}
+
+function advisoryKey(advisories: WatchlistSummary["advisories"]): string {
+  if (!advisories) return "";
+  return advisories.map((advisory) => advisory.id).join("|");
+}
+
+function dependencyKey(
+  dependencies: WatchlistSummary["dependencyAdvisories"],
+): string {
+  if (!dependencies) return "";
+  return dependencies
+    .map((dep) => `${dep.name}:${dep.ids.join(",")}`)
+    .join("|");
 }
 
 function freshEqual(
@@ -445,7 +393,9 @@ function freshEqual(
   return (
     a.version === b.version &&
     a.vulnerabilityCount === b.vulnerabilityCount &&
-    a.deprecated === b.deprecated
+    a.deprecated === b.deprecated &&
+    advisoryKey(a.advisories) === advisoryKey(b.advisories) &&
+    dependencyKey(a.dependencyAdvisories) === dependencyKey(b.dependencyAdvisories)
   );
 }
 

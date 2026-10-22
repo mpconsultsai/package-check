@@ -3,9 +3,16 @@ import {
   advisoryEcosystem,
   type PackageEcosystem,
 } from "@/lib/packages/package-routes";
+import { fetchNpmDirectAdvisories } from "./deps-dev";
 import { checkPackageSecurity } from "./security";
 import { fetchPypiPackageData } from "./pypi-registry";
 import { fetchNugetPackageData } from "./nuget-registry";
+import {
+  compactAdvisories,
+  compactDependencyAdvisories,
+  type WatchlistAdvisory,
+  type WatchlistDependencyAdvisory,
+} from "@/lib/prefs/watchlist-alerts";
 
 const NPM_REGISTRY_URL = "https://registry.npmjs.org";
 
@@ -14,6 +21,9 @@ export interface WatchlistPackageStatus {
   ecosystem: PackageEcosystem;
   version: string;
   vulnerabilityCount: number;
+  advisories?: WatchlistAdvisory[];
+  /** Present for npm after a deps.dev lookup. Absent when that lookup fails. */
+  dependencyAdvisories?: WatchlistDependencyAdvisory[];
   deprecated: boolean;
 }
 
@@ -80,6 +90,7 @@ export async function fetchWatchlistPackageStatus(
   if (!meta?.version) return null;
 
   let vulnerabilityCount = 0;
+  let advisories: WatchlistAdvisory[] | undefined;
   try {
     const security = await checkPackageSecurity(
       packageName,
@@ -87,8 +98,20 @@ export async function fetchWatchlistPackageStatus(
       advisoryEcosystem(ecosystem),
     );
     vulnerabilityCount = security.totalCount;
+    advisories = compactAdvisories(security.vulnerabilities);
   } catch {
-    // Keep version/deprecation even if advisories fail
+    // Keep version and deprecation even if advisories fail
+  }
+
+  let dependencyAdvisories: WatchlistDependencyAdvisory[] | undefined;
+  if (ecosystem === "npm") {
+    try {
+      dependencyAdvisories = compactDependencyAdvisories(
+        await fetchNpmDirectAdvisories(packageName, meta.version),
+      );
+    } catch {
+      // Leave the field unset so a failed lookup is not stored as "none".
+    }
   }
 
   return {
@@ -96,6 +119,8 @@ export async function fetchWatchlistPackageStatus(
     ecosystem,
     version: meta.version,
     vulnerabilityCount,
+    ...(advisories ? { advisories } : {}),
+    ...(dependencyAdvisories ? { dependencyAdvisories } : {}),
     deprecated: meta.deprecated,
   };
 }

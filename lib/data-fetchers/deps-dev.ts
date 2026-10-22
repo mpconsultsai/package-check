@@ -145,6 +145,66 @@ async function fetchVersionAdvisories(
   }
 }
 
+const DIRECT_ADVISORY_CAP = 32;
+
+type BareDependencyGraph = {
+  packageName: string;
+  version: string;
+  nodes: TransitiveDepNode[];
+  edges: TransitiveDepEdge[];
+};
+
+const bareGraphCache = new Map<
+  string,
+  { expires: number; data: BareDependencyGraph }
+>();
+
+async function loadBareDependencyGraph(
+  packageName: string,
+  version: string,
+): Promise<BareDependencyGraph> {
+  const cacheKey = `${packageName.toLowerCase()}|${version}`;
+  const cached = bareGraphCache.get(cacheKey);
+  if (cached && cached.expires > Date.now()) return cached.data;
+
+  const url = `${DEPS_DEV_API}/systems/npm/packages/${encodePackagePath(packageName)}/versions/${encodeURIComponent(version)}:dependencies`;
+  const response = await fetch(url, { headers: { Accept: "application/json" } });
+  if (!response.ok) {
+    throw new Error(`deps.dev graph unavailable (${response.status})`);
+  }
+
+  const payload = (await response.json()) as DepsDevGraphResponse;
+  if (payload.error) throw new Error(payload.error);
+
+  const rawNodes = payload.nodes ?? [];
+  const { nodes: dedupedBase, rawIndexToCanonical } = dedupeGraphNodes(rawNodes);
+  const nodes: TransitiveDepNode[] = dedupedBase.map((node) => ({
+    ...node,
+    advisoryCount: 0,
+    advisoryIds: [],
+  }));
+  const idByCanonical = nodes.map((node) =>
+    nodeId({ system: "NPM", name: node.name, version: node.version }),
+  );
+  const edges: TransitiveDepEdge[] = dedupeEdges(
+    (payload.edges ?? [])
+      .map((edge) => {
+        const fromCanon = rawIndexToCanonical[edge.fromNode];
+        const toCanon = rawIndexToCanonical[edge.toNode];
+        if (fromCanon === undefined || toCanon === undefined) return null;
+        const from = idByCanonical[fromCanon];
+        const to = idByCanonical[toCanon];
+        if (!from || !to || from === to) return null;
+        return { from, to, requirement: edge.requirement };
+      })
+      .filter(Boolean) as TransitiveDepEdge[],
+  );
+
+  const data = { packageName, version, nodes, edges };
+  bareGraphCache.set(cacheKey, { expires: Date.now() + GRAPH_CACHE_MS, data });
+  return data;
+}
+
 async function enrichAdvisories(
   nodes: TransitiveDepNode[],
 ): Promise<TransitiveDepNode[]> {
@@ -197,45 +257,9 @@ export async function fetchTransitiveDependencyGraph(
     return cached.data;
   }
 
-  const url = `${DEPS_DEV_API}/systems/npm/packages/${encodePackagePath(packageName)}/versions/${encodeURIComponent(version)}:dependencies`;
-  const response = await fetch(url, { headers: { Accept: "application/json" } });
-  if (!response.ok) {
-    throw new Error(`deps.dev graph unavailable (${response.status})`);
-  }
-
-  const payload = (await response.json()) as DepsDevGraphResponse;
-  if (payload.error) {
-    throw new Error(payload.error);
-  }
-
-  const rawNodes = payload.nodes ?? [];
-  const { nodes: dedupedBase, rawIndexToCanonical } = dedupeGraphNodes(rawNodes);
-  const nodesBase: TransitiveDepNode[] = dedupedBase.map((n) => ({
-    ...n,
-    advisoryCount: 0,
-    advisoryIds: [],
-  }));
-
-  const idByCanonical = nodesBase.map((n) => nodeId({ system: "NPM", name: n.name, version: n.version }));
-  const edges: TransitiveDepEdge[] = dedupeEdges(
-    (payload.edges ?? [])
-      .map((e) => {
-        const fromCanon = rawIndexToCanonical[e.fromNode];
-        const toCanon = rawIndexToCanonical[e.toNode];
-        if (fromCanon === undefined || toCanon === undefined) return null;
-        const from = idByCanonical[fromCanon];
-        const to = idByCanonical[toCanon];
-        if (!from || !to || from === to) return null;
-        return {
-          from,
-          to,
-          requirement: e.requirement,
-        };
-      })
-      .filter(Boolean) as TransitiveDepEdge[],
-  );
-
-  const nodes = await enrichAdvisories(nodesBase);
+  const bare = await loadBareDependencyGraph(packageName, version);
+  const edges = bare.edges;
+  const nodes = await enrichAdvisories(bare.nodes);
 
   const direct = nodes.filter((n) => n.relation === "DIRECT").length;
   const indirect = nodes.filter((n) => n.relation === "INDIRECT").length;
@@ -257,4 +281,23 @@ export async function fetchTransitiveDependencyGraph(
 
   graphCache.set(cacheKey, { expires: Date.now() + GRAPH_CACHE_MS, data: result });
   return result;
+}
+
+/** Direct npm dependencies that deps.dev lists with at least one advisory. */
+export async function fetchNpmDirectAdvisories(
+  packageName: string,
+  version: string,
+): Promise<Array<{ name: string; version: string; ids: string[] }>> {
+  const bare = await loadBareDependencyGraph(packageName, version);
+  const directs = bare.nodes
+    .filter((node) => node.relation === "DIRECT")
+    .slice(0, DIRECT_ADVISORY_CAP);
+  const enriched = await enrichAdvisories(directs);
+  return enriched
+    .filter((node) => node.advisoryIds.length > 0)
+    .map((node) => ({
+      name: node.name,
+      version: node.version,
+      ids: node.advisoryIds.slice(0, 4),
+    }));
 }

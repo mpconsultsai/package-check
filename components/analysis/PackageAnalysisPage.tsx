@@ -17,6 +17,7 @@ import { WatchToggle } from "@/components/Watchlist";
 import { useWatchlistActions } from "@/lib/prefs/use-watchlist";
 import { useAiAnalysisEnabled, useAiAnalysisPrefReady } from "@/lib/prefs/use-ai-analysis-pref";
 import { getAiAnalysisEnabled } from "@/lib/prefs/ai-analysis-pref";
+import { compactAdvisories } from "@/lib/prefs/watchlist-alerts";
 import type { WatchlistSummary } from "@/lib/prefs/watchlist-store";
 import {
   PackageInfoCard,
@@ -51,6 +52,7 @@ function summaryFromAnalysis(data: ClientAnalysisResponse): WatchlistSummary {
         : undefined,
     qualityScore: data?.metrics?.qualityScore,
     vulnerabilityCount: data?.security?.totalCount,
+    advisories: compactAdvisories(data?.security?.vulnerabilities),
     deprecated: Boolean(data?.npm?.deprecated),
     recommendation: data?.ai?.recommendation,
   };

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import semver from "semver";
+import { TrashIcon } from "@/components/icons";
 import {
   useWatchlist,
   useWatchlistActions,
@@ -9,6 +10,7 @@ import {
 } from "@/lib/prefs/use-watchlist";
 import {
   getWatchlistAlerts,
+  watchlistEntryHasAlerts,
   type WatchlistEntry,
 } from "@/lib/prefs/watchlist-store";
 import {
@@ -89,6 +91,11 @@ function statusLine(entry: WatchlistEntry): string {
   return parts.length > 0 ? parts.join(" · ") : "Open to analyse";
 }
 
+function shortText(text: string): string {
+  const trimmed = text.trim();
+  return trimmed.length > 48 ? `${trimmed.slice(0, 45)}…` : trimmed;
+}
+
 function AlertBadges({ entry }: { entry: WatchlistEntry }) {
   const alerts = getWatchlistAlerts(entry);
   const chips: { label: string; className: string }[] = [];
@@ -96,12 +103,40 @@ function AlertBadges({ entry }: { entry: WatchlistEntry }) {
     const versionChip = newVersionChip(entry);
     if (versionChip) chips.push(versionChip);
   }
-  if (alerts.newVulns) {
+  const securityChip =
+    "border-red-600 text-red-800 dark:border-red-500 dark:text-red-300";
+  if (alerts.newAdvisories.length > 0) {
+    for (const advisory of alerts.newAdvisories.slice(0, 2)) {
+      chips.push({
+        label: `${advisory.severity} · ${shortText(advisory.title)}`,
+        className: securityChip,
+      });
+    }
+    const extra = alerts.newAdvisories.length - 2;
+    if (extra > 0) {
+      chips.push({
+        label: `+${extra} advisories`,
+        className: securityChip,
+      });
+    }
+  } else if (alerts.newVulns) {
     const n = entry.fresh?.vulnerabilityCount ?? 0;
     chips.push({
       label: `${n} vuln${n === 1 ? "" : "s"}`,
-      className:
-        "border-red-600 text-red-800 dark:border-red-500 dark:text-red-300",
+      className: securityChip,
+    });
+  }
+  for (const dep of alerts.newDependencyAdvisories.slice(0, 2)) {
+    chips.push({
+      label: `${dep.name} advisory`,
+      className: securityChip,
+    });
+  }
+  const extraDeps = alerts.newDependencyAdvisories.length - 2;
+  if (extraDeps > 0) {
+    chips.push({
+      label: `+${extraDeps} dependencies`,
+      className: securityChip,
     });
   }
   if (alerts.newlyDeprecated) {
@@ -131,31 +166,69 @@ function AlertBadges({ entry }: { entry: WatchlistEntry }) {
 export function WatchlistSection({
   embedded = false,
   checking = false,
+  checkError = null,
+  onCheck,
+  otherAlertCount = 0,
   ecosystem = "npm",
 }: {
   /** Compact list for the search-card Watchlist panel */
   embedded?: boolean;
   checking?: boolean;
+  checkError?: string | null;
+  onCheck?: () => void;
+  /** Notices on registries other than the one this list is showing. */
+  otherAlertCount?: number;
   /** Show only packages from this registry. */
   ecosystem?: PackageEcosystem;
 }) {
   const entries = useWatchlist().filter(
     (entry) => (entry.ecosystem ?? "npm") === ecosystem,
   );
-  const { remove } = useWatchlistActions();
+  const { remove, acknowledge } = useWatchlistActions();
   const registry = registryLabel(ecosystem);
+
+  const statusNote = checkError
+    ? checkError
+    : otherAlertCount > 0
+      ? `${otherAlertCount} update${otherAlertCount === 1 ? "" : "s"} on another registry`
+      : null;
+
+  const controls = onCheck ? (
+    <div className="mt-3 flex items-center gap-3" aria-live="polite">
+      <button
+        type="button"
+        onClick={onCheck}
+        disabled={checking}
+        className="link shrink-0 text-xs font-medium disabled:opacity-60"
+      >
+        {checking ? "Checking…" : "Check now"}
+      </button>
+      {statusNote ? (
+        <p
+          className={`text-xs ${checkError ? "text-red-700 dark:text-red-300" : "text-gray-500 dark:text-gray-400"}`}
+          role={checkError ? "alert" : undefined}
+        >
+          {statusNote}
+        </p>
+      ) : null}
+    </div>
+  ) : null;
 
   if (entries.length === 0) {
     if (!embedded) return null;
     return (
-      <p className="py-1 text-sm text-gray-600 dark:text-gray-400">
-        No {registry} packages watched yet. Use Watch on a {registry} package
-        page to save it here.
-      </p>
+      <div>
+        <p className="py-1 text-sm text-gray-600 dark:text-gray-400">
+          No {registry} packages watched yet. Use Watch on a {registry} package
+          page to save it here.
+        </p>
+        {controls}
+      </div>
     );
   }
 
   const list = (
+    <>
     <ul
       className={
         embedded
@@ -163,15 +236,6 @@ export function WatchlistSection({
           : "divide-y divide-rule border-y border-rule"
       }
     >
-      {checking && (
-        <li
-          className="py-2 font-mono text-xs text-gray-600 dark:text-gray-400"
-          role="status"
-          aria-live="polite"
-        >
-          Checking for updates…
-        </li>
-      )}
       {entries.map((entry) => (
         <li
           key={`${entry.ecosystem ?? "npm"}:${entry.name}`}
@@ -196,18 +260,32 @@ export function WatchlistSection({
             </p>
             <AlertBadges entry={entry} />
           </Link>
+          {watchlistEntryHasAlerts(entry) ? (
+            <button
+              type="button"
+              onClick={() =>
+                acknowledge(entry.name, entry.ecosystem ?? "npm")
+              }
+              aria-label={`Mark ${entry.name} updates as seen`}
+              className="shrink-0 py-1 text-xs text-ink underline decoration-gray-400 underline-offset-4 hover:decoration-signal focus:outline-none focus-visible:ring-2 focus-visible:ring-signal"
+            >
+              Mark seen
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={() => remove(entry.name, entry.ecosystem ?? "npm")}
             title={`Remove ${entry.name} from watchlist`}
             aria-label={`Remove ${entry.name} from watchlist`}
-            className="shrink-0 py-1 text-xs text-gray-600 underline decoration-gray-400 underline-offset-4 transition-colors hover:text-red-700 hover:decoration-red-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-signal dark:text-gray-400 dark:hover:text-red-400"
+            className="shrink-0 rounded-sm p-1 text-gray-500 transition-colors hover:text-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-signal dark:text-gray-400 dark:hover:text-red-400"
           >
-            Remove
+            <TrashIcon className="h-4 w-4" />
           </button>
         </li>
       ))}
     </ul>
+    {controls}
+    </>
   );
 
   if (embedded) return list;

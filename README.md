@@ -18,7 +18,7 @@ All three registries:
 - **AI insights** - Recommendation, strengths, concerns, and scores. Gemini 2.5 Flash falls back to Flash-Lite, then Groq
 - **Dependencies** - Direct dependencies before you add the package. The view opens on the list (with the count), then the full tree, then the chart. The chart legend marks peer dependencies on npm only
 - **Trends** - Release history and GitHub issue history
-- **Watchlist** - Saved packages checked again from the browser. The list can be filtered to the registry you are browsing
+- **Watchlist** - Saved packages checked again from the browser, at most daily, with Check now. A new version, a named advisory, a new deprecation, or a newly affected npm direct dependency stays listed until you mark it seen. The toolbar dot includes every registry. The list itself is filtered to the registry you are browsing
 - **Paste a list** - Analyse many packages from a dependency file
 - **Most checked this week** - The home page lists the packages people opened most in the last seven days, and the most recent ones, for the selected registry (needs the database, see below)
 
