@@ -23,6 +23,25 @@ function git(args, options = {}) {
   return execFileSync("git", args, { encoding: "utf8", ...options });
 }
 
+/** A Render checkout is often shallow and has no tags, so the changelog would miss commits. */
+function fetchReleaseHistory() {
+  let shallow = false;
+  try {
+    shallow = git(["rev-parse", "--is-shallow-repository"]).trim() === "true";
+  } catch {
+    return;
+  }
+  const args = ["fetch", "origin", "--tags"];
+  if (shallow) args.push("--unshallow");
+  try {
+    git(args, { stdio: "inherit" });
+  } catch {
+    console.error(
+      "Could not fetch full git history. The changelog uses the commits in this checkout.",
+    );
+  }
+}
+
 function main() {
   if (process.env.RENDER !== "true") return;
 
@@ -59,6 +78,7 @@ function main() {
 
   process.env.GIT_ASKPASS = path.join(__dirname, "git-askpass.sh");
   process.env.GIT_TERMINAL_PROMPT = "0";
+  fetchReleaseHistory();
 
   try {
     execFileSync("npm", ["exec", "--", "release-it", "--ci"], { stdio: "inherit" });

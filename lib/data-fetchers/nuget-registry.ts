@@ -1,5 +1,8 @@
 import axios from "axios";
-import { errorMessage } from "@/lib/utils/error-message";
+import {
+  errorMessage,
+  publicRegistryMessage,
+} from "@/lib/utils/error-message";
 import { validatePackageNameForEcosystem } from "@/lib/packages/validation";
 import { sanitizeDescription } from "@/lib/packages/sanitize";
 import { formatNugetDescription } from "@/lib/nuget/nuget-description";
@@ -308,10 +311,10 @@ export async function fetchNugetPackageData(packageName: string): Promise<{
       totalDownloads,
     };
   } catch (error: unknown) {
-    if (error instanceof Error && /not found on NuGet/.test(error.message)) {
-      throw error;
+    if (!(error instanceof Error && /not found/i.test(error.message))) {
+      console.error("Failed to fetch NuGet data:", error);
     }
-    throw new Error(`Failed to fetch NuGet data: ${errorMessage(error)}`);
+    throw new Error(publicRegistryMessage(error, "NuGet"));
   }
 }
 
@@ -322,17 +325,25 @@ export async function searchNugetPackages(
   const text = query.trim();
   if (text.length < 2) return [];
 
-  const response = await axios.get<{
+  let response: {
     data?: {
-      id?: string;
-      version?: string;
-      description?: string;
-      summary?: string;
-    }[];
-  }>(SEARCH_URL, {
-    headers: HEADERS,
-    params: { q: text, take: limit, prerelease: false },
-  });
+      data?: {
+        id?: string;
+        version?: string;
+        description?: string;
+        summary?: string;
+      }[];
+    };
+  };
+  try {
+    response = await axios.get(SEARCH_URL, {
+      headers: HEADERS,
+      params: { q: text, take: limit, prerelease: false },
+    });
+  } catch (error: unknown) {
+    console.error("Failed to search NuGet:", error);
+    throw new Error(publicRegistryMessage(error, "NuGet"));
+  }
 
   const seen = new Set<string>();
   const packages: NugetSearchResult[] = [];

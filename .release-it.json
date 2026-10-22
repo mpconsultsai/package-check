@@ -12,6 +12,9 @@
     "pushRepo": "origin",
     "pushArgs": ["--follow-tags"]
   },
+  "hooks": {
+    "after:bump": "node scripts/write-changelog.cjs"
+  },
   "npm": {
     "publish": false
   },

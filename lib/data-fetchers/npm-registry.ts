@@ -15,7 +15,10 @@ import {
   provenanceFromAttestationDocument,
   type NpmProvenance,
 } from "@/lib/packages/npm-provenance";
-import { errorMessage } from '@/lib/utils/error-message';
+import {
+  errorMessage,
+  publicRegistryMessage,
+} from '@/lib/utils/error-message';
 import { sanitizeDescription } from '../packages/sanitize';
 import { extractPackageName, validatePackageName } from '../packages/validation';
 import type { NpmPackageData, NpmDownloadStats } from '../types/package-data';
@@ -124,7 +127,10 @@ export async function fetchNpmPackageData(packageName: string): Promise<{
     if (axios.isAxiosError(error) && error.response?.status === 404) {
       throw new Error(`Package "${packageName}" not found on npm registry`);
     }
-    throw new Error(`Failed to fetch npm data: ${errorMessage(error)}`);
+    if (!(error instanceof Error && /not found/i.test(error.message))) {
+      console.error("Failed to fetch npm data:", error);
+    }
+    throw new Error(publicRegistryMessage(error, "npm"));
   }
 }
 

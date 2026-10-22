@@ -237,7 +237,7 @@ Module format, missing TypeScript types, bundle size, dependency count, and npm 
 
 On Render, create a **Web Service** (this app serves API routes, so it is not a static site).
 
-- **Build command**: `rm -rf .next && npm ci --include=dev && npm run release && npm run build`. On Render, `npm run release` runs [release-it](https://github.com/release-it/release-it), which bumps the patch, commits it, and tags `v0.1.1`, `v0.1.2`, and so on. The commit message includes `[skip render]`, so that push does not start a second deploy. The build then reads the new version from `package.json` for the footer. Set `RELEASE_GITHUB_TOKEN` to a GitHub token that can push commits and tags to the deploy branch. Pull before the next push, because main moves forward by that version commit.
+- **Build command**: `rm -rf .next && npm ci --include=dev && npm run release && npm run build`. On Render, `npm run release` runs [release-it](https://github.com/release-it/release-it), which bumps the patch, rewrites `CHANGELOG.md` from the commits since the previous release, commits both, and tags `v0.1.1`, `v0.1.2`, and so on. The commit message includes `[skip render]`, so that push does not start a second deploy. The build then reads the new version from `package.json` for the footer. Set `RELEASE_GITHUB_TOKEN` to a GitHub token that can push commits and tags to the deploy branch. Pull before the next push, because main moves forward by that version commit.
 - **Start command**: `npm start`
 - **Health check path**: `/api/v1/health`
 - **Root directory**: leave blank

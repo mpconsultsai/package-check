@@ -9,7 +9,8 @@ import { fetchNugetPackageData } from "./nuget-registry";
 import { fetchGitHubDataFromUrl, parseGitHubUrl } from "./github";
 import { checkPackageSecurity } from "./security";
 import { fetchBundleSize } from "./bundlephobia";
-import { advisoryEcosystem } from "@/lib/packages/package-routes";
+import { advisoryEcosystem, registryLabel } from "@/lib/packages/package-routes";
+import { publicRegistryMessage } from "@/lib/utils/error-message";
 
 /**
  * Analyze a package by fetching data from multiple sources
@@ -50,10 +51,9 @@ export async function analyzePackage(
         }
       }
     } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : "Unknown registry error";
+      const message = publicRegistryMessage(error, registryLabel(ecosystem));
       result.errors!.npm = message;
-      throw new Error(`Failed to fetch package data: ${message}`);
+      throw new Error(message);
     }
 
     const version = result.npm.version;
@@ -96,10 +96,9 @@ export async function analyzePackage(
     result.npm = data;
     result.readme = readme;
   } catch (error: unknown) {
-    const message =
-      error instanceof Error ? error.message : "Unknown npm registry error";
+    const message = publicRegistryMessage(error, "npm");
     result.errors!.npm = message;
-    throw new Error(`Failed to fetch package data: ${message}`);
+    throw new Error(message);
   }
 
   const version = result.npm.version;

@@ -4,7 +4,7 @@ import {
   pickPypiDistributionSize,
   type DistributionSizeInfo,
 } from "@/lib/data-fetchers/pypi-distribution-size";
-import { errorMessage } from "@/lib/utils/error-message";
+import { publicRegistryMessage } from "@/lib/utils/error-message";
 import { validatePackageNameForEcosystem } from "@/lib/packages/validation";
 import { sanitizeDescription } from "../packages/sanitize";
 import type { NpmPackageData } from "../types/package-data";
@@ -168,7 +168,10 @@ export async function fetchPypiPackageData(packageName: string): Promise<{
     if (axios.isAxiosError(error) && error.response?.status === 404) {
       throw new Error(`Project "${packageName}" not found on PyPI`);
     }
-    throw new Error(`Failed to fetch PyPI data: ${errorMessage(error)}`);
+    if (!(error instanceof Error && /not found/i.test(error.message))) {
+      console.error("Failed to fetch PyPI data:", error);
+    }
+    throw new Error(publicRegistryMessage(error, "PyPI"));
   }
 }
 

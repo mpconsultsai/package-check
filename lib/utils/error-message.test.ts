@@ -1,6 +1,11 @@
 import { AxiosError } from "axios";
 import { describe, it } from "vitest";
-import { axiosResponseStatus, errorMessage } from "@/lib/utils/error-message";
+import {
+  axiosResponseStatus,
+  errorMessage,
+  publicRegistryMessage,
+  registryUnavailableMessage,
+} from "@/lib/utils/error-message";
 
 describe("errorMessage", () => {
   it("should use an axios error message", () => {
@@ -13,6 +18,25 @@ describe("errorMessage", () => {
 
   it("should fall back for an unknown value", () => {
     errorMessage("nope", "Request failed").should.equal("Request failed");
+  });
+});
+
+describe("publicRegistryMessage", () => {
+  it("should keep a not-found message", () => {
+    publicRegistryMessage(
+      new Error('Package "Serilog" not found on NuGet'),
+      "NuGet",
+    ).should.equal('Package "Serilog" not found on NuGet');
+  });
+
+  it("should hide the upstream API message", () => {
+    publicRegistryMessage(
+      new AxiosError("Request failed with status code 503"),
+      "NuGet",
+    ).should.equal(registryUnavailableMessage("NuGet"));
+    publicRegistryMessage(new Error("Unexpected token '<'"), "npm").should.equal(
+      "Could not reach npm. Try again in a moment.",
+    );
   });
 });
 
