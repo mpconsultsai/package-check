@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import semver from "semver";
-import { TrashIcon } from "@/components/icons";
+import { RefreshIcon, TrashIcon } from "@/components/icons";
 import {
   useWatchlist,
   useWatchlistActions,
@@ -199,9 +199,14 @@ export function WatchlistSection({
         type="button"
         onClick={onCheck}
         disabled={checking}
-        className="link shrink-0 text-xs font-medium disabled:opacity-60"
+        className="group inline-flex shrink-0 items-center gap-1.5 text-xs font-medium disabled:opacity-60"
       >
-        {checking ? "Checking…" : "Check now"}
+        <RefreshIcon
+          className={`h-3.5 w-3.5 shrink-0 ${checking ? "animate-spin" : ""}`}
+        />
+        <span className="link group-hover:decoration-signal">
+          {checking ? "Checking…" : "Check now"}
+        </span>
       </button>
     ) : null;
 

@@ -4,6 +4,7 @@ export { ClearIcon } from "@/components/icons/ClearIcon";
 export { ClipboardIcon } from "@/components/icons/ClipboardIcon";
 export { CogIcon } from "@/components/icons/CogIcon";
 export { CopyIcon } from "@/components/icons/CopyIcon";
+export { RefreshIcon } from "@/components/icons/RefreshIcon";
 export { SearchIcon } from "@/components/icons/SearchIcon";
 export { StarIcon } from "@/components/icons/StarIcon";
 export { StrokeIcon } from "@/components/icons/StrokeIcon";

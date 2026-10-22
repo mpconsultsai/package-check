@@ -40,12 +40,10 @@ function main() {
     process.exit(1);
   }
 
-  let remote = "";
-  try {
-    remote = git(["remote", "get-url", "origin"]).trim();
-  } catch {
-    remote = "";
-  }
+  const remotes = git(["remote"]).split("\n").map((name) => name.trim());
+  const remote = remotes.includes("origin")
+    ? git(["remote", "get-url", "origin"]).trim()
+    : "";
   const repo = releaseRepoUrl(remote, process.env.RENDER_GIT_REPO_SLUG);
   if (!repo) {
     console.error("Could not determine the GitHub repository to push the release to.");
