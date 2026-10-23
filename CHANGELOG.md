@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.5 - 2026-10-23
+
+- feat: Add Changelog link and add update check for PyPi (6d22ab1)
+
 ## 0.1.4 - 2026-10-23
 
 - build: Fix build and add NextJS caching (a03152b)
