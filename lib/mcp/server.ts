@@ -6,6 +6,7 @@ import {
   getPackageReport,
   getSecurity,
   searchPackages,
+  upgradePackage,
 } from "@/lib/mcp/tools";
 
 const ecosystem = z
@@ -40,7 +41,7 @@ export function createPkglensMcpServer(): McpServer {
     { name: "package-check", version: "0.1.0" },
     {
       instructions:
-        "Package reviews for npm, PyPI, and NuGet. get_package returns registry, quality, and advisory counts without an LLM. analyse_package adds an AI recommendation and is slower.",
+        "Package reviews for npm, PyPI, and NuGet. get_package returns registry, quality, and advisory counts without an LLM. upgrade_package compares an installed npm version with a newer one. analyse_package adds an AI recommendation and is slower.",
     },
   );
 
@@ -98,6 +99,23 @@ export function createPkglensMcpServer(): McpServer {
     },
     async ({ package: name, ecosystem: registry }) =>
       run(() => getDependencies(name, registry)),
+  );
+
+  server.registerTool(
+    "upgrade_package",
+    {
+      description:
+        "npm only. Compare an installed version with the latest stable release, or with a version you pass as to. Returns the bump size, how many releases are behind, and breaking notes, peer changes, and engine changes when an upgrade exists. Does not call an LLM.",
+      inputSchema: {
+        package: z.string().describe("npm package name."),
+        from: z.string().describe("Installed version, such as 4.17.21."),
+        to: z
+          .string()
+          .optional()
+          .describe("Target version. Defaults to the latest stable release."),
+      },
+    },
+    async ({ package: name, from, to }) => run(() => upgradePackage(name, from, to)),
   );
 
   server.registerTool(

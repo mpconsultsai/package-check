@@ -69,6 +69,7 @@ describe("POST /api/mcp", () => {
       "get_package",
       "get_security",
       "get_dependencies",
+      "upgrade_package",
       "analyse_package",
     ]);
   });

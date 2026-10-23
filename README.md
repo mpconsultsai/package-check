@@ -2,7 +2,7 @@
 
 Package reviews for npm, PyPI and NuGet: security, upkeep and dependencies in one place.
 
-The same review is available in the browser and over [MCP](#mcp-server). The site is for reading a package. The MCP server is for an agent that needs the same facts as JSON: search, the latest version, advisories, direct dependencies, or a full AI recommendation.
+The same review is available in the browser and over [MCP](#mcp-server). The site is for reading a package. The MCP server is for an agent that needs the same facts as JSON: search, the latest version, advisories, direct dependencies, an npm upgrade from a version you already have, or a full AI recommendation.
 
 Choose a registry above the search box, then open a package at `/npm/<name>`, `/pypi/<name>`, or `/nuget/<name>`.
 
@@ -67,6 +67,7 @@ Point `url` at the deployed host for a remote agent. The bearer value is the `MC
 | `get_package` | Latest version, quality score, and advisory counts. No LLM call |
 | `get_security` | Advisories for one version (up to 15), with CVE, severity, and known-exploited flags |
 | `get_dependencies` | Direct dependencies for the latest version (up to 40). npm includes peers. PyPI includes `Requires-Python` and extras. NuGet includes the target framework |
+| `upgrade_package` | npm only. Compare `from` with the latest stable version, or with `to`. Returns the bump, releases behind, and breaking notes when an upgrade exists. No LLM call |
 | `analyse_package` | The `get_package` report plus an AI recommendation, strengths, concerns, and scores. This is the slow tool |
 
 `ecosystem` is `npm` (the default), `pypi`, or `nuget`. `pip` is accepted as PyPI.
@@ -248,7 +249,7 @@ Set `MCP_API_KEY` on the service to open `/api/mcp`. Clients and tool list are i
 
 A free Render instance sleeps after about 15 minutes idle. The first request can take about half a minute. While the service is starting, the package page shows **Package Check is starting up** and a **Reload** button. A paid instance stays up. Keep the health check path as `/api/v1/health`.
 
-To run tests during a Render build, use `rm -rf .next && npm ci --include=dev && npm run release && npm test && npm run build`. A production install skips devDependencies, so Vitest is otherwise omitted. A failed build leaves the previous deploy in place. Clearing `.next` avoids a cached server manifest that still omits `/api/mcp`.
+To run tests during a Render build, use `rm -rf .next && npm ci --include=dev && npm run release && npm test && npm run build`. A production install skips devDependencies, so Vitest is otherwise omitted. A failed build leaves the previous deploy in place. Clearing `.next` drops the previous server output, including a stale route manifest. `npm run build` then restores `.next/cache` from Render's persistent cache (`$XDG_CACHE_HOME`) and saves it again after a successful build. The first deploy after this change still logs "No build cache found". The following deploy reuses the cache.
 
 ## License
 

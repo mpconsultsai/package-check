@@ -347,7 +347,7 @@ export async function searchNugetPackages(
 
   const seen = new Set<string>();
   const packages: NugetSearchResult[] = [];
-  for (const item of response.data.data ?? []) {
+  for (const item of response.data?.data ?? []) {
     const name = item.id?.trim();
     if (!name || seen.has(name.toLowerCase())) continue;
     if (!validatePackageNameForEcosystem(name, "nuget").valid) continue;

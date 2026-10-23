@@ -37,7 +37,7 @@ vi.mock("@/lib/data-fetchers/npm-registry", () => ({
   fetchNpmPackageData,
 }));
 
-import { getDependencies, getSecurity, searchPackages } from "@/lib/mcp/tools";
+import { getDependencies, getSecurity, searchPackages, upgradePackage } from "@/lib/mcp/tools";
 
 function lastRecorded() {
   const call = recordPackageSearch.mock.calls.at(-1) as
@@ -77,6 +77,21 @@ describe("MCP tool recording", () => {
       version: "1.3.0",
       advisoryCount: 2,
       agent: "Cursor",
+    });
+  });
+
+  it("should record an npm upgrade that is already current", async () => {
+    const result = await upgradePackage("left-pad", "1.3.0");
+    result.verdict.should.equal("current");
+    result.latest.should.equal("1.3.0");
+    (result.changes === null).should.equal(true);
+    const row = lastRecorded();
+    row.should.include({ ecosystem: "npm", query: "left-pad", source: "mcp" });
+    (row.metadata as Record<string, unknown>).should.include({
+      tool: "upgrade_package",
+      from: "1.3.0",
+      to: "1.3.0",
+      verdict: "current",
     });
   });
 

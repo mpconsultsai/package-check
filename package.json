@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "next dev",
     "release": "node scripts/render-release.cjs",
-    "build": "next build",
+    "build": "bash scripts/render-next-build.sh",
     "start": "next start",
     "lint": "eslint .",
     "test": "vitest run --coverage",

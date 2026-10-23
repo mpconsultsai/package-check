@@ -105,7 +105,7 @@ export async function loadPackageActivity(
         where created_at >= ${since}
           and (
             metadata->>'page' = 'true'
-            or metadata->>'tool' in ('get_package', 'get_security', 'analyse_package')
+            or metadata->>'tool' in ('get_package', 'get_security', 'upgrade_package', 'analyse_package')
           )
       ),
       verified as (

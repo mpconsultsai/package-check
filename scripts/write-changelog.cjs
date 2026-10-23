@@ -2,10 +2,21 @@ const { execFileSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
 
+/**
+ * @typedef {{ subject: string, hash: string, date: string }} ChangelogCommit
+ * @typedef {{ subject: string, hash: string }} ChangelogEntry
+ * @typedef {{ version: string, date: string, entries: ChangelogEntry[] }} ChangelogSection
+ */
+
 const RELEASE_COMMIT = /^v(\d+\.\d+\.\d+) \[skip render\]$/;
 const ROOT = path.join(__dirname, "..");
 const CHANGELOG_PATH = path.join(ROOT, "CHANGELOG.md");
 
+/**
+ * @param {ChangelogCommit[]} commits
+ * @param {{ version: string, date: string }} release
+ * @returns {ChangelogSection[]}
+ */
 function groupChangelog(commits, release) {
   const sections = [];
   let version = release.version;
@@ -34,6 +45,10 @@ function groupChangelog(commits, release) {
   return sections;
 }
 
+/**
+ * @param {ChangelogSection[]} sections
+ * @returns {string}
+ */
 function renderChangelog(sections) {
   const body = sections
     .map((section) => {

@@ -1,3 +1,4 @@
+import semver from "semver";
 import { analyzePackageCached } from "@/lib/packages/analysis-cache";
 import {
   buildAnalysisResponse,
@@ -15,6 +16,14 @@ import {
 } from "@/lib/data-fetchers/nuget-registry";
 import { listPackageDependencies, type PackageDependency } from "@/lib/packages/package-deps";
 import { advisoryEcosystem, type PackageEcosystem } from "@/lib/packages/package-routes";
+import {
+  buildUpgradeAdvice,
+  listStableVersions,
+} from "@/lib/upgrade/upgrade-advisor";
+import {
+  loadUpgradeDetails,
+  truncateUpgradeDetailsForAgent,
+} from "@/lib/upgrade/upgrade-details";
 import { clientMetadata } from "@/lib/db/client-metadata";
 import { recordPackageSearch } from "@/lib/db/package-searches";
 import { currentMcpHeaders } from "@/lib/mcp/request-context";
@@ -248,6 +257,72 @@ export async function getSecurity(
       knownExploited: item.knownExploited ?? false,
     })),
     truncated: security.vulnerabilities.length > ADVISORY_CAP,
+  };
+}
+
+function latestStableVersion(
+  version: string | undefined,
+  times?: Record<string, string> | null,
+): string | null {
+  const stable = listStableVersions(times);
+  const tagged = version?.trim() ?? "";
+  if (tagged && semver.valid(tagged) && !semver.prerelease(tagged)) return tagged;
+  return stable[0] ?? null;
+}
+
+/** npm only. Compare an installed version with latest, or with an explicit target. */
+export async function upgradePackage(rawName: string, from: string, to?: string) {
+  const packageName = requirePackageNameForEcosystem(rawName, "npm");
+  const fromVersion = from.trim();
+  if (!fromVersion) {
+    throw new Error("A from version is required.");
+  }
+  const { data } = await fetchNpmPackageData(packageName);
+  const latest = latestStableVersion(data.version, data.time);
+  if (!latest) {
+    throw new Error("Could not find a published npm version.");
+  }
+  const target = to?.trim() || latest;
+  const advice = buildUpgradeAdvice({
+    from: fromVersion,
+    to: target,
+    versionTimes: data.time,
+    versions: listStableVersions(data.time),
+  });
+  const changes =
+    advice.verdict === "patch" ||
+    advice.verdict === "minor" ||
+    advice.verdict === "major"
+      ? truncateUpgradeDetailsForAgent(
+          await loadUpgradeDetails(packageName, fromVersion, target),
+        )
+      : null;
+  await recordMcpTool({
+    tool: "upgrade_package",
+    ecosystem: "npm",
+    query: packageName,
+    resultNames: [packageName],
+    metadata: {
+      from: fromVersion,
+      to: target,
+      verdict: advice.verdict,
+    },
+  });
+  return {
+    ecosystem: "npm" as const,
+    name: data.name || packageName,
+    latest,
+    from: advice.from,
+    to: advice.to,
+    bump: advice.bump,
+    verdict: advice.verdict,
+    headline: advice.headline,
+    summary: advice.summary,
+    releasesBehind: advice.releasesBehind,
+    majorsCrossed: advice.majorsCrossed,
+    daysBetween: advice.daysBetween,
+    intermediateMajors: advice.intermediateMajors,
+    changes,
   };
 }
 
