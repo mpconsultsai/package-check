@@ -7,3 +7,10 @@ export function siteGithubUrl(): string | null {
   if (!slug || slug.includes(" ")) return null;
   return `https://github.com/${slug.replace(/^\/+|\/+$/g, "")}`;
 }
+
+/** CHANGELOG.md in the site repository. Written on each release deploy. */
+export function siteChangelogUrl(): string | null {
+  const github = siteGithubUrl();
+  if (!github) return null;
+  return `${github}/blob/main/CHANGELOG.md`;
+}

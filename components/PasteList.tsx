@@ -12,6 +12,7 @@ import {
   type PackageEcosystem,
 } from "@/lib/packages/package-routes";
 import { isNugetUpdateAvailable } from "@/lib/nuget/nuget-version";
+import { describePypiSpec, isPypiUpdateAvailable } from "@/lib/pypi/pypi-version";
 import { describeDependencySpec } from "@/lib/parse/describe-dependency-spec";
 import { useWatchlistActions } from "@/lib/prefs/use-watchlist";
 import type { WatchlistSummary } from "@/lib/prefs/watchlist-store";
@@ -78,24 +79,18 @@ export function isUpdateAvailable(
   return false;
 }
 
-function isPyPiUpdateAvailable(
-  requested: string | undefined,
-  latest: string | undefined,
-): boolean {
-  if (!requested || !latest || latest === "Unknown") return false;
-  const spec = requested.trim();
-  if (!spec || spec === "*") return false;
-  const pinned = spec.match(/^==\s*(.+)$/);
-  if (pinned) {
-    const want = pinned[1].trim();
-    return want !== latest && want !== latest.replace(/^v/i, "");
-  }
-  return isUpdateAvailable(spec, latest);
-}
-
-function SpecifiedCell({ requested }: { requested?: string }) {
+function SpecifiedCell({
+  requested,
+  ecosystem,
+}: {
+  requested?: string;
+  ecosystem: PackageEcosystem;
+}) {
   if (!requested) return "-";
-  const desc = describeDependencySpec(requested);
+  const desc =
+    ecosystem === "pypi"
+      ? describePypiSpec(requested)
+      : describeDependencySpec(requested);
   return (
     <span className="block">
       <span className="font-mono text-xs">{requested}</span>
@@ -359,7 +354,7 @@ export function PasteListPanel({
                         version: latest,
                         updateAvailable:
                           ecosystem === "pypi"
-                            ? isPyPiUpdateAvailable(entry.requested, latest)
+                            ? isPypiUpdateAvailable(entry.requested, latest)
                             : ecosystem === "nuget"
                               ? isNugetUpdateAvailable(entry.requested, latest)
                               : isUpdateAvailable(entry.requested, latest),
@@ -591,7 +586,10 @@ export function PasteListPanel({
                         )}
                       </td>
                       <td className="px-3 py-2 text-gray-700 dark:text-gray-300">
-                        <SpecifiedCell requested={row.requested} />
+                        <SpecifiedCell
+                          requested={row.requested}
+                          ecosystem={ecosystem}
+                        />
                       </td>
                       <td className="px-3 py-2 text-gray-700 dark:text-gray-300">
                         {row.version && row.version !== "Unknown" ? (
