@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.4 - 2026-10-23
+
+- build: Fix build and add NextJS caching (a03152b)
+
 ## 0.1.3 - 2026-10-22
 
 - chore: Add changelog and fix error messaging when APIs fail (5b12d27)
