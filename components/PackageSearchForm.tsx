@@ -124,28 +124,32 @@ export function PackageSearchForm({
   const [isSearching, setIsSearching] = useState(false);
   const [searchCompleted, setSearchCompleted] = useState(false);
   const [highlightIndex, setHighlightIndex] = useState(-1);
-  const [examples, setExamples] = useState<readonly string[]>(
-    EXAMPLE_PACKAGES[initialEcosystem],
-  );
+  const [examples, setExamples] = useState<readonly string[]>([]);
 
   useEffect(() => {
     const controller = new AbortController();
-    setExamples(EXAMPLE_PACKAGES[ecosystem]);
+    setExamples([]);
     void (async () => {
       try {
         const { ok, data } = await fetchJson<{ packages?: unknown }>(
           `${apiPaths.packages.examples}?ecosystem=${ecosystem}`,
           { signal: controller.signal, timeoutMs: 12_000, retries: 0 },
         );
-        if (controller.signal.aborted || !ok || !Array.isArray(data.packages)) {
-          return;
-        }
-        const names = data.packages.filter(
-          (name): name is string => typeof name === "string" && name.trim().length > 0,
+        if (controller.signal.aborted) return;
+        const names =
+          ok && Array.isArray(data.packages)
+            ? data.packages.filter(
+                (name): name is string =>
+                  typeof name === "string" && name.trim().length > 0,
+              )
+            : [];
+        setExamples(
+          names.length > 0 ? names : EXAMPLE_PACKAGES[ecosystem],
         );
-        if (names.length > 0) setExamples(names);
       } catch {
-        // Keep the fixed examples when the ranking is unavailable.
+        if (!controller.signal.aborted) {
+          setExamples(EXAMPLE_PACKAGES[ecosystem]);
+        }
       }
     })();
     return () => controller.abort();
@@ -786,36 +790,40 @@ export function PackageSearchForm({
               </ul>
             )}
           </div>
-          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm text-gray-500 dark:text-gray-400">
-            <span aria-hidden="true">Or try</span>
-            <ul
-              aria-label={
-                ecosystem === "pypi"
-                  ? "Popular PyPI projects"
-                  : ecosystem === "nuget"
-                    ? "Popular NuGet packages"
-                    : "Popular npm packages"
-              }
-              className="flex flex-wrap items-baseline gap-x-1"
-            >
-              {examples.map((name, index, all) => (
-                <li key={name}>
-                  <button
-                    type="button"
-                    onClick={() => runSearch(name)}
-                    disabled={disabled || loading}
-                    className="link font-mono focus:outline-none focus-visible:ring-2 focus-visible:ring-signal disabled:opacity-60"
-                  >
-                    {name}
-                  </button>
-                  {index < all.length - 2 ? (
-                    <span aria-hidden="true">,</span>
-                  ) : index === all.length - 2 ? (
-                    <span aria-hidden="true"> or</span>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
+          <div className="flex min-h-5 flex-wrap items-baseline gap-x-2 gap-y-1 text-sm text-gray-500 dark:text-gray-400">
+            {examples.length > 0 && (
+              <>
+                <span aria-hidden="true">Or try</span>
+                <ul
+                  aria-label={
+                    ecosystem === "pypi"
+                      ? "Popular PyPI projects"
+                      : ecosystem === "nuget"
+                        ? "Popular NuGet packages"
+                        : "Popular npm packages"
+                  }
+                  className="flex flex-wrap items-baseline gap-x-1"
+                >
+                  {examples.map((name, index, all) => (
+                    <li key={name}>
+                      <button
+                        type="button"
+                        onClick={() => runSearch(name)}
+                        disabled={disabled || loading}
+                        className="link font-mono focus:outline-none focus-visible:ring-2 focus-visible:ring-signal disabled:opacity-60"
+                      >
+                        {name}
+                      </button>
+                      {index < all.length - 2 ? (
+                        <span aria-hidden="true">,</span>
+                      ) : index === all.length - 2 ? (
+                        <span aria-hidden="true"> or</span>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
           </div>
           </div>
       </form>

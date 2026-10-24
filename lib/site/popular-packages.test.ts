@@ -24,7 +24,7 @@ describe("namesFromNpmTopDownloads", () => {
     const source = "export const topDownload = [\n  'semver',\n  '@types/node',\n  'react',\n];";
     namesFromNpmTopDownloads(source, 2).should.deep.equal([
       "semver",
-      "@types/node",
+      "react",
     ]);
   });
 });
@@ -42,6 +42,8 @@ describe("namesFromNugetSearch", () => {
   it("should sort by total downloads", () => {
     namesFromNugetSearch({
       data: [
+        { id: "System.Text.Json", totalDownloads: 100 },
+        { id: "Microsoft.Extensions.Logging", totalDownloads: 90 },
         { id: "Serilog", totalDownloads: 10 },
         { id: "Newtonsoft.Json", totalDownloads: 50 },
       ],

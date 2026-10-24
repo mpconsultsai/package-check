@@ -1,9 +1,12 @@
 import axios from "axios";
 import type { PackageEcosystem } from "@/lib/packages/package-routes";
+import { isDotnetInboxPackageId } from "@/lib/nuget/dotnet-platform";
 import { validatePackageNameForEcosystem } from "@/lib/packages/validation";
 import { EXAMPLE_PACKAGES } from "@/lib/site/example-packages";
 
 const TOP_COUNT = 100;
+/** NuGet's first page is mostly Microsoft.* and System.*. Read further so 100 others remain. */
+const NUGET_FETCH_COUNT = 1000;
 const CACHE_MS = 24 * 60 * 60 * 1000;
 const REQUEST_TIMEOUT_MS = 15_000;
 
@@ -51,6 +54,8 @@ function acceptedName(
   const trimmed = name.trim();
   if (!trimmed) return null;
   if (!validatePackageNameForEcosystem(trimmed, ecosystem).valid) return null;
+  if (ecosystem === "npm" && /^@types(\/|$)/i.test(trimmed)) return null;
+  if (ecosystem === "nuget" && isDotnetInboxPackageId(trimmed)) return null;
   return trimmed;
 }
 
@@ -131,7 +136,7 @@ async function fetchRanking(ecosystem: PackageEcosystem): Promise<string[]> {
   const response = await axios.get(NUGET_SEARCH_URL, {
     timeout: REQUEST_TIMEOUT_MS,
     headers: HEADERS,
-    params: { take: TOP_COUNT, prerelease: false },
+    params: { take: NUGET_FETCH_COUNT, prerelease: false },
   });
   return namesFromNugetSearch(response.data);
 }
