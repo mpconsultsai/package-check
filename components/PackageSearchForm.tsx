@@ -35,6 +35,7 @@ import { useWatchlist } from "@/lib/prefs/use-watchlist";
 import { useWatchlistRefresh } from "@/lib/prefs/use-watchlist-refresh";
 import { summarizeWatchlistAlerts } from "@/lib/prefs/watchlist-store";
 import { apiPaths } from "@/lib/api/paths";
+import { fetchJson } from "@/lib/prefs/fetch-client";
 import { EXAMPLE_PACKAGES } from "@/lib/site/example-packages";
 import {
   ClearIcon,
@@ -123,6 +124,32 @@ export function PackageSearchForm({
   const [isSearching, setIsSearching] = useState(false);
   const [searchCompleted, setSearchCompleted] = useState(false);
   const [highlightIndex, setHighlightIndex] = useState(-1);
+  const [examples, setExamples] = useState<readonly string[]>(
+    EXAMPLE_PACKAGES[initialEcosystem],
+  );
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setExamples(EXAMPLE_PACKAGES[ecosystem]);
+    void (async () => {
+      try {
+        const { ok, data } = await fetchJson<{ packages?: unknown }>(
+          `${apiPaths.packages.examples}?ecosystem=${ecosystem}`,
+          { signal: controller.signal, timeoutMs: 12_000, retries: 0 },
+        );
+        if (controller.signal.aborted || !ok || !Array.isArray(data.packages)) {
+          return;
+        }
+        const names = data.packages.filter(
+          (name): name is string => typeof name === "string" && name.trim().length > 0,
+        );
+        if (names.length > 0) setExamples(names);
+      } catch {
+        // Keep the fixed examples when the ranking is unavailable.
+      }
+    })();
+    return () => controller.abort();
+  }, [ecosystem]);
 
   const dismissDropdown = useCallback(() => {
     allowDropdownRef.current = false;
@@ -764,14 +791,14 @@ export function PackageSearchForm({
             <ul
               aria-label={
                 ecosystem === "pypi"
-                  ? "Example PyPI projects"
+                  ? "Popular PyPI projects"
                   : ecosystem === "nuget"
-                    ? "Example NuGet packages"
-                    : "Example npm packages"
+                    ? "Popular NuGet packages"
+                    : "Popular npm packages"
               }
               className="flex flex-wrap items-baseline gap-x-1"
             >
-              {EXAMPLE_PACKAGES[ecosystem].map((name, index, all) => (
+              {examples.map((name, index, all) => (
                 <li key={name}>
                   <button
                     type="button"
