@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.6 - 2026-10-24
+
+- chore: Update try packages to allow for random names (f4df635)
+
 ## 0.1.5 - 2026-10-23
 
 - feat: Add Changelog link and add update check for PyPi (6d22ab1)
