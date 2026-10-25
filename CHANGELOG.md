@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.8 - 2026-10-25
+
+- chore: Update accessibility (f46a196)
+
 ## 0.1.7 - 2026-10-24
 
 - chore: Remove types and system libs from try now and improve UX loading (453907f)
