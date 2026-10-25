@@ -179,6 +179,7 @@
   --foreground: #1a1916;
   --rule: #ded9cc;
   --signal: #b83c17;
+  --chart-tick: #5d5951;
   color-scheme: light;
 }
 
@@ -187,6 +188,7 @@
   --foreground: #ede9e0;
   --rule: #3d3a35;
   --signal: #e8693f;
+  --chart-tick: #a09a8b;
   color-scheme: dark;
 }
 
@@ -233,10 +235,14 @@ body {
 @utility link {
   color: var(--foreground);
   text-decoration-line: underline;
-  text-decoration-color: var(--color-gray-400);
+  text-decoration-color: var(--color-gray-600);
   text-decoration-thickness: 1px;
   text-underline-offset: 4px;
   transition: text-decoration-color 120ms;
+
+  @variant dark {
+    text-decoration-color: var(--color-gray-400);
+  }
 
   &:hover {
     text-decoration-color: var(--signal);

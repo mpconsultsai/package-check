@@ -14,6 +14,7 @@ import {
 import { isNugetUpdateAvailable } from "@/lib/nuget/nuget-version";
 import { describePypiSpec, isPypiUpdateAvailable } from "@/lib/pypi/pypi-version";
 import { describeDependencySpec } from "@/lib/parse/describe-dependency-spec";
+import { useAnnounce } from "@/components/LiveAnnouncer";
 import { useWatchlistActions } from "@/lib/prefs/use-watchlist";
 import type { WatchlistSummary } from "@/lib/prefs/watchlist-store";
 import type { ClientAnalysisResponse } from "@/lib/packages/analysis-response";
@@ -192,6 +193,7 @@ export function PasteListPanel({
   const textareaId = useId();
   const selectAllId = useId();
   const { add } = useWatchlistActions();
+  const announce = useAnnounce();
   const [text, setText] = useState("");
   const [rows, setRows] = useState<AnalysisRow[]>([]);
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
@@ -277,6 +279,11 @@ export function PasteListPanel({
       setRows([]);
       setSelected(new Set());
       setDoneCount(0);
+      announce(
+        parsed.invalidCount > 0
+          ? `No valid package names found, ${parsed.invalidCount} invalid skipped`
+          : "No valid package names found",
+      );
       return;
     }
 
@@ -287,6 +294,9 @@ export function PasteListPanel({
     setRunning(true);
     setDoneCount(0);
     setSelected(new Set());
+    announce(
+      `Analysing ${parsed.entries.length} package${parsed.entries.length === 1 ? "" : "s"}`,
+    );
 
     const initial: AnalysisRow[] = parsed.entries.map((entry) => ({
       name: entry.name,
@@ -297,6 +307,8 @@ export function PasteListPanel({
 
     let cursor = 0;
     let completed = 0;
+    let doneOk = 0;
+    let updatesFound = 0;
 
     const workers = Array.from(
       { length: Math.min(CONCURRENCY, initial.length) },
@@ -345,6 +357,14 @@ export function PasteListPanel({
               const latest = data?.packageInfo?.latestVersion as
                 | string
                 | undefined;
+              const updateAvailable =
+                ecosystem === "pypi"
+                  ? isPypiUpdateAvailable(entry.requested, latest)
+                  : ecosystem === "nuget"
+                    ? isNugetUpdateAvailable(entry.requested, latest)
+                    : isUpdateAvailable(entry.requested, latest);
+              if (updateAvailable) updatesFound += 1;
+              doneOk += 1;
               setRows((prev) =>
                 prev.map((row, i) =>
                   i === index
@@ -352,12 +372,7 @@ export function PasteListPanel({
                         ...row,
                         status: "done",
                         version: latest,
-                        updateAvailable:
-                          ecosystem === "pypi"
-                            ? isPypiUpdateAvailable(entry.requested, latest)
-                            : ecosystem === "nuget"
-                              ? isNugetUpdateAvailable(entry.requested, latest)
-                              : isUpdateAvailable(entry.requested, latest),
+                        updateAvailable,
                         vulnerabilityCount: data?.security?.totalCount,
                         qualityScore: data?.metrics?.qualityScore,
                         deprecated: Boolean(data?.npm?.deprecated),
@@ -391,8 +406,20 @@ export function PasteListPanel({
     );
 
     await Promise.all(workers);
-    if (!cancelledRef.current) setRunning(false);
-  }, [text, ecosystem]);
+    if (cancelledRef.current) return;
+    setRunning(false);
+    const parts = [
+      `${doneOk} of ${initial.length} complete`,
+      updatesFound > 0
+        ? `${updatesFound} update${updatesFound === 1 ? "" : "s"} available`
+        : null,
+      parsed.truncated ? `capped at ${PASTE_LIST_MAX_PACKAGES}` : null,
+      parsed.invalidCount > 0
+        ? `${parsed.invalidCount} invalid skipped`
+        : null,
+    ].filter(Boolean);
+    announce(parts.join(" · "));
+  }, [text, ecosystem, announce]);
 
   const doneRows = rows.filter((row) => row.status === "done");
   const updateCount = rows.filter((row) => row.updateAvailable).length;
@@ -402,12 +429,18 @@ export function PasteListPanel({
     for (const row of selectedRows) {
       add(row.name, summaryFromRow(row), ecosystem);
     }
+    if (selectedRows.length > 0) {
+      announce(
+        `Added ${selectedRows.length} package${selectedRows.length === 1 ? "" : "s"} to watchlist`,
+      );
+    }
   };
 
   const exportMarkdown = () => {
     const markdown = buildMarkdownReport(rows);
     const stamp = new Date().toISOString().slice(0, 10);
     downloadMarkdown(markdown, `package-analysis-${stamp}.md`);
+    announce("Markdown report downloaded");
   };
 
   return (
@@ -443,7 +476,7 @@ export function PasteListPanel({
                 ? "<Project>\n  <ItemGroup>\n    <PackageReference Include=\"Newtonsoft.Json\" Version=\"13.0.3\" />\n    <PackageReference Include=\"Serilog\" Version=\"4.0.0\" />\n  </ItemGroup>\n</Project>"
                 : `{\n  "dependencies": {\n    "react": "^19.0.0",\n    "lodash": "^4.17.21"\n  }\n}`
           }
-          className="mt-2 w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-ink px-3 py-2 font-mono outline-none focus:border-blue-500 focus:ring-2 focus:ring-inset focus:ring-signal/30 dark:focus:border-blue-400"
+          className="mt-2 w-full rounded-lg border border-gray-600 bg-white px-3 py-2 font-mono text-sm text-ink outline-none focus:border-ink focus:ring-2 focus:ring-inset focus:ring-signal/30 dark:border-gray-400 dark:bg-gray-700 dark:focus:border-gray-300"
           disabled={running}
         />
       </div>
@@ -461,7 +494,7 @@ export function PasteListPanel({
           <button
             type="button"
             onClick={stop}
-            className="inline-flex items-center rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
+            className="inline-flex items-center rounded-lg border border-gray-600 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-400 dark:text-gray-200 dark:hover:bg-gray-700"
           >
             Cancel
           </button>
@@ -470,7 +503,7 @@ export function PasteListPanel({
           <button
             type="button"
             onClick={reset}
-            className="inline-flex items-center rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
+            className="inline-flex items-center rounded-lg border border-gray-600 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-400 dark:text-gray-200 dark:hover:bg-gray-700"
           >
             Reset
           </button>
@@ -479,7 +512,7 @@ export function PasteListPanel({
           <button
             type="button"
             onClick={exportMarkdown}
-            className="inline-flex items-center rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
+            className="inline-flex items-center rounded-lg border border-gray-600 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-400 dark:text-gray-200 dark:hover:bg-gray-700"
           >
             Export Markdown
           </button>
@@ -488,7 +521,7 @@ export function PasteListPanel({
           <button
             type="button"
             onClick={addSelectedToWatchlist}
-            className="inline-flex items-center rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
+            className="inline-flex items-center rounded-lg border border-gray-600 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-400 dark:text-gray-200 dark:hover:bg-gray-700"
           >
             Add selected to watchlist ({selectedRows.length})
           </button>
@@ -511,10 +544,7 @@ export function PasteListPanel({
             >
               Results
             </h3>
-            <p
-              className="text-xs text-gray-500 dark:text-gray-400"
-              aria-live="polite"
-            >
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               {running
                 ? `Analysed ${doneCount} of ${rows.length}`
                 : `${doneRows.length} of ${rows.length} complete`}
@@ -543,7 +573,7 @@ export function PasteListPanel({
                       checked={allSelected}
                       onChange={toggleSelectAll}
                       disabled={running || selectableNames.length === 0}
-                      className="rounded border-gray-300 accent-signal disabled:opacity-50"
+                      className="rounded border-gray-600 accent-signal disabled:opacity-50 dark:border-gray-400"
                       aria-label="Select all analysed packages"
                       title="Select all"
                     />
@@ -567,7 +597,7 @@ export function PasteListPanel({
                           checked={canSelect && selected.has(row.name)}
                           onChange={() => toggleSelected(row.name)}
                           disabled={running || !canSelect}
-                          className="rounded border-gray-300 accent-signal disabled:opacity-40"
+                          className="rounded border-gray-600 accent-signal disabled:opacity-40 dark:border-gray-400"
                           aria-label={`Select ${row.name}`}
                         />
                       </td>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useLiveMessage } from "@/components/LiveAnnouncer";
 import { fetchJson } from "@/lib/prefs/fetch-client";
 import { apiPaths } from "@/lib/api/paths";
 import {
@@ -422,6 +423,8 @@ export function DependenciesCard({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<"chart" | "list" | "transitive">("list");
+
+  useLiveMessage(error, { politeness: "assertive" });
 
   useEffect(() => {
     const controller = new AbortController();

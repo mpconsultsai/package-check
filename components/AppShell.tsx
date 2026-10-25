@@ -12,6 +12,7 @@ import {
 } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { HeaderGithubProvider } from "@/components/header-github";
+import { LiveAnnouncerProvider } from "@/components/LiveAnnouncer";
 import { WhatWeCheck } from "@/components/WhatWeCheck";
 import { ShellEcosystemContext } from "@/components/shell-ecosystem";
 import { PageHeader } from "@/components/PageHeader";
@@ -86,6 +87,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   };
 
   return (
+    <LiveAnnouncerProvider>
     <SearchLoadingContext.Provider value={setSearchLoading}>
       <ShellEcosystemContext.Provider value={toolbarEcosystem}>
       <HeaderGithubProvider>
@@ -140,5 +142,6 @@ export function AppShell({ children }: { children: ReactNode }) {
       </HeaderGithubProvider>
       </ShellEcosystemContext.Provider>
     </SearchLoadingContext.Provider>
+    </LiveAnnouncerProvider>
   );
 }

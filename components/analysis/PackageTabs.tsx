@@ -39,7 +39,7 @@ export function PackageNameHeader({
       href={homepage}
       target="_blank"
       rel="noopener noreferrer"
-      className="text-ink underline decoration-gray-300 decoration-2 underline-offset-[6px] hover:decoration-signal dark:decoration-gray-600"
+      className="text-ink underline decoration-gray-600 decoration-2 underline-offset-[6px] hover:decoration-signal dark:decoration-gray-400"
     >
       {packageName}
     </a>

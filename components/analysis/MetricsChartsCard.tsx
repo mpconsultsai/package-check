@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { SelectField } from "@/components/SelectField";
+import { useLiveMessage } from "@/components/LiveAnnouncer";
 import { registryLabel } from "@/lib/packages/package-routes";
 import {
   Bar,
@@ -107,6 +108,56 @@ function githubChartLinks(repository?: string | null): {
     releases: `${base}/releases`,
     issues: `${base}/issues`,
   };
+}
+
+function chartCell(value: number | null | undefined): string {
+  if (typeof value !== "number") return "No data";
+  return value.toLocaleString("en-GB");
+}
+
+/** Same figures as the chart, available from the keyboard. */
+function ChartDataTable({
+  caption,
+  columns,
+  rows,
+}: {
+  caption: string;
+  columns: string[];
+  rows: { key: string; cells: string[] }[];
+}) {
+  if (rows.length === 0) return null;
+  return (
+    <details className="mt-2">
+      <summary className="link cursor-pointer text-xs font-medium">
+        View data for {caption}
+      </summary>
+      <div className="mt-2 max-h-48 overflow-auto">
+        <table className="w-full text-left text-xs text-ink">
+          <caption className="sr-only">{caption}</caption>
+          <thead className="text-gray-600 dark:text-gray-400">
+            <tr>
+              {columns.map((column) => (
+                <th key={column} scope="col" className="py-1 pr-3 font-medium">
+                  {column}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.key} className="border-t border-rule">
+                {row.cells.map((cell, index) => (
+                  <td key={`${row.key}-${index}`} className="py-1 pr-3 tabular-nums">
+                    {cell}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </details>
+  );
 }
 
 function ChartExternalLink({
@@ -210,6 +261,7 @@ function MetricLineChart({
               </li>
             </ul>
           )}
+          <div aria-hidden="true">
           <ChartFrame>
               <LineChart
                 key={`downloads-${compareName ?? "solo"}`}
@@ -223,7 +275,7 @@ function MetricLineChart({
                 />
                 <XAxis
                   dataKey="date"
-                  tick={{ fill: "#7a7569", fontSize: 11 }}
+                  tick={{ fill: "var(--chart-tick)", fontSize: 11 }}
                   tickLine={false}
                   axisLine={false}
                   interval="preserveStartEnd"
@@ -231,7 +283,7 @@ function MetricLineChart({
                   tickFormatter={formatTickDate}
                 />
                 <YAxis
-                  tick={{ fill: "#7a7569", fontSize: 11 }}
+                  tick={{ fill: "var(--chart-tick)", fontSize: 11 }}
                   tickLine={false}
                   axisLine={false}
                   width={48}
@@ -289,6 +341,23 @@ function MetricLineChart({
                 )}
               </LineChart>
           </ChartFrame>
+          </div>
+          <ChartDataTable
+            caption={title}
+            columns={[
+              "Period",
+              seriesName,
+              ...(showCompare && compareName ? [compareName] : []),
+            ]}
+            rows={data.map((point) => ({
+              key: point.date,
+              cells: [
+                formatTooltipDate(point.date),
+                chartCell(point.value),
+                ...(showCompare ? [chartCell(point.compare)] : []),
+              ],
+            }))}
+          />
         </>
       )}
     </div>
@@ -323,12 +392,14 @@ function ReleaseCadenceChart({
           No release history available.
         </p>
       ) : (
+        <>
+        <div aria-hidden="true">
         <ChartFrame>
             <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#a09a8b" opacity={0.25} />
               <XAxis
                 dataKey="label"
-                tick={{ fill: "#7a7569", fontSize: 11 }}
+                tick={{ fill: "var(--chart-tick)", fontSize: 11 }}
                 tickLine={false}
                 axisLine={false}
                 interval="preserveStartEnd"
@@ -336,7 +407,7 @@ function ReleaseCadenceChart({
               />
               <YAxis
                 allowDecimals={false}
-                tick={{ fill: "#7a7569", fontSize: 11 }}
+                tick={{ fill: "var(--chart-tick)", fontSize: 11 }}
                 tickLine={false}
                 axisLine={false}
                 width={36}
@@ -368,6 +439,19 @@ function ReleaseCadenceChart({
               />
             </BarChart>
         </ChartFrame>
+        </div>
+        <ChartDataTable
+          caption="Release cadence"
+          columns={["Month", "Releases"]}
+          rows={points.map((point) => ({
+            key: point.date,
+            cells: [
+              formatTooltipDate(point.date),
+              `${point.value.toLocaleString("en-GB")} release${point.value === 1 ? "" : "s"}`,
+            ],
+          }))}
+        />
+        </>
       )}
     </div>
   );
@@ -547,6 +631,8 @@ export function MetricsChartsCard({
   >(() => (showDownloads ? "downloads" : "releases"));
   const compareRequestId = useRef(0);
   const compareCacheRef = useRef<Record<string, ChartPoint[]>>({});
+
+  useLiveMessage(error, { politeness: "assertive" });
 
   const releasePoints = useMemo(
     () => buildReleaseCadence(versionTimes, 36),

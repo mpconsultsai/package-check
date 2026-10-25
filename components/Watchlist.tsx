@@ -1,8 +1,10 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import semver from "semver";
 import { RefreshIcon, TrashIcon } from "@/components/icons";
+import { useAnnounce, useLiveMessage } from "@/components/LiveAnnouncer";
 import {
   useWatchlist,
   useWatchlistActions,
@@ -185,7 +187,18 @@ export function WatchlistSection({
     (entry) => (entry.ecosystem ?? "npm") === ecosystem,
   );
   const { remove, acknowledge } = useWatchlistActions();
+  const announce = useAnnounce();
   const registry = registryLabel(ecosystem);
+
+  useLiveMessage(checking ? "Checking watchlist…" : null);
+  useLiveMessage(checkError, { politeness: "assertive" });
+  const wasChecking = useRef(false);
+  useEffect(() => {
+    if (wasChecking.current && !checking && !checkError) {
+      announce("Watchlist check complete");
+    }
+    wasChecking.current = checking;
+  }, [checking, checkError, announce]);
 
   const statusNote = checkError
     ? checkError
@@ -212,12 +225,11 @@ export function WatchlistSection({
 
   const controls =
     checkButton || statusNote ? (
-      <div className="mt-3 flex items-center gap-3" aria-live="polite">
+      <div className="mt-3 flex items-center gap-3">
         {checkButton}
         {statusNote ? (
           <p
             className={`text-xs ${checkError ? "text-red-700 dark:text-red-300" : "text-gray-500 dark:text-gray-400"}`}
-            role={checkError ? "alert" : undefined}
           >
             {statusNote}
           </p>
@@ -260,7 +272,7 @@ export function WatchlistSection({
             className="group min-w-0 flex-1"
           >
             <p className="truncate font-mono text-sm font-medium">
-              <span className="text-ink underline decoration-gray-400 underline-offset-4 group-hover:decoration-signal">
+              <span className="text-ink underline decoration-gray-600 underline-offset-4 group-hover:decoration-signal dark:decoration-gray-400">
                 {entry.name}
               </span>
             </p>
@@ -274,18 +286,22 @@ export function WatchlistSection({
           {watchlistEntryHasAlerts(entry) ? (
             <button
               type="button"
-              onClick={() =>
-                acknowledge(entry.name, entry.ecosystem ?? "npm")
-              }
+              onClick={() => {
+                acknowledge(entry.name, entry.ecosystem ?? "npm");
+                announce(`Marked ${entry.name} updates as seen`);
+              }}
               aria-label={`Mark ${entry.name} updates as seen`}
-              className="shrink-0 py-1 text-xs text-ink underline decoration-gray-400 underline-offset-4 hover:decoration-signal focus:outline-none focus-visible:ring-2 focus-visible:ring-signal"
+              className="shrink-0 py-1 text-xs text-ink underline decoration-gray-600 underline-offset-4 hover:decoration-signal focus:outline-none focus-visible:ring-2 focus-visible:ring-signal dark:decoration-gray-400"
             >
               Mark seen
             </button>
           ) : null}
           <button
             type="button"
-            onClick={() => remove(entry.name, entry.ecosystem ?? "npm")}
+            onClick={() => {
+              remove(entry.name, entry.ecosystem ?? "npm");
+              announce(`Removed ${entry.name} from watchlist`);
+            }}
             title={`Remove ${entry.name} from watchlist`}
             aria-label={`Remove ${entry.name} from watchlist`}
             className="shrink-0 rounded-sm p-1 text-gray-500 transition-colors hover:text-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-signal dark:text-gray-400 dark:hover:text-red-400"
@@ -329,6 +345,7 @@ export function WatchToggle({
 }) {
   const watched = useIsWatched(packageName, ecosystem);
   const { toggle } = useWatchlistActions();
+  const announce = useAnnounce();
 
   if (!packageName) return null;
 
@@ -336,9 +353,16 @@ export function WatchToggle({
     <button
       type="button"
       disabled={disabled}
-      onClick={() => toggle(packageName, summary, ecosystem)}
+      onClick={() => {
+        toggle(packageName, summary, ecosystem);
+        announce(
+          watched
+            ? `Removed ${packageName} from watchlist`
+            : `Added ${packageName} to watchlist`,
+        );
+      }}
       aria-pressed={watched}
-      className="inline-flex items-center gap-1.5 border border-ink px-3 py-1.5 text-sm font-medium text-ink transition-colors hover:bg-ink hover:text-paper disabled:opacity-50 dark:border-gray-300"
+      className="inline-flex items-center gap-1.5 border border-ink px-3 py-1.5 text-sm font-medium text-ink transition-colors hover:bg-ink hover:text-paper disabled:opacity-50 dark:border-gray-400"
     >
       <svg
         className={`h-4 w-4 transition-colors ${

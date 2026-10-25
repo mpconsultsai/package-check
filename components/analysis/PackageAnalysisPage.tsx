@@ -11,6 +11,7 @@ import { fetchJson, friendlyFetchError, isServiceStartingError } from "@/lib/pre
 import { apiPaths } from "@/lib/api/paths";
 import { useShellSearchLoading } from "@/components/AppShell";
 import { ServiceStartingNotice } from "@/components/ServiceStartingNotice";
+import { useLiveMessage } from "@/components/LiveAnnouncer";
 import { usePackageGithubLink } from "@/components/header-github";
 import { WhatWeCheck } from "@/components/WhatWeCheck";
 import { WatchToggle } from "@/components/Watchlist";
@@ -36,6 +37,7 @@ import {
 import { snapshotFromAnalysis } from "@/lib/packages/package-compare";
 import type { ClientAnalysisResponse } from "@/lib/packages/analysis-response";
 import type { SecuritySummary } from "@/lib/data-fetchers/security";
+import { SITE_NAME } from "@/lib/site/site-brand";
 
 type ApiErrorBody = { error?: string };
 type VersionSecurityPayload = {
@@ -533,6 +535,19 @@ function PackagePageContent({
     ? summaryFromAnalysis(analysisData)
     : undefined;
   const serviceStarting = isServiceStartingError(error);
+
+  useLiveMessage(
+    serviceStarting
+      ? `${SITE_NAME} is starting up. Reload to wake it.`
+      : error,
+    { politeness: "assertive" },
+  );
+  useLiveMessage(
+    !error && !reportLoading && analysisData && packageDisplayName
+      ? `${packageDisplayName} analysis ready`
+      : null,
+  );
+  useLiveMessage(aiError, { politeness: "assertive" });
 
   useEffect(() => {
     if (!packageDisplayName || !analysisData || reportLoading) return;

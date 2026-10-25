@@ -8,7 +8,7 @@ export function SelectField({
   return (
     <select
       {...props}
-      className={`select-field border border-gray-400 bg-transparent py-2 ps-3 text-sm text-ink focus:border-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-signal disabled:opacity-60 dark:border-gray-500 dark:bg-gray-700 ${className}`}
+      className={`select-field border border-gray-600 bg-transparent py-2 ps-3 text-sm text-ink focus:border-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-signal disabled:opacity-60 dark:border-gray-400 dark:bg-gray-700 ${className}`}
     />
   );
 }

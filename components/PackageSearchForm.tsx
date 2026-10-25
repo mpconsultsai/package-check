@@ -31,6 +31,7 @@ import {
 import { usePackageManagerPref } from "@/lib/prefs/use-package-manager-pref";
 import { WatchlistSection } from "@/components/Watchlist";
 import { PasteListPanel } from "@/components/PasteList";
+import { useAnnounce, useLiveMessage } from "@/components/LiveAnnouncer";
 import { useWatchlist } from "@/lib/prefs/use-watchlist";
 import { useWatchlistRefresh } from "@/lib/prefs/use-watchlist-refresh";
 import { summarizeWatchlistAlerts } from "@/lib/prefs/watchlist-store";
@@ -372,16 +373,6 @@ export function PackageSearchForm({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [utilityPanel, closeUtilityPanel]);
 
-  useEffect(() => {
-    if (utilityPanel === "watchlist") {
-      watchlistPanelRef.current?.focus();
-    } else if (utilityPanel === "paste") {
-      pastePanelRef.current?.focus();
-    } else if (utilityPanel === "settings") {
-      settingsPanelRef.current?.focus();
-    }
-  }, [utilityPanel]);
-
   const showResultsPanel =
     !utilityPanel &&
     !loading &&
@@ -489,6 +480,40 @@ export function PackageSearchForm({
   const otherAlertCount = Math.max(0, alertSummary.total - visibleAlerts);
   const { checking: watchlistChecking, error: watchlistCheckError, checkNow } =
     useWatchlistRefresh(isHome);
+  const announce = useAnnounce();
+
+  useEffect(() => {
+    if (utilityPanel === "watchlist") {
+      watchlistPanelRef.current?.focus();
+      announce(
+        watchCount > 0
+          ? `Watchlist opened, ${watchCount} ${registryLabel(ecosystem)} package${watchCount === 1 ? "" : "s"}`
+          : "Watchlist opened, no packages yet",
+      );
+    } else if (utilityPanel === "paste") {
+      pastePanelRef.current?.focus();
+      announce(`${pasteLabel} opened`);
+    } else if (utilityPanel === "settings") {
+      settingsPanelRef.current?.focus();
+      announce("Settings opened");
+    }
+    // Announce once when the panel opens; ignore later watchlist edits.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- utilityPanel only
+  }, [utilityPanel, announce]);
+
+  const searchingMessage =
+    !loading &&
+    !utilityPanel &&
+    isSearching &&
+    value.trim().length >= MIN_QUERY_LENGTH
+      ? ecosystem === "pypi"
+        ? "Searching PyPI…"
+        : ecosystem === "nuget"
+          ? "Searching NuGet…"
+          : "Searching npm…"
+      : null;
+  useLiveMessage(searchingMessage);
+  useLiveMessage(showNoMatches ? "No matches found" : null);
 
   useEffect(() => {
     if (!showPasteList && utilityPanel === "paste") {
@@ -644,7 +669,7 @@ export function PackageSearchForm({
             <label id="package-name-label" htmlFor="packageName" className="sr-only">
               Package name
             </label>
-            <div className="relative flex items-stretch border border-gray-400 bg-white transition-colors focus-within:border-ink dark:border-gray-600 dark:bg-gray-800 dark:focus-within:border-gray-300">
+            <div className="relative flex items-stretch border border-gray-600 bg-white transition-colors focus-within:border-ink dark:border-gray-400 dark:bg-gray-800 dark:focus-within:border-gray-300">
               <span
                 className="pointer-events-none flex select-none items-center pl-3 pr-2 font-mono text-base text-gray-500 sm:pl-4 sm:text-lg dark:text-gray-400"
                 aria-hidden="true"
@@ -722,26 +747,14 @@ export function PackageSearchForm({
                     : "Analyse npm package"}
               </button>
             </div>
-            {!loading &&
-              !utilityPanel &&
-              isSearching &&
-              value.trim().length >= MIN_QUERY_LENGTH && (
-                <p
-                  className="mt-2.5 text-xs text-gray-500 dark:text-gray-400"
-                  role="status"
-                  aria-live="polite"
-                >
-                  {ecosystem === "pypi"
-                    ? "Searching PyPI…"
-                    : ecosystem === "nuget"
-                      ? "Searching NuGet…"
-                      : "Searching npm…"}
-                </p>
-              )}
+            {searchingMessage && (
+              <p className="mt-2.5 text-xs text-gray-500 dark:text-gray-400">
+                {searchingMessage}
+              </p>
+            )}
             {showNoMatches && (
               <div
                 id={`${listboxId}-empty`}
-                role="status"
                 className="absolute z-20 -mt-px w-full border border-ink bg-white px-4 py-3 shadow-xl dark:border-gray-300 dark:bg-gray-800"
               >
                 <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -827,18 +840,6 @@ export function PackageSearchForm({
           </div>
           </div>
       </form>
-
-      <div className="sr-only" aria-live="polite" aria-atomic="true">
-          {utilityPanel === "watchlist"
-            ? watchCount > 0
-              ? `Watchlist opened, ${watchCount} ${registryLabel(ecosystem)} packages`
-              : "Watchlist opened, no packages yet"
-            : utilityPanel === "paste"
-              ? `${pasteLabel} opened`
-              : utilityPanel === "settings"
-                ? "Settings opened"
-                : ""}
-      </div>
 
       {utilityPanel === "watchlist" && (
         <div

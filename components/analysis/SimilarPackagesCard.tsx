@@ -317,7 +317,7 @@ export function SimilarPackagesCard({
                       checked={checked}
                       disabled={disabled}
                       onChange={() => toggle(pkg.name)}
-                      className="rounded border-gray-300 accent-signal disabled:opacity-40"
+                      className="rounded border-gray-600 accent-signal disabled:opacity-40 dark:border-gray-400"
                     />
                     Compare
                   </label>

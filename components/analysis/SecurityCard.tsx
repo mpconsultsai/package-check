@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { SelectField } from "@/components/SelectField";
+import { useLiveMessage } from "@/components/LiveAnnouncer";
 import { AdvisoryLinks } from "./AdvisoryLinks";
 import { AdvisoryDescription } from "./AdvisoryDescription";
 import {
@@ -200,6 +201,20 @@ export function SecurityCard({
     mode === "listed" ||
     Boolean(checkedCustom && checkedCustom === customVersion.trim());
 
+  useLiveMessage(
+    showSecurity && securityLoading
+      ? `Checking security for ${packageName}@${selectedVersion || "…"}…`
+      : null,
+  );
+  useLiveMessage(
+    customNotFound
+      ? "Version not found"
+      : showSecurity && securityData?.error && !securityLoading
+        ? securityData.error
+        : null,
+    { politeness: "assertive" },
+  );
+
   const selectedPublished = formatPublishDate(
     selectedVersion ? versionTimes?.[selectedVersion] : null,
   );
@@ -291,7 +306,7 @@ export function SecurityCard({
               spellCheck={false}
               autoComplete="off"
               disabled={showSecurity && securityLoading}
-              className="w-full md:w-1/4 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white disabled:opacity-60"
+              className="w-full rounded-lg border border-gray-600 px-4 py-2 disabled:opacity-60 focus:border-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-signal md:w-1/4 dark:border-gray-400 dark:bg-gray-700 dark:text-white dark:focus:border-gray-300"
             />
             <button
               type="button"
@@ -317,7 +332,7 @@ export function SecurityCard({
       )}
 
       {showSecurity && securityLoading && (
-        <p className="mt-4 text-sm text-gray-500 dark:text-gray-400" role="status">
+        <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
           Checking security for {packageName}@{selectedVersion || "…"}…
         </p>
       )}

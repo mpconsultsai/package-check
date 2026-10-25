@@ -17,6 +17,7 @@ import type {
 } from "@/lib/upgrade/upgrade-release-notes";
 import { usePackageManagerPreference } from "@/lib/prefs/use-package-manager-pref";
 import { LinkifiedText } from "@/components/LinkifiedText";
+import { useLiveMessage } from "@/components/LiveAnnouncer";
 import { SelectField } from "@/components/SelectField";
 import { AgentGraphSteps } from "@/components/analysis/AgentGraphSteps";
 import { severityBadgeClass } from "@/lib/utils/severity";
@@ -428,6 +429,19 @@ export function UpgradeAdvisorPanel({
   const peerChanges = details?.peers?.changes ?? [];
   const needsUpgrade =
     advice && advice.verdict !== "current" && advice.verdict !== "invalid";
+
+  const agentStatusMessage = agentLoading
+    ? agentStage
+      ? `Generating agent brief, ${agentStage}`
+      : "Generating agent brief"
+    : agentError
+      ? agentError
+      : agentBrief
+        ? "Agent brief ready"
+        : null;
+  useLiveMessage(agentStatusMessage, {
+    politeness: agentError ? "assertive" : "polite",
+  });
 
   const factLine = (() => {
     if (!advice || !needsUpgrade) return null;
@@ -901,17 +915,6 @@ export function UpgradeAdvisorPanel({
                 {agentCached ? " · cached" : ""}
                 {agentLoading && agentStage ? ` · ${agentStage}` : ""}
               </p>
-              <span className="sr-only" aria-live="polite" aria-atomic="true">
-                {agentLoading
-                  ? agentStage
-                    ? `Generating agent brief, ${agentStage}`
-                    : "Generating agent brief"
-                  : agentError
-                    ? agentError
-                    : agentBrief
-                      ? "Agent brief ready"
-                      : ""}
-              </span>
             </div>
             <button
               type="button"
