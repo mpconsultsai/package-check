@@ -10,11 +10,13 @@ import {
 } from "@/lib/packages/npm-package-facts";
 import {
   emptyNpmProvenance,
+  findPriorAttestedVersion,
   npmAttestationsUrl,
   npmHasProvenanceAttestation,
   provenanceFromAttestationDocument,
   type NpmProvenance,
 } from "@/lib/packages/npm-provenance";
+import { assessNpmPublishRisk } from "@/lib/packages/npm-publish-risk";
 import {
   errorMessage,
   publicRegistryMessage,
@@ -80,7 +82,27 @@ export async function fetchNpmPackageData(packageName: string): Promise<{
       if (published === true) typesIncluded = true;
       else if (published === false) typesPackage = separate;
     }
-    const provenance = await provenancePromise;
+    const provenanceBase = await provenancePromise;
+    const priorAttestedVersion =
+      typeof latestVersion === "string" && latestVersion && !provenanceBase.verified
+        ? findPriorAttestedVersion({
+            latestVersion,
+            versions: data.versions,
+            versionTimes: data.time,
+          })
+        : null;
+    const provenance: NpmProvenance = {
+      ...provenanceBase,
+      priorAttestedVersion,
+    };
+    const publishRisk = assessNpmPublishRisk({
+      createdAt:
+        typeof data.time?.created === "string" ? data.time.created : null,
+      maintainers: data.maintainers,
+      latestVersion: typeof latestVersion === "string" ? latestVersion : "",
+      versions: data.versions,
+      versionTimes: data.time,
+    });
 
     return {
       data: {
@@ -118,6 +140,7 @@ export async function fetchNpmPackageData(packageName: string): Promise<{
         typesPackage,
         provenance,
         maintainers: data.maintainers,
+        publishRiskNotes: publishRisk.notes,
         time: data.time,
         distTags: data["dist-tags"],
       },

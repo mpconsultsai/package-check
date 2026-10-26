@@ -42,6 +42,11 @@ import { SITE_NAME } from "@/lib/site/site-brand";
 type ApiErrorBody = { error?: string };
 type VersionSecurityPayload = {
   security?: SecuritySummary;
+  depsDev?: {
+    saferVersion: string | null;
+    depsDevUrl: string;
+    advisoryIds?: string[];
+  };
   error?: string;
 };
 
@@ -281,7 +286,7 @@ function PackagePageContent({
         const latest = data.packageInfo?.latestVersion;
         if (latest && latest !== "Unknown") {
           setVersionToCheck(latest);
-          if (data.security) {
+          if (data.security && ecosystem !== "npm") {
             setVersionSecurityData({ security: data.security });
             checkedVersionRef.current = `${name}@${latest}`;
           }
@@ -318,12 +323,9 @@ function PackagePageContent({
     setEcosystemPreference(ecosystem);
   }, [ecosystem]);
 
-  const directDependencyCount =
-    analysisData?.packageInfo?.directDependencyCount;
+  // Hide until the count is known so a zero-deps package does not flash the tab.
   const showDependenciesTab =
-    typeof directDependencyCount !== "number"
-      ? true
-      : directDependencyCount > 0;
+    (analysisData?.packageInfo?.directDependencyCount ?? 0) > 0;
 
   useEffect(() => {
     if (!features.chartsTab && overviewTab === "charts") {
@@ -437,7 +439,13 @@ function PackagePageContent({
       }
 
       const latest = analysisData?.packageInfo?.latestVersion;
-      if (latest && version === latest && reuseLatestSecurity) {
+      // npm also pulls a deps.dev safer-release hint from the security route.
+      if (
+        ecosystem !== "npm" &&
+        latest &&
+        version === latest &&
+        reuseLatestSecurity
+      ) {
         setVersionSecurityData({ security: reuseLatestSecurity });
         checkedVersionRef.current = cacheKey;
         setVersionSecurityLoading(false);
@@ -497,7 +505,7 @@ function PackagePageContent({
 
     const latest = analysisData.packageInfo?.latestVersion;
     const canReuse =
-      version === latest && analysisData.security
+      ecosystem !== "npm" && version === latest && analysisData.security
         ? analysisData.security
         : undefined;
 

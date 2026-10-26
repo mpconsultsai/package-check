@@ -301,3 +301,101 @@ export async function fetchNpmDirectAdvisories(
       ids: node.advisoryIds.slice(0, 4),
     }));
 }
+
+export type NpmDepsDevVersionInsight = {
+  packageName: string;
+  version: string;
+  advisoryIds: string[];
+  isDefault: boolean;
+  /**
+   * Default version on deps.dev when it lists fewer advisories than this
+   * version. Null when already on the clearer release or none is known.
+   */
+  saferVersion: string | null;
+  depsDevUrl: string;
+};
+
+async function fetchNpmVersionRecord(
+  packageName: string,
+  version: string,
+): Promise<{
+  advisoryIds: string[];
+  isDefault: boolean;
+} | null> {
+  const url = `${DEPS_DEV_API}/systems/npm/packages/${encodePackagePath(packageName)}/versions/${encodeURIComponent(version)}`;
+  try {
+    const response = await fetch(url, {
+      headers: { Accept: "application/json" },
+      next: { revalidate: 3600 },
+    });
+    if (!response.ok) return null;
+    const payload = (await response.json()) as {
+      advisoryKeys?: { id?: string }[];
+      isDefault?: boolean;
+    };
+    const advisoryIds = (payload.advisoryKeys ?? [])
+      .map((a) => a.id?.trim())
+      .filter(Boolean) as string[];
+    return { advisoryIds, isDefault: Boolean(payload.isDefault) };
+  } catch {
+    return null;
+  }
+}
+
+async function fetchNpmDefaultVersion(
+  packageName: string,
+): Promise<string | null> {
+  const url = `${DEPS_DEV_API}/systems/npm/packages/${encodePackagePath(packageName)}`;
+  try {
+    const response = await fetch(url, {
+      headers: { Accept: "application/json" },
+      next: { revalidate: 3600 },
+    });
+    if (!response.ok) return null;
+    const payload = (await response.json()) as {
+      versions?: Array<{
+        versionKey?: { version?: string };
+        isDefault?: boolean;
+      }>;
+    };
+    const match = (payload.versions ?? []).find((entry) => entry.isDefault);
+    const version = match?.versionKey?.version?.trim();
+    return version || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * deps.dev advisories for this version, plus a clearer default release when
+ * one lists fewer advisories.
+ */
+export async function fetchNpmDepsDevVersionInsight(
+  packageName: string,
+  version: string,
+): Promise<NpmDepsDevVersionInsight | null> {
+  const current = await fetchNpmVersionRecord(packageName, version);
+  if (!current) return null;
+
+  const depsDevUrl = `https://deps.dev/npm/${encodePackagePath(packageName)}/${encodeURIComponent(version)}`;
+  let saferVersion: string | null = null;
+
+  if (current.advisoryIds.length > 0 && !current.isDefault) {
+    const defaultVersion = await fetchNpmDefaultVersion(packageName);
+    if (defaultVersion && defaultVersion !== version) {
+      const def = await fetchNpmVersionRecord(packageName, defaultVersion);
+      if (def && def.advisoryIds.length < current.advisoryIds.length) {
+        saferVersion = defaultVersion;
+      }
+    }
+  }
+
+  return {
+    packageName,
+    version,
+    advisoryIds: current.advisoryIds.slice(0, 8),
+    isDefault: current.isDefault,
+    saferVersion,
+    depsDevUrl,
+  };
+}

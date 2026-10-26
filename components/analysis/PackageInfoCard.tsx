@@ -23,7 +23,10 @@ import {
   type BundleModuleShare,
   type NpmModuleFormat,
 } from "@/lib/packages/npm-package-facts";
-import type { NpmProvenance } from "@/lib/packages/npm-provenance";
+import {
+  npmProvenanceDowngradeNote,
+  type NpmProvenance,
+} from "@/lib/packages/npm-provenance";
 import {
   npmReleaseCooldownCaution,
   npmReleaseCooldownStatus,
@@ -58,6 +61,7 @@ interface PackageInfo {
   typesPackage?: string | null;
   provenance?: NpmProvenance | null;
   maintainers?: string[] | null;
+  publishRiskNotes?: string[] | null;
   supportedFrameworks?: string[] | null;
   commonlyUsedTypes?: string[] | null;
   descriptionNote?: string | null;
@@ -90,7 +94,7 @@ interface PackageInfoCardProps {
   } | null;
 }
 
-function formatDependents(count: number): string {
+const formatDependents = (count: number): string => {
   if (count >= 1_000_000) {
     const m = count / 1_000_000;
     return `${m >= 10 ? m.toFixed(0) : m.toFixed(1)}M`;
@@ -100,9 +104,33 @@ function formatDependents(count: number): string {
     return `${k >= 10 ? k.toFixed(0) : k.toFixed(1)}k`;
   }
   return String(count);
-}
+};
 
-function PopularBadge({ dependents }: { dependents: number }) {
+const keywordBadgeLabels = (
+  keywords: string[] | undefined,
+  packageName: string,
+): string[] => {
+  if (!keywords?.length) return [];
+
+  const nameLower = packageName.toLowerCase();
+  const baseName = nameLower.includes("/")
+    ? nameLower.slice(nameLower.lastIndexOf("/") + 1)
+    : nameLower;
+
+  return [
+    ...new Set(
+      keywords
+        .map((k) => k.trim())
+        .filter(Boolean)
+        .filter((k) => {
+          const key = k.toLowerCase();
+          return key !== nameLower && key !== baseName;
+        }),
+    ),
+  ].slice(0, MAX_KEYWORD_BADGES);
+};
+
+const PopularBadge = ({ dependents }: { dependents: number }) => {
   if (dependents < POPULAR_MIN_DEPENDENTS) return null;
 
   const very = dependents >= VERY_POPULAR_MIN_DEPENDENTS;
@@ -116,44 +144,18 @@ function PopularBadge({ dependents }: { dependents: number }) {
       {label}
     </span>
   );
-}
+};
 
-function ZeroDependenciesBadge() {
-  return (
-    <span
-      className="inline-flex items-center border border-ink px-1.5 py-0.5 font-mono text-[11px] font-medium uppercase tracking-[0.1em] text-ink"
-      title="No direct runtime or peer dependencies declared for the latest version"
-    >
-      Zero dependencies
-    </span>
-  );
-}
+const ZeroDependenciesBadge = () => (
+  <span
+    className="inline-flex items-center border border-ink px-1.5 py-0.5 font-mono text-[11px] font-medium uppercase tracking-[0.1em] text-ink"
+    title="No direct runtime or peer dependencies declared for the latest version"
+  >
+    Zero dependencies
+  </span>
+);
 
-function KeywordBadges({
-  keywords,
-  packageName,
-}: {
-  keywords?: string[];
-  packageName: string;
-}) {
-  if (!keywords?.length) return null;
-
-  const nameLower = packageName.toLowerCase();
-  const baseName = nameLower.includes("/")
-    ? nameLower.slice(nameLower.lastIndexOf("/") + 1)
-    : nameLower;
-
-  const labels = [
-    ...new Set(
-      keywords
-        .map((k) => k.trim())
-        .filter(Boolean)
-        .filter((k) => {
-          const key = k.toLowerCase();
-          return key !== nameLower && key !== baseName;
-        }),
-    ),
-  ].slice(0, MAX_KEYWORD_BADGES);
+const KeywordBadges = ({ labels }: { labels: string[] }) => {
   if (labels.length === 0) return null;
 
   return (
@@ -168,16 +170,22 @@ function KeywordBadges({
       ))}
     </>
   );
-}
+};
 
-export function PackageInfoCard({
+const ReleaseCooldownNote = ({ message }: { message: string }) => (
+  <span className="text-sm font-sans font-normal text-amber-800 dark:text-amber-300">
+    {message}
+  </span>
+);
+
+export const PackageInfoCard = ({
   packageInfo,
   metrics,
   metricsLoading = false,
   versionTimes,
   latestSecurity,
   ecosystem = "npm",
-}: PackageInfoCardProps) {
+}: PackageInfoCardProps) => {
   const features = featuresForEcosystem(ecosystem);
   const registryName = registryLabel(ecosystem);
   const releaseCooldownHours = useNpmReleaseCooldownHours();
@@ -218,25 +226,13 @@ export function PackageInfoCard({
   const zeroDependenciesBadge = zeroDependencies ? (
     <ZeroDependenciesBadge />
   ) : null;
-  const keywordBadges = (
-    <KeywordBadges
-      keywords={packageInfo.keywords}
-      packageName={packageInfo.name}
-    />
+  const keywordLabels = keywordBadgeLabels(
+    packageInfo.keywords,
+    packageInfo.name,
   );
-  const hasKeywordBadges = Boolean(
-    packageInfo.keywords?.some((k) => {
-      const key = k.trim().toLowerCase();
-      if (!key) return false;
-      const nameLower = packageInfo.name.toLowerCase();
-      const baseName = nameLower.includes("/")
-        ? nameLower.slice(nameLower.lastIndexOf("/") + 1)
-        : nameLower;
-      return key !== nameLower && key !== baseName;
-    }),
-  );
+  const keywordBadges = <KeywordBadges labels={keywordLabels} />;
   const badgeRow =
-    popularBadge || zeroDependenciesBadge || hasKeywordBadges ? (
+    popularBadge || zeroDependenciesBadge || keywordLabels.length > 0 ? (
       <div className="flex flex-wrap items-center gap-2">
         {popularBadge}
         {zeroDependenciesBadge}
@@ -407,16 +403,10 @@ export function PackageInfoCard({
                     </span>
                   )}
                   {cooldownCaution ? (
-                    <span className="text-sm font-sans font-normal text-amber-800 dark:text-amber-300">
-                      {cooldownCaution}
-                    </span>
+                    <ReleaseCooldownNote message={cooldownCaution} />
                   ) : null}
                 </span>
               </Fact>
-            )}
-
-            {zeroDependencies && (
-              <Fact label="Dependencies">Zero</Fact>
             )}
 
             {pythonEngine && ecosystem === "pypi" && (
@@ -512,26 +502,37 @@ export function PackageInfoCard({
             )}
 
             {ecosystem === "npm" &&
-              (packageInfo.maintainers?.length ?? 0) > 0 && (
+              ((packageInfo.maintainers?.length ?? 0) > 0 ||
+                (packageInfo.publishRiskNotes?.length ?? 0) > 0) && (
                 <Fact label="Maintainers">
-                  <span className="font-mono text-sm font-normal">
-                    {packageInfo.maintainers!.slice(0, 8).map((name, index) => (
-                      <span key={name}>
-                        {index > 0 ? ", " : ""}
-                        <a
-                          href={npmMaintainerGithubUrl(name)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="link"
-                        >
-                          {name}
-                        </a>
-                      </span>
-                    ))}
-                    {packageInfo.maintainers!.length > 8
-                      ? ` and ${packageInfo.maintainers!.length - 8} more`
-                      : ""}
-                  </span>
+                  {(packageInfo.maintainers?.length ?? 0) > 0 ? (
+                    <span className="font-mono text-sm font-normal">
+                      {packageInfo.maintainers!.slice(0, 8).map((name, index) => (
+                        <span key={name}>
+                          {index > 0 ? ", " : ""}
+                          <a
+                            href={npmMaintainerGithubUrl(name)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="link"
+                          >
+                            {name}
+                          </a>
+                        </span>
+                      ))}
+                      {packageInfo.maintainers!.length > 8
+                        ? ` and ${packageInfo.maintainers!.length - 8} more`
+                        : ""}
+                    </span>
+                  ) : null}
+                  {(packageInfo.publishRiskNotes ?? []).map((note) => (
+                    <span
+                      key={note}
+                      className="mt-1 block text-xs font-normal leading-relaxed text-amber-800 dark:text-amber-300"
+                    >
+                      {note}
+                    </span>
+                  ))}
                 </Fact>
               )}
 
@@ -623,11 +624,14 @@ export function PackageInfoCard({
       )}
     </div>
   );
-}
+};
 
-function ProvenanceFact({ provenance }: { provenance: NpmProvenance }) {
+const ProvenanceFact = ({ provenance }: { provenance: NpmProvenance }) => {
   const noteClass =
     "mt-1 block text-xs font-normal leading-relaxed text-gray-500 dark:text-gray-400";
+  const downgradeNote = npmProvenanceDowngradeNote(
+    provenance.priorAttestedVersion,
+  );
   if (!provenance.verified) {
     return (
       <>
@@ -635,6 +639,11 @@ function ProvenanceFact({ provenance }: { provenance: NpmProvenance }) {
         <span className={noteClass}>
           The latest version has no signed link to a public CI build.
         </span>
+        {downgradeNote ? (
+          <span className="mt-1 block text-xs font-normal leading-relaxed text-amber-800 dark:text-amber-300">
+            {downgradeNote}
+          </span>
+        ) : null}
       </>
     );
   }
@@ -671,9 +680,9 @@ function ProvenanceFact({ provenance }: { provenance: NpmProvenance }) {
       )}
     </>
   );
-}
+};
 
-function Fact({
+const Fact = ({
   label,
   action,
   wide = false,
@@ -683,16 +692,12 @@ function Fact({
   action?: ReactNode;
   wide?: boolean;
   children: ReactNode;
-}) {
-  return (
-    <div
-      className={`border-t border-rule py-3 ${wide ? "md:col-span-2" : ""}`}
-    >
-      <dt className="flex items-baseline justify-between gap-3 font-mono text-[11px] uppercase tracking-[0.12em] text-gray-500 dark:text-gray-400">
-        {label}
-        {action}
-      </dt>
-      <dd className="mt-1 text-base font-medium text-ink">{children}</dd>
-    </div>
-  );
-}
+}) => (
+  <div className={`border-t border-rule py-3 ${wide ? "md:col-span-2" : ""}`}>
+    <dt className="flex items-baseline justify-between gap-3 font-mono text-[11px] uppercase tracking-[0.12em] text-gray-500 dark:text-gray-400">
+      {label}
+      {action}
+    </dt>
+    <dd className="mt-1 text-base font-medium text-ink">{children}</dd>
+  </div>
+);

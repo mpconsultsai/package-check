@@ -1,3 +1,5 @@
+import semver from "semver";
+
 export type NpmProvenance = {
   /** The registry recorded a SLSA provenance attestation for this version. */
   verified: boolean;
@@ -5,6 +7,11 @@ export type NpmProvenance = {
   commit: string | null;
   /** Tag or branch the build ran from, without the refs/ prefix. */
   ref: string | null;
+  /**
+   * When the latest version has no attestation, the most recent prior stable
+   * version that did. Null when there is no downgrade to report.
+   */
+  priorAttestedVersion?: string | null;
 };
 
 const EMPTY: NpmProvenance = {
@@ -12,7 +19,11 @@ const EMPTY: NpmProvenance = {
   repositoryUrl: null,
   commit: null,
   ref: null,
+  priorAttestedVersion: null,
 };
+
+const TIME_META = new Set(["created", "modified", "unpublished"]);
+const PRIOR_SCAN_LIMIT = 40;
 
 export function emptyNpmProvenance(): NpmProvenance {
   return { ...EMPTY };
@@ -24,6 +35,52 @@ export function npmHasProvenanceAttestation(dist: unknown): boolean {
   const provenance = (dist as { attestations?: { provenance?: unknown } })
     .attestations?.provenance;
   return provenance != null && typeof provenance === "object";
+}
+
+/**
+ * Most recent prior stable release that had provenance when `latestVersion`
+ * does not. Scans by publish time, newest first.
+ */
+export function findPriorAttestedVersion(options: {
+  latestVersion: string;
+  versions: Record<string, { dist?: unknown } | undefined> | null | undefined;
+  versionTimes?: Record<string, string> | null;
+}): string | null {
+  const latest = options.latestVersion.trim();
+  if (!latest || !options.versions) return null;
+  const latestDist = options.versions[latest]?.dist;
+  if (npmHasProvenanceAttestation(latestDist)) return null;
+
+  const times = options.versionTimes ?? {};
+  const candidates = Object.keys(options.versions)
+    .filter((version) => version !== latest)
+    .filter((version) => !TIME_META.has(version))
+    .filter((version) => {
+      const cleaned = semver.valid(version);
+      return Boolean(cleaned) && !semver.prerelease(cleaned!);
+    })
+    .filter((version) => Boolean(times[version]))
+    .sort(
+      (a, b) =>
+        new Date(times[b]!).getTime() - new Date(times[a]!).getTime(),
+    )
+    .slice(0, PRIOR_SCAN_LIMIT);
+
+  for (const version of candidates) {
+    if (npmHasProvenanceAttestation(options.versions[version]?.dist)) {
+      return version;
+    }
+  }
+  return null;
+}
+
+/** Short note when latest lost a signed build that earlier releases had. */
+export function npmProvenanceDowngradeNote(
+  priorAttestedVersion: string | null | undefined,
+): string | null {
+  const version = priorAttestedVersion?.trim();
+  if (!version) return null;
+  return `Earlier release ${version} had a signed build.`;
 }
 
 /** Registry URL for the attestation bundle, limited to npm itself. */

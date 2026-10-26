@@ -55,6 +55,8 @@ export interface NpmPackageData {
   /** Signed link from the latest version back to the CI build that published it. */
   provenance?: NpmProvenance | null;
   maintainers?: Array<{ name: string; email: string }>;
+  /** Compact publish-risk notes (young package, solo maintainer, new publisher). */
+  publishRiskNotes?: string[];
   time?: {
     created: string;
     modified: string;

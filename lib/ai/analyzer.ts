@@ -957,16 +957,28 @@ function createAnalysisPrompt(
       ]
         .filter(Boolean)
         .join(", ");
-      lines.push(
-        source.verified
-          ? `Provenance: the latest version was published from a verified CI build${where ? ` (${where})` : ""}. State it as a fact. Do not raise or lower the recommendation because provenance is present.`
-          : "Provenance: the latest version has no signed provenance attestation. State it as a fact. Do not lower the recommendation because it is missing.",
-      );
+      let provenanceLine = source.verified
+        ? `Provenance: the latest version was published from a verified CI build${where ? ` (${where})` : ""}. State it as a fact. Do not raise or lower the recommendation because provenance is present.`
+        : "Provenance: the latest version has no signed provenance attestation. State it as a fact. Do not lower the recommendation because it is missing.";
+      if (
+        !source.verified &&
+        typeof source.priorAttestedVersion === "string" &&
+        source.priorAttestedVersion.trim()
+      ) {
+        provenanceLine += ` Earlier release ${source.priorAttestedVersion.trim()} had a signed build. State that as a fact only.`;
+      }
+      lines.push(provenanceLine);
     }
     const maintainers = npmMaintainerNames(data.npm?.maintainers);
     if (maintainers.length > 0) {
       lines.push(
         `Maintainers (${maintainers.length}): ${maintainers.slice(0, 12).join(", ")}`,
+      );
+    }
+    const publishRiskNotes = data.npm?.publishRiskNotes ?? [];
+    if (publishRiskNotes.length > 0) {
+      lines.push(
+        `Publish risk notes: ${publishRiskNotes.join(" ")} State as facts. Do not change the quality score for these alone.`,
       );
     }
 

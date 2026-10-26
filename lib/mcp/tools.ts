@@ -108,6 +108,7 @@ export function compactPackage(report: ClientAnalysisResponse) {
           typesPackage: report.packageInfo.typesPackage ?? null,
           provenance: report.packageInfo.provenance ?? null,
           maintainers: report.packageInfo.maintainers,
+          publishRiskNotes: report.packageInfo.publishRiskNotes ?? [],
           bundleComposition: report.metrics.bundleComposition ?? null,
         }
       : {}),

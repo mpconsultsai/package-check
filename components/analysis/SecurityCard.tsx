@@ -49,7 +49,14 @@ interface SecurityCardProps {
   selectedVersion: string;
   onVersionChange: (v: string) => void;
   securityLoading: boolean;
-  securityData: { error?: string; security?: SecurityResult } | null;
+  securityData: {
+    error?: string;
+    security?: SecurityResult;
+    depsDev?: {
+      saferVersion: string | null;
+      depsDevUrl: string;
+    };
+  } | null;
 }
 
 const TIME_META = new Set(["created", "modified", "unpublished"]);
@@ -438,6 +445,29 @@ export function SecurityCard({
               No known vulnerabilities for this version.
             </p>
           )}
+          {securityData?.depsDev?.saferVersion ? (
+            <p className="mt-4 text-xs font-normal leading-relaxed text-gray-500 dark:text-gray-400">
+              deps.dev lists a clearer release:{" "}
+              <button
+                type="button"
+                onClick={() =>
+                  onVersionChange(securityData.depsDev!.saferVersion!)
+                }
+                className="link font-mono"
+              >
+                {securityData.depsDev.saferVersion}
+              </button>
+              {" · "}
+              <a
+                href={securityData.depsDev.depsDevUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="link"
+              >
+                deps.dev
+              </a>
+            </p>
+          ) : null}
         </div>
       )}
     </div>

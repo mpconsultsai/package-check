@@ -191,6 +191,10 @@ export function buildAnalysisResponse(
         ecosystem === "npm"
           ? npmMaintainerNames(packageData.npm?.maintainers)
           : null,
+      publishRiskNotes:
+        ecosystem === "npm"
+          ? (packageData.npm?.publishRiskNotes ?? [])
+          : null,
       supportedFrameworks: packageData.npm?.supportedFrameworks ?? null,
       commonlyUsedTypes: packageData.npm?.commonlyUsedTypes ?? null,
       descriptionNote: packageData.npm?.descriptionNote ?? null,

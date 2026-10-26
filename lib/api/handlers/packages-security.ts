@@ -1,3 +1,4 @@
+import { fetchNpmDepsDevVersionInsight } from "@/lib/data-fetchers/deps-dev";
 import { checkPackageSecurity } from "@/lib/data-fetchers/security";
 import { advisoryEcosystem } from "@/lib/packages/package-routes";
 import { jsonOk, withHandler } from "@/lib/api/http";
@@ -15,12 +16,26 @@ const securityCheck = async (
   ecosystem: import("@/lib/packages/package-routes").PackageEcosystem,
 ) => {
   const securityEcosystem = advisoryEcosystem(ecosystem);
-  const security = await checkPackageSecurity(
+  const securityPromise = checkPackageSecurity(
     packageName,
     version,
     securityEcosystem,
   );
-  return jsonOk({ packageName, version, ecosystem, security });
+  const depsDevPromise =
+    ecosystem === "npm"
+      ? fetchNpmDepsDevVersionInsight(packageName, version).catch(() => null)
+      : Promise.resolve(null);
+  const [security, depsDev] = await Promise.all([
+    securityPromise,
+    depsDevPromise,
+  ]);
+  return jsonOk({
+    packageName,
+    version,
+    ecosystem,
+    security,
+    ...(depsDev ? { depsDev } : {}),
+  });
 };
 
 /** GET /api/v1/packages/security?package=&version=&ecosystem= */

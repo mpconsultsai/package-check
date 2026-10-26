@@ -989,79 +989,81 @@ export function PackageSearchForm({
 
             {pasteFeatures.npmPackageManagerSettings ? (
               <>
-              <div className="flex flex-col gap-2 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-                <div>
-                  <p
-                    id="package-manager-preference-label"
-                    className="text-sm font-semibold text-ink"
-                  >
-                    npm client
-                  </p>
-                  <p className="mt-0.5 text-xs text-gray-600 dark:text-gray-400">
-                    Used for the install commands in upgrade advice.
-                  </p>
+                <div className="flex flex-col gap-2 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                  <div>
+                    <p
+                      id="package-manager-preference-label"
+                      className="text-sm font-semibold text-ink"
+                    >
+                      npm client
+                    </p>
+                    <p className="mt-0.5 text-xs text-gray-600 dark:text-gray-400">
+                      Used for the install commands in upgrade advice.
+                    </p>
+                  </div>
+                  {packageManagerReady ? (
+                    <SelectField
+                      id="package-manager-preference"
+                      aria-labelledby="package-manager-preference-label"
+                      value={packageManager}
+                      onChange={(e) =>
+                        setPackageManager(
+                          e.target.value as PackageManagerPreference,
+                        )
+                      }
+                      className="w-full shrink-0 font-mono sm:w-40"
+                    >
+                      {PACKAGE_MANAGER_OPTIONS.map(({ value, label }) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
+                    </SelectField>
+                  ) : (
+                    <span
+                      className="inline-block h-8 w-40 shrink-0 bg-gray-200 dark:bg-gray-700"
+                      aria-hidden="true"
+                    />
+                  )}
                 </div>
-                {packageManagerReady ? (
-                  <SelectField
-                    id="package-manager-preference"
-                    aria-labelledby="package-manager-preference-label"
-                    value={packageManager}
-                    onChange={(e) =>
-                      setPackageManager(e.target.value as PackageManagerPreference)
-                    }
-                    className="w-full shrink-0 font-mono sm:w-40"
-                  >
-                    {PACKAGE_MANAGER_OPTIONS.map(({ value, label }) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ))}
-                  </SelectField>
-                ) : (
-                  <span
-                    className="inline-block h-8 w-40 shrink-0 bg-gray-200 dark:bg-gray-700"
-                    aria-hidden="true"
-                  />
-                )}
-              </div>
-              <div className="flex flex-col gap-2 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-                <div>
-                  <p
-                    id="npm-release-cooldown-label"
-                    className="text-sm font-semibold text-ink"
-                  >
-                    Release cooldown
-                  </p>
-                  <p className="mt-0.5 text-xs text-gray-600 dark:text-gray-400">
-                    Flag latest npm versions newer than this age. 0 turns it
-                    off.
-                  </p>
+                <div className="flex flex-col gap-2 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                  <div>
+                    <p
+                      id="npm-release-cooldown-label"
+                      className="text-sm font-semibold text-ink"
+                    >
+                      Release cooldown
+                    </p>
+                    <p className="mt-0.5 text-xs text-gray-600 dark:text-gray-400">
+                      Flag latest npm versions newer than this age. 0 turns it
+                      off.
+                    </p>
+                  </div>
+                  {releaseCooldownReady ? (
+                    <SelectField
+                      id="npm-release-cooldown"
+                      aria-labelledby="npm-release-cooldown-label"
+                      value={String(releaseCooldownHours)}
+                      onChange={(e) =>
+                        setReleaseCooldownHours(
+                          Number(e.target.value) as NpmReleaseCooldownHours,
+                        )
+                      }
+                      className="w-full shrink-0 font-mono sm:w-40"
+                    >
+                      {NPM_RELEASE_COOLDOWN_OPTIONS.map((value) => (
+                        <option key={value} value={value}>
+                          {npmReleaseCooldownLabel(value)}
+                        </option>
+                      ))}
+                    </SelectField>
+                  ) : (
+                    <span
+                      className="inline-block h-8 w-40 shrink-0 bg-gray-200 dark:bg-gray-700"
+                      aria-hidden="true"
+                    />
+                  )}
                 </div>
-                {releaseCooldownReady ? (
-                  <SelectField
-                    id="npm-release-cooldown"
-                    aria-labelledby="npm-release-cooldown-label"
-                    value={String(releaseCooldownHours)}
-                    onChange={(e) =>
-                      setReleaseCooldownHours(
-                        Number(e.target.value) as NpmReleaseCooldownHours,
-                      )
-                    }
-                    className="w-full shrink-0 font-mono sm:w-40"
-                  >
-                    {NPM_RELEASE_COOLDOWN_OPTIONS.map((value) => (
-                      <option key={value} value={value}>
-                        {npmReleaseCooldownLabel(value)}
-                      </option>
-                    ))}
-                  </SelectField>
-                ) : (
-                  <span
-                    className="inline-block h-8 w-40 shrink-0 bg-gray-200 dark:bg-gray-700"
-                    aria-hidden="true"
-                  />
-                )}
-              </div>
               </>
             ) : null}
           </div>
