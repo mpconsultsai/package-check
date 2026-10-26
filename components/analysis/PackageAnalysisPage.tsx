@@ -318,8 +318,18 @@ function PackagePageContent({
     setEcosystemPreference(ecosystem);
   }, [ecosystem]);
 
+  const directDependencyCount =
+    analysisData?.packageInfo?.directDependencyCount;
+  const showDependenciesTab =
+    typeof directDependencyCount !== "number"
+      ? true
+      : directDependencyCount > 0;
+
   useEffect(() => {
     if (!features.chartsTab && overviewTab === "charts") {
+      setOverviewTab("info");
+    }
+    if (!showDependenciesTab && overviewTab === "dependencies") {
       setOverviewTab("info");
     }
     if (!features.relatedPackages && insightTab === "related") {
@@ -328,6 +338,7 @@ function PackagePageContent({
   }, [
     features.chartsTab,
     features.relatedPackages,
+    showDependenciesTab,
     overviewTab,
     insightTab,
     aiEnabled,
@@ -602,6 +613,7 @@ function PackagePageContent({
                 active={overviewTab}
                 onChange={handleOverviewTabChange}
                 showCharts={features.chartsTab}
+                showDependencies={showDependenciesTab}
               />
 
               {overviewTab === "info" && (
@@ -641,7 +653,7 @@ function PackagePageContent({
                 </AnalysisPanel>
               )}
 
-              {overviewTab === "dependencies" && (
+              {showDependenciesTab && overviewTab === "dependencies" && (
                 <AnalysisPanel
                   id="overview-panel-dependencies"
                   title="Dependencies"

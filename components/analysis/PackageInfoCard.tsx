@@ -24,6 +24,11 @@ import {
   type NpmModuleFormat,
 } from "@/lib/packages/npm-package-facts";
 import type { NpmProvenance } from "@/lib/packages/npm-provenance";
+import {
+  npmReleaseCooldownCaution,
+  npmReleaseCooldownStatus,
+} from "@/lib/packages/npm-release-cooldown";
+import { useNpmReleaseCooldownHours } from "@/lib/prefs/use-npm-release-cooldown-pref";
 
 /** npm search `dependents` count - badge when widely depended-on. */
 const POPULAR_MIN_DEPENDENTS = 1000;
@@ -41,6 +46,8 @@ interface PackageInfo {
   repository?: string;
   daysSinceLastRelease?: number | null;
   lastReleaseLabel?: string | null;
+  /** Direct runtime + peer dependency count for the latest version. */
+  directDependencyCount?: number | null;
   dependents?: number;
   keywords?: string[];
   engines?: Record<string, string> | null;
@@ -111,6 +118,17 @@ function PopularBadge({ dependents }: { dependents: number }) {
   );
 }
 
+function ZeroDependenciesBadge() {
+  return (
+    <span
+      className="inline-flex items-center border border-ink px-1.5 py-0.5 font-mono text-[11px] font-medium uppercase tracking-[0.1em] text-ink"
+      title="No direct runtime or peer dependencies declared for the latest version"
+    >
+      Zero dependencies
+    </span>
+  );
+}
+
 function KeywordBadges({
   keywords,
   packageName,
@@ -162,15 +180,44 @@ export function PackageInfoCard({
 }: PackageInfoCardProps) {
   const features = featuresForEcosystem(ecosystem);
   const registryName = registryLabel(ecosystem);
+  const releaseCooldownHours = useNpmReleaseCooldownHours();
   const [section, setSection] = useState<
     "info" | "metrics" | "scorecard" | "upgrade"
   >("info");
   const [dependentsOpen, setDependentsOpen] = useState(false);
   const closeDependents = useCallback(() => setDependentsOpen(false), []);
+
+  const latestVersion =
+    packageInfo.latestVersion || packageInfo.version || "";
+  const latestPublishedAt =
+    ecosystem === "npm" && latestVersion && versionTimes
+      ? versionTimes[latestVersion]
+      : null;
+  const cooldownStatus =
+    ecosystem === "npm"
+      ? npmReleaseCooldownStatus({
+          publishedAt: latestPublishedAt,
+          cooldownHours: releaseCooldownHours,
+        })
+      : { withinCooldown: false, hoursSincePublish: null };
+  const cooldownCaution =
+    cooldownStatus.withinCooldown &&
+    cooldownStatus.hoursSincePublish !== null
+      ? npmReleaseCooldownCaution({
+          hoursSincePublish: cooldownStatus.hoursSincePublish,
+          cooldownHours: releaseCooldownHours,
+        })
+      : null;
   const popularBadge =
     packageInfo.dependents !== undefined ? (
       <PopularBadge dependents={packageInfo.dependents} />
     ) : null;
+  const zeroDependencies =
+    typeof packageInfo.directDependencyCount === "number" &&
+    packageInfo.directDependencyCount === 0;
+  const zeroDependenciesBadge = zeroDependencies ? (
+    <ZeroDependenciesBadge />
+  ) : null;
   const keywordBadges = (
     <KeywordBadges
       keywords={packageInfo.keywords}
@@ -189,9 +236,10 @@ export function PackageInfoCard({
     }),
   );
   const badgeRow =
-    popularBadge || hasKeywordBadges ? (
+    popularBadge || zeroDependenciesBadge || hasKeywordBadges ? (
       <div className="flex flex-wrap items-center gap-2">
         {popularBadge}
+        {zeroDependenciesBadge}
         {keywordBadges}
       </div>
     ) : null;
@@ -344,11 +392,31 @@ export function PackageInfoCard({
 
             {(packageInfo.lastReleaseLabel ||
               (packageInfo.daysSinceLastRelease !== null &&
-                packageInfo.daysSinceLastRelease !== undefined)) && (
+                packageInfo.daysSinceLastRelease !== undefined) ||
+              cooldownCaution) && (
               <Fact label="Last release">
-                {packageInfo.lastReleaseLabel ??
-                  formatDaysSinceRelease(packageInfo.daysSinceLastRelease!)}
+                <span className="flex flex-col gap-1">
+                  {(packageInfo.lastReleaseLabel ||
+                    (packageInfo.daysSinceLastRelease !== null &&
+                      packageInfo.daysSinceLastRelease !== undefined)) && (
+                    <span>
+                      {packageInfo.lastReleaseLabel ??
+                        formatDaysSinceRelease(
+                          packageInfo.daysSinceLastRelease!,
+                        )}
+                    </span>
+                  )}
+                  {cooldownCaution ? (
+                    <span className="text-sm font-sans font-normal text-amber-800 dark:text-amber-300">
+                      {cooldownCaution}
+                    </span>
+                  ) : null}
+                </span>
               </Fact>
+            )}
+
+            {zeroDependencies && (
+              <Fact label="Dependencies">Zero</Fact>
             )}
 
             {pythonEngine && ecosystem === "pypi" && (

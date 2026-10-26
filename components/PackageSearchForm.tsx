@@ -29,6 +29,12 @@ import {
   type PackageManagerPreference,
 } from "@/lib/prefs/package-manager-pref";
 import { usePackageManagerPref } from "@/lib/prefs/use-package-manager-pref";
+import {
+  NPM_RELEASE_COOLDOWN_OPTIONS,
+  npmReleaseCooldownLabel,
+  type NpmReleaseCooldownHours,
+} from "@/lib/prefs/npm-release-cooldown-pref";
+import { useNpmReleaseCooldownPref } from "@/lib/prefs/use-npm-release-cooldown-pref";
 import { WatchlistSection } from "@/components/Watchlist";
 import { PasteListPanel } from "@/components/PasteList";
 import { useAnnounce, useLiveMessage } from "@/components/LiveAnnouncer";
@@ -470,6 +476,11 @@ export function PackageSearchForm({
     setPreference: setPackageManager,
     ready: packageManagerReady,
   } = usePackageManagerPref();
+  const {
+    hours: releaseCooldownHours,
+    setHours: setReleaseCooldownHours,
+    ready: releaseCooldownReady,
+  } = useNpmReleaseCooldownPref();
   const savedPackages = useWatchlist();
   const watchlist = savedPackages.filter(
     (entry) => (entry.ecosystem ?? "npm") === ecosystem,
@@ -977,6 +988,7 @@ export function PackageSearchForm({
             </div>
 
             {pasteFeatures.npmPackageManagerSettings ? (
+              <>
               <div className="flex flex-col gap-2 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                 <div>
                   <p
@@ -1012,6 +1024,45 @@ export function PackageSearchForm({
                   />
                 )}
               </div>
+              <div className="flex flex-col gap-2 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                <div>
+                  <p
+                    id="npm-release-cooldown-label"
+                    className="text-sm font-semibold text-ink"
+                  >
+                    Release cooldown
+                  </p>
+                  <p className="mt-0.5 text-xs text-gray-600 dark:text-gray-400">
+                    Flag latest npm versions newer than this age. 0 turns it
+                    off.
+                  </p>
+                </div>
+                {releaseCooldownReady ? (
+                  <SelectField
+                    id="npm-release-cooldown"
+                    aria-labelledby="npm-release-cooldown-label"
+                    value={String(releaseCooldownHours)}
+                    onChange={(e) =>
+                      setReleaseCooldownHours(
+                        Number(e.target.value) as NpmReleaseCooldownHours,
+                      )
+                    }
+                    className="w-full shrink-0 font-mono sm:w-40"
+                  >
+                    {NPM_RELEASE_COOLDOWN_OPTIONS.map((value) => (
+                      <option key={value} value={value}>
+                        {npmReleaseCooldownLabel(value)}
+                      </option>
+                    ))}
+                  </SelectField>
+                ) : (
+                  <span
+                    className="inline-block h-8 w-40 shrink-0 bg-gray-200 dark:bg-gray-700"
+                    aria-hidden="true"
+                  />
+                )}
+              </div>
+              </>
             ) : null}
           </div>
         </div>

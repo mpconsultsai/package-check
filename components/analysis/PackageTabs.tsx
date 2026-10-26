@@ -171,10 +171,12 @@ export function OverviewTabs({
   active,
   onChange,
   showCharts = true,
+  showDependencies = true,
 }: {
   active: OverviewTabId;
   onChange: (tab: OverviewTabId) => void;
   showCharts?: boolean;
+  showDependencies?: boolean;
 }) {
   const tabs: TabDef<OverviewTabId>[] = [
     { id: "info", label: "Package info", shortLabel: "Package" },
@@ -187,11 +189,15 @@ export function OverviewTabs({
           },
         ]
       : []),
-    {
-      id: "dependencies",
-      label: "Dependencies",
-      shortLabel: "Deps",
-    },
+    ...(showDependencies
+      ? [
+          {
+            id: "dependencies" as const,
+            label: "Dependencies",
+            shortLabel: "Deps",
+          },
+        ]
+      : []),
   ];
 
   return (

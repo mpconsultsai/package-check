@@ -7,6 +7,7 @@ import type { AIPackageAnalysis } from "@/lib/ai/analyzer";
 import { classifyRuntimeEnvironment } from "@/lib/packages/runtime-environment";
 import { licenseDisplayName } from "@/lib/packages/license-info";
 import { npmMaintainerNames } from "@/lib/packages/npm-package-facts";
+import { countDirectDependencies } from "@/lib/packages/package-deps";
 import { registryPackageUrl } from "@/lib/packages/package-routes";
 import { isStableDotnetPlatformPackage } from "@/lib/nuget/dotnet-platform";
 
@@ -147,6 +148,10 @@ export function buildAnalysisResponse(
   const daysSinceLastRelease = getDaysSinceLastRelease(packageData);
   const runtime = getPackageRuntime(packageData);
   const registryUrl = registryPackageUrl(ecosystem, packageName);
+  const directDependencyCount = countDirectDependencies(
+    packageData.npm?.dependencies,
+    packageData.npm?.peerDependencies,
+  );
 
   return {
     ...packageData,
@@ -166,6 +171,7 @@ export function buildAnalysisResponse(
         daysSinceLastRelease !== null
           ? formatDaysSinceRelease(daysSinceLastRelease)
           : null,
+      directDependencyCount,
       dependents: packageData.popularity?.dependents,
       keywords: packageData.npm?.keywords?.filter(
         (k): k is string => typeof k === "string" && k.trim().length > 0,

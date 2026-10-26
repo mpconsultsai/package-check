@@ -893,8 +893,17 @@ function createAnalysisPrompt(
     for (const line of facts.advisoryLines) lines.push(`- ${line}`);
   }
   if (facts?.dependencyLines.length) {
+    const zeroDeps = facts.dependencyLines.some((line) =>
+      /zero direct/i.test(line),
+    );
     lines.push("Dependencies:");
-    if (facts.dependencyLines.some((line) => line.includes("has advisories"))) {
+    if (zeroDeps) {
+      lines.push(
+        "No direct runtime or peer dependencies. Treat this as a strength (smaller supply-chain surface). Prefer mentioning it in strengths. Do not invent dependency concerns.",
+      );
+    } else if (
+      facts.dependencyLines.some((line) => line.includes("has advisories"))
+    ) {
       lines.push(
         "Mention a direct dependency in concerns when its line says it has advisories.",
       );
@@ -1016,9 +1025,9 @@ function createAnalysisPrompt(
     "Fields:",
     "- summary: 3-4 sentences - what it is, who for / how used, notable capabilities. From desc/keywords/README. No metrics lead (downloads, stars, vulns, publish age). No scorecard product names.",
     "- recommendation: recommended|use-with-caution|not-recommended|do-not-use",
-    "- strengths: 3-5 short bullets",
+    "- strengths: 3-5 short bullets. When the package has zero direct dependencies, include that as a strength.",
     "- concerns: 2-4 short distinct risk bullets (or [\"None\"]). Facts only - do NOT restate them in reasoning.",
-    "- overallScore: 0-100",
+    "- overallScore: 0-100. Zero direct dependencies may support a higher score when the rest of the package is sound; do not penalise a package for having none.",
     "- securityRating, qualityRating, maintenanceRating: excellent|good|fair|poor",
     "- reasoning: 1-2 sentences WHY the recommendation - tradeoffs / decision. Do NOT repeat concern wording or themes.",
     ecosystem === "pypi"

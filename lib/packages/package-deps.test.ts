@@ -1,9 +1,11 @@
 import { describe, it } from "vitest";
 import {
   attachDirectAdvisories,
+  countDirectDependencies,
   dependencyReactKey,
   formatDirectAdvisoryLine,
   listPackageDependencies,
+  ZERO_DEPENDENCY_FACT,
 } from "@/lib/packages/package-deps";
 
 describe("listPackageDependencies", () => {
@@ -23,6 +25,12 @@ describe("listPackageDependencies", () => {
       "runtime:React",
       "peer:left",
     ]);
+  });
+
+  it("should count zero when nothing is declared", () => {
+    countDirectDependencies(null, undefined).should.equal(0);
+    countDirectDependencies({}, {}).should.equal(0);
+    ZERO_DEPENDENCY_FACT.should.match(/Zero direct/i);
   });
 });
 

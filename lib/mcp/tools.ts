@@ -113,6 +113,7 @@ export function compactPackage(report: ClientAnalysisResponse) {
       : {}),
     qualityScore: report.metrics.qualityScore,
     daysSinceLastRelease: report.packageInfo.daysSinceLastRelease,
+    directDependencyCount: report.packageInfo.directDependencyCount,
     supportedFrameworks: report.packageInfo.supportedFrameworks,
     security: {
       totalCount: security?.totalCount ?? 0,

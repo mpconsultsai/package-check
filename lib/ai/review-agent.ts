@@ -10,6 +10,7 @@ import { featuresForEcosystem } from "@/lib/packages/ecosystem-features";
 import {
   formatDirectAdvisoryLine,
   listPackageDependencies,
+  ZERO_DEPENDENCY_FACT,
 } from "@/lib/packages/package-deps";
 import type { PackageAnalysisResult } from "@/lib/types/package-data";
 
@@ -119,7 +120,10 @@ async function enrichAdvisories(state: typeof ReviewState.State) {
 async function enrichDependencies(state: typeof ReviewState.State) {
   const route = reviewRoute(state.data);
   if (!route.dependencies) {
-    return { toolCalls: appendToolCall(state, "enrich_dependencies:skip") };
+    return {
+      dependencyLines: [ZERO_DEPENDENCY_FACT],
+      toolCalls: appendToolCall(state, "enrich_dependencies:zero"),
+    };
   }
   const total = listPackageDependencies(
     state.data.npm?.dependencies,

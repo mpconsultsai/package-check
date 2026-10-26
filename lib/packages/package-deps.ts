@@ -93,6 +93,10 @@ const asDeps = (
     }));
 };
 
+/** Fact line for AI when a package declares no direct runtime or peer deps. */
+export const ZERO_DEPENDENCY_FACT =
+  "Zero direct runtime or peer dependencies";
+
 /** Direct runtime + peer dependencies for a package version. */
 export const listPackageDependencies = (
   dependencies?: Record<string, string> | null,
@@ -112,3 +116,10 @@ export const listPackageDependencies = (
     ...peers.filter((d) => !seen.has(d.name.toLowerCase())),
   ];
 };
+
+export function countDirectDependencies(
+  dependencies?: Record<string, string> | null,
+  peerDependencies?: Record<string, string> | null,
+): number {
+  return listPackageDependencies(dependencies, peerDependencies).length;
+}
