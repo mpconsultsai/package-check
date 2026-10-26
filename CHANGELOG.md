@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.10 - 2026-10-26
+
+- feat: Updated maintainers and improved metrics (c52e7c0)
+
 ## 0.1.9 - 2026-10-26
 
 - feat: Add cooldown period and flag package with zero dependencies (3914273)
