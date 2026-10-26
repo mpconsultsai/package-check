@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.9 - 2026-10-26
+
+- feat: Add cooldown period and flag package with zero dependencies (3914273)
+
 ## 0.1.8 - 2026-10-25
 
 - chore: Update accessibility (f46a196)
