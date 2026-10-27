@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.12 - 2026-10-27
+
+- chore: Minor updates and fixes (542b418)
+
 ## 0.1.11 - 2026-10-27
 
 - chore: Remove node manager client from settings (caf4d1b)
