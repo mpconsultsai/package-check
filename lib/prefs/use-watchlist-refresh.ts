@@ -26,7 +26,7 @@ interface CheckResponse {
 const CHECK_FAILED = "Could not check the watchlist";
 
 /**
- * On the homepage, refresh stale watchlist packages at most once per day each.
+ * Refresh stale watchlist packages at most once per day each when `auto` is on.
  * checkNow ignores that interval.
  */
 export function useWatchlistRefresh(auto: boolean) {
@@ -68,7 +68,7 @@ export function useWatchlistRefresh(auto: boolean) {
         (pkg): pkg is WatchlistFresh & { name: string; ecosystem?: PackageEcosystem } =>
           Boolean(pkg?.name && pkg.version),
       );
-      if (!ok || updates.length === 0) {
+      if (!ok) {
         setError(data.error || CHECK_FAILED);
         return;
       }

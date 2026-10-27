@@ -14,6 +14,16 @@ import {
   sortByThreatPriority,
 } from "@/lib/utils/vuln-priority";
 import { formatPublishDate } from "@/lib/utils/format";
+import {
+  npmReleaseCooldownCaution,
+  npmReleaseCooldownStatus,
+} from "@/lib/packages/npm-release-cooldown";
+import { useNpmReleaseCooldownHours } from "@/lib/prefs/use-npm-release-cooldown-pref";
+import {
+  versionCheckVerdict,
+  type VersionCheckVerdict,
+} from "@/lib/packages/version-check";
+import type { PackageEcosystem } from "@/lib/packages/package-routes";
 
 interface VersionVuln {
   id?: string;
@@ -49,9 +59,11 @@ interface SecurityCardProps {
   selectedVersion: string;
   onVersionChange: (v: string) => void;
   securityLoading: boolean;
+  ecosystem?: PackageEcosystem;
   securityData: {
     error?: string;
     security?: SecurityResult;
+    deprecated?: string | null;
     depsDev?: {
       saferVersion: string | null;
       depsDevUrl: string;
@@ -122,6 +134,32 @@ function SeverityMix({ security }: { security: SecurityResult }) {
   );
 }
 
+function verdictPanelClass(verdict: VersionCheckVerdict): string {
+  switch (verdict) {
+    case "use":
+      return "border-emerald-200 bg-emerald-50/80 text-emerald-950 dark:border-emerald-800/50 dark:bg-emerald-950/30 dark:text-emerald-50";
+    case "wait":
+      return "border-amber-200 bg-amber-50/80 text-amber-950 dark:border-amber-800/50 dark:bg-amber-950/30 dark:text-amber-50";
+    case "prefer_other":
+      return "border-sky-200 bg-sky-50/80 text-sky-950 dark:border-sky-800/50 dark:bg-sky-950/30 dark:text-sky-50";
+    case "avoid":
+      return "border-red-200 bg-red-50/80 text-red-950 dark:border-red-800/50 dark:bg-red-950/30 dark:text-red-50";
+  }
+}
+
+function verdictBadge(verdict: VersionCheckVerdict): string {
+  switch (verdict) {
+    case "use":
+      return "Use";
+    case "wait":
+      return "Wait";
+    case "prefer_other":
+      return "Prefer other";
+    case "avoid":
+      return "Avoid";
+  }
+}
+
 export function SecurityCard({
   packageName,
   latestVersion,
@@ -131,7 +169,9 @@ export function SecurityCard({
   onVersionChange,
   securityLoading,
   securityData,
+  ecosystem = "npm",
 }: SecurityCardProps) {
+  const cooldownHours = useNpmReleaseCooldownHours();
   const hasSecurity = Boolean(securityData?.security && !securityData?.error);
   const sortedVulns = hasSecurity
     ? sortByThreatPriority(securityData!.security!.vulnerabilities)
@@ -151,6 +191,9 @@ export function SecurityCard({
     [availableVersionsKey, latestVersion],
   );
   const versionsKey = versions.join("\0");
+  // Parent already slices to 10; fewer than that means the package has no
+  // older releases beyond the listed set.
+  const showOlderVersions = versions.length >= 10;
 
   const [mode, setMode] = useState<"listed" | "custom">("listed");
   const [listedVersion, setListedVersion] = useState(
@@ -173,6 +216,14 @@ export function SecurityCard({
     setListedVersion((prev) => (versions.includes(prev) ? prev : versions[0]));
   }, [versionsKey, versions]);
 
+  useEffect(() => {
+    if (showOlderVersions) return;
+    setMode("listed");
+    setCustomVersion("");
+    setCustomNotFound(false);
+    setCheckedCustom(null);
+  }, [showOlderVersions]);
+
   const applyListedVersion = (version: string) => {
     setListedVersion(version);
     setCustomNotFound(false);
@@ -193,6 +244,7 @@ export function SecurityCard({
 
   const chooseMode = (next: "listed" | "custom") => {
     if (next === mode) return;
+    if (next === "custom" && !showOlderVersions) return;
     setMode(next);
     setCustomVersion("");
     setCustomNotFound(false);
@@ -204,13 +256,62 @@ export function SecurityCard({
     if (defaultListed) setListedVersion(defaultListed);
   };
 
+  const effectiveMode = showOlderVersions ? mode : "listed";
+
   const showSecurity =
-    mode === "listed" ||
+    effectiveMode === "listed" ||
     Boolean(checkedCustom && checkedCustom === customVersion.trim());
+
+  const publishedAt =
+    selectedVersion && versionTimes ? versionTimes[selectedVersion] : null;
+  const selectedPublished = formatPublishDate(publishedAt);
+  const cooldownStatus =
+    ecosystem === "npm"
+      ? npmReleaseCooldownStatus({
+          publishedAt,
+          cooldownHours,
+        })
+      : { withinCooldown: false, hoursSincePublish: null };
+  const cooldownNote =
+    cooldownStatus.withinCooldown &&
+    cooldownStatus.hoursSincePublish !== null
+      ? npmReleaseCooldownCaution({
+          hoursSincePublish: cooldownStatus.hoursSincePublish,
+          cooldownHours,
+        })
+      : null;
+
+  const check = useMemo(() => {
+    if (!hasSecurity || !selectedVersion) return null;
+    const security = securityData!.security!;
+    return versionCheckVerdict({
+      selectedVersion,
+      security: {
+        totalCount: security.totalCount,
+        critical: security.critical,
+        high: security.high,
+        moderate: security.moderate,
+        low: security.low,
+      },
+      deprecated: securityData?.deprecated ?? null,
+      saferVersion: securityData?.depsDev?.saferVersion ?? null,
+      publishedAt,
+      cooldownHours: ecosystem === "npm" ? cooldownHours : 0,
+      versionTimes: ecosystem === "npm" ? versionTimes : null,
+    });
+  }, [
+    hasSecurity,
+    selectedVersion,
+    securityData,
+    publishedAt,
+    cooldownHours,
+    versionTimes,
+    ecosystem,
+  ]);
 
   useLiveMessage(
     showSecurity && securityLoading
-      ? `Checking security for ${packageName}@${selectedVersion || "…"}…`
+      ? `Checking ${packageName}@${selectedVersion || "…"}…`
       : null,
   );
   useLiveMessage(
@@ -221,49 +322,52 @@ export function SecurityCard({
         : null,
     { politeness: "assertive" },
   );
-
-  const selectedPublished = formatPublishDate(
-    selectedVersion ? versionTimes?.[selectedVersion] : null,
+  useLiveMessage(
+    showSecurity && !securityLoading && check
+      ? check.headline
+      : null,
   );
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 sm:p-6">
       <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-        GitHub advisories plus OSV, CISA KEV, and EPSS - ordered by known
-        exploitation, severity, then exploit likelihood.
+        Pick a version to check whether it is safe to use. Advisories, release
+        age, and deprecation drive the verdict.
       </p>
-      <div
-        role="radiogroup"
-        aria-label="Version source"
-        className="flex gap-5 mb-3 border-b border-rule"
-      >
-        {(
-          [
-            { id: "listed" as const, label: "Last 10 versions" },
-            { id: "custom" as const, label: "Older versions" },
-          ] as const
-        ).map((option) => {
-          const selected = mode === option.id;
-          return (
-            <button
-              key={option.id}
-              type="button"
-              role="radio"
-              aria-checked={selected}
-              onClick={() => chooseMode(option.id)}
-              className={`-mb-px pb-2 text-sm font-medium border-b-2 transition-colors ${
-                selected
-                  ? "border-signal font-semibold text-ink"
-                  : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
-              }`}
-            >
-              {option.label}
-            </button>
-          );
-        })}
-      </div>
+      {showOlderVersions ? (
+        <div
+          role="radiogroup"
+          aria-label="Version source"
+          className="flex gap-5 mb-3 border-b border-rule"
+        >
+          {(
+            [
+              { id: "listed" as const, label: "Last 10 versions" },
+              { id: "custom" as const, label: "Older versions" },
+            ] as const
+          ).map((option) => {
+            const selected = effectiveMode === option.id;
+            return (
+              <button
+                key={option.id}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                onClick={() => chooseMode(option.id)}
+                className={`-mb-px pb-2 text-sm font-medium border-b-2 transition-colors ${
+                  selected
+                    ? "border-signal font-semibold text-ink"
+                    : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                }`}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
 
-      {mode === "listed" ? (
+      {effectiveMode === "listed" ? (
         <div>
           <label
             htmlFor="securityVersionSelect"
@@ -332,15 +436,9 @@ export function SecurityCard({
         </div>
       )}
 
-      {mode === "listed" && selectedPublished && (
-        <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
-          Released {selectedPublished}
-        </p>
-      )}
-
       {showSecurity && securityLoading && (
         <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
-          Checking security for {packageName}@{selectedVersion || "…"}…
+          Checking {packageName}@{selectedVersion || "…"}…
         </p>
       )}
 
@@ -348,126 +446,145 @@ export function SecurityCard({
         <p className="mt-4 text-red-600 dark:text-red-400">{securityData.error}</p>
       )}
 
-      {showSecurity && hasSecurity && !securityLoading && (
-        <div className="mt-6 pt-6 border-t border-rule">
-          <h3 className="font-semibold text-lg mb-3">
-            Security for {packageName}@{selectedVersion}
-          </h3>
-          {securityData!.security!.hasVulnerabilities ? (
-            <div className="space-y-2">
-              <p className="text-red-600 dark:text-red-400 font-medium">
-                {securityData!.security!.totalCount}{" "}
-                {securityData!.security!.totalCount === 1
-                  ? "vulnerability"
-                  : "vulnerabilities"}{" "}
-                found
-                {kevCount > 0 && (
-                  <span className="text-red-800 dark:text-red-300 font-semibold">
-                    {" "}
-                    · {kevCount} on CISA KEV
-                  </span>
-                )}
-              </p>
-              <SeverityMix security={securityData!.security!} />
-              <div className="space-y-3 mt-4">
-                {sortedVulns.map((vuln, idx) => (
-                  <div
-                    key={vuln.id ?? idx}
-                    className={`bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 border-l-4 ${severityBorderClass(vuln.severity)}`}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <h4 className="font-semibold">{vuln.title}</h4>
-                      <div className="flex shrink-0 flex-wrap justify-end gap-1">
-                        {vuln.knownExploited && (
-                          <span
-                            className="px-2 py-0.5 rounded text-xs font-semibold bg-red-800 text-white"
-                            title="Listed in CISA Known Exploited Vulnerabilities catalog"
-                          >
-                            KEV
-                          </span>
-                        )}
-                        {formatEpssPercent(vuln.epssScore) && (
-                          <span
-                            className="px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-950 dark:bg-amber-900/50 dark:text-amber-100"
-                            title={
-                              vuln.epssPercentile != null
-                                ? `EPSS ${formatEpssPercent(vuln.epssScore)} · ${(vuln.epssPercentile * 100).toFixed(0)}th percentile vs all CVEs`
-                                : "EPSS 30-day exploitation probability (FIRST.org)"
-                            }
-                          >
-                            EPSS {formatEpssPercent(vuln.epssScore)}
-                          </span>
-                        )}
-                        <span
-                          className={`px-2 py-0.5 rounded text-xs font-medium ${severityBadgeClass(vuln.severity)}`}
-                        >
-                          {vuln.severity}
-                        </span>
-                      </div>
-                    </div>
-                    <AdvisoryDescription markdown={vuln.description} />
-                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-gray-600 dark:text-gray-400 mt-2">
-                      {vuln.id && (
-                        <span>
-                          <strong>ID:</strong> {vuln.id}
-                        </span>
-                      )}
-                      {vuln.cveId && vuln.cveId !== vuln.id && (
-                        <span>
-                          <strong>CVE:</strong> {vuln.cveId}
-                        </span>
-                      )}
-                      {vuln.vulnerableVersionRange && (
-                        <span>
-                          <strong>Vulnerable:</strong>{" "}
-                          {vuln.vulnerableVersionRange}
-                        </span>
-                      )}
-                      {vuln.patchedVersions &&
-                        vuln.patchedVersions !== "none" && (
-                          <span className="text-green-600 dark:text-green-400">
-                            <strong>Fixed in:</strong> {vuln.patchedVersions}
-                          </span>
-                        )}
-                    </div>
-                    <AdvisoryLinks
-                      githubUrl={vuln.url}
-                      osvUrl={vuln.osvUrl}
-                      packageName={packageName}
-                      version={selectedVersion}
-                    />
-                  </div>
-                ))}
-              </div>
+      {showSecurity && hasSecurity && !securityLoading && check && (
+        <div className="mt-6 space-y-6">
+          <div
+            className={`rounded-xl border px-4 py-4 sm:px-5 ${verdictPanelClass(check.verdict)}`}
+          >
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex rounded-md px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide bg-black/5 dark:bg-white/10">
+                {verdictBadge(check.verdict)}
+              </span>
+              <span className="font-mono text-xs opacity-80">
+                {packageName}@{selectedVersion}
+              </span>
             </div>
-          ) : (
-            <p className="text-green-600 dark:text-green-400 font-medium">
-              No known vulnerabilities for this version.
+            <p className="mt-2 text-base font-semibold leading-snug">
+              {check.headline}
             </p>
-          )}
-          {securityData?.depsDev?.saferVersion ? (
-            <p className="mt-4 text-xs font-normal leading-relaxed text-gray-500 dark:text-gray-400">
-              deps.dev lists a clearer release:{" "}
+            <ul className="mt-2 space-y-1 text-sm leading-relaxed opacity-90">
+              {check.reasons.map((reason) => (
+                <li key={reason}>{reason}</li>
+              ))}
+            </ul>
+            {check.recommendedVersion ? (
               <button
                 type="button"
-                onClick={() =>
-                  onVersionChange(securityData.depsDev!.saferVersion!)
-                }
-                className="link font-mono"
+                onClick={() => onVersionChange(check.recommendedVersion!)}
+                className="mt-3 inline-flex items-center rounded-lg bg-ink px-3 py-1.5 text-sm font-semibold text-paper hover:bg-signal"
               >
-                {securityData.depsDev.saferVersion}
+                Check {check.recommendedVersion}
               </button>
-              {" · "}
-              <a
-                href={securityData.depsDev.depsDevUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="link"
-              >
-                deps.dev
-              </a>
-            </p>
-          ) : null}
+            ) : null}
+            {selectedPublished || cooldownNote ? (
+              <p className="mt-3 text-xs leading-relaxed opacity-70">
+                {[
+                  selectedPublished ? `Released ${selectedPublished}` : null,
+                  cooldownNote,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
+            ) : null}
+          </div>
+
+          <div className="border-t border-rule pt-4">
+            <h3 className="font-semibold text-lg mb-3">
+              Advisories on this version
+            </h3>
+            {securityData!.security!.hasVulnerabilities ? (
+              <div className="space-y-2">
+                <p className="text-red-600 dark:text-red-400 font-medium">
+                  {securityData!.security!.totalCount}{" "}
+                  {securityData!.security!.totalCount === 1
+                    ? "vulnerability"
+                    : "vulnerabilities"}{" "}
+                  found
+                  {kevCount > 0 && (
+                    <span className="text-red-800 dark:text-red-300 font-semibold">
+                      {" "}
+                      · {kevCount} on CISA KEV
+                    </span>
+                  )}
+                </p>
+                <SeverityMix security={securityData!.security!} />
+                <div className="space-y-3 mt-4">
+                  {sortedVulns.map((vuln, idx) => (
+                    <div
+                      key={vuln.id ?? idx}
+                      className={`bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 border-l-4 ${severityBorderClass(vuln.severity)}`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <h4 className="font-semibold">{vuln.title}</h4>
+                        <div className="flex shrink-0 flex-wrap justify-end gap-1">
+                          {vuln.knownExploited && (
+                            <span
+                              className="px-2 py-0.5 rounded text-xs font-semibold bg-red-800 text-white"
+                              title="Listed in CISA Known Exploited Vulnerabilities catalog"
+                            >
+                              KEV
+                            </span>
+                          )}
+                          {formatEpssPercent(vuln.epssScore) && (
+                            <span
+                              className="px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-950 dark:bg-amber-900/50 dark:text-amber-100"
+                              title={
+                                vuln.epssPercentile != null
+                                  ? `EPSS ${formatEpssPercent(vuln.epssScore)} · ${(vuln.epssPercentile * 100).toFixed(0)}th percentile vs all CVEs`
+                                  : "EPSS 30-day exploitation probability (FIRST.org)"
+                              }
+                            >
+                              EPSS {formatEpssPercent(vuln.epssScore)}
+                            </span>
+                          )}
+                          <span
+                            className={`px-2 py-0.5 rounded text-xs font-medium ${severityBadgeClass(vuln.severity)}`}
+                          >
+                            {vuln.severity}
+                          </span>
+                        </div>
+                      </div>
+                      <AdvisoryDescription markdown={vuln.description} />
+                      <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-gray-600 dark:text-gray-400 mt-2">
+                        {vuln.id && (
+                          <span>
+                            <strong>ID:</strong> {vuln.id}
+                          </span>
+                        )}
+                        {vuln.cveId && vuln.cveId !== vuln.id && (
+                          <span>
+                            <strong>CVE:</strong> {vuln.cveId}
+                          </span>
+                        )}
+                        {vuln.vulnerableVersionRange && (
+                          <span>
+                            <strong>Vulnerable:</strong>{" "}
+                            {vuln.vulnerableVersionRange}
+                          </span>
+                        )}
+                        {vuln.patchedVersions &&
+                          vuln.patchedVersions !== "none" && (
+                            <span className="text-green-600 dark:text-green-400">
+                              <strong>Fixed in:</strong> {vuln.patchedVersions}
+                            </span>
+                          )}
+                      </div>
+                      <AdvisoryLinks
+                        githubUrl={vuln.url}
+                        osvUrl={vuln.osvUrl}
+                        packageName={packageName}
+                        version={selectedVersion}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p className="text-green-600 dark:text-green-400 font-medium">
+                No known vulnerabilities for this version.
+              </p>
+            )}
+          </div>
         </div>
       )}
     </div>

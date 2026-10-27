@@ -36,6 +36,11 @@ export type TransitiveDepEdge = {
 export type TransitiveDependencyGraph = {
   packageName: string;
   version: string;
+  /**
+   * When deps.dev has not indexed `requestedVersion` yet, `version` is the
+   * nearest older release that does have a graph.
+   */
+  requestedVersion?: string;
   nodes: TransitiveDepNode[];
   edges: TransitiveDepEdge[];
   stats: {
@@ -46,6 +51,8 @@ export type TransitiveDependencyGraph = {
   };
   depsDevUrl: string;
 };
+
+const GRAPH_FALLBACK_ATTEMPTS = 12;
 
 const graphCache = new Map<
   string,
@@ -159,16 +166,58 @@ const bareGraphCache = new Map<
   { expires: number; data: BareDependencyGraph }
 >();
 
+type DepsDevPackageVersion = {
+  version: string;
+  publishedAtMs: number;
+};
+
+async function listNpmPackageVersions(
+  packageName: string,
+): Promise<DepsDevPackageVersion[]> {
+  const url = `${DEPS_DEV_API}/systems/npm/packages/${encodePackagePath(packageName)}`;
+  try {
+    const response = await fetch(url, {
+      headers: { Accept: "application/json" },
+      next: { revalidate: 3600 },
+    });
+    if (!response.ok) return [];
+    const payload = (await response.json()) as {
+      versions?: Array<{
+        versionKey?: { version?: string };
+        publishedAt?: string;
+      }>;
+    };
+    return [...(payload.versions ?? [])]
+      .flatMap((entry) => {
+        const version = entry.versionKey?.version?.trim();
+        if (!version) return [];
+        const publishedAtMs = entry.publishedAt
+          ? new Date(entry.publishedAt).getTime()
+          : 0;
+        return [
+          {
+            version,
+            publishedAtMs: Number.isFinite(publishedAtMs) ? publishedAtMs : 0,
+          },
+        ];
+      })
+      .sort((a, b) => b.publishedAtMs - a.publishedAtMs);
+  } catch {
+    return [];
+  }
+}
+
 async function loadBareDependencyGraph(
   packageName: string,
   version: string,
-): Promise<BareDependencyGraph> {
+): Promise<BareDependencyGraph | null> {
   const cacheKey = `${packageName.toLowerCase()}|${version}`;
   const cached = bareGraphCache.get(cacheKey);
   if (cached && cached.expires > Date.now()) return cached.data;
 
   const url = `${DEPS_DEV_API}/systems/npm/packages/${encodePackagePath(packageName)}/versions/${encodeURIComponent(version)}:dependencies`;
   const response = await fetch(url, { headers: { Accept: "application/json" } });
+  if (response.status === 404) return null;
   if (!response.ok) {
     throw new Error(`deps.dev graph unavailable (${response.status})`);
   }
@@ -203,6 +252,44 @@ async function loadBareDependencyGraph(
   const data = { packageName, version, nodes, edges };
   bareGraphCache.set(cacheKey, { expires: Date.now() + GRAPH_CACHE_MS, data });
   return data;
+}
+
+/**
+ * Load a deps.dev graph for `version`, or the nearest older indexed release
+ * when that version is not available yet (common right after publish).
+ */
+async function loadBareDependencyGraphWithFallback(
+  packageName: string,
+  version: string,
+): Promise<{ bare: BareDependencyGraph; requestedVersion?: string }> {
+  const primary = await loadBareDependencyGraph(packageName, version);
+  if (primary) return { bare: primary };
+
+  const versions = await listNpmPackageVersions(packageName);
+  const requestedAt =
+    versions.find((entry) => entry.version === version)?.publishedAtMs ??
+    Number.POSITIVE_INFINITY;
+  // Prefer older indexed releases first — brand-new ones often 404 too.
+  const candidates = [
+    ...versions.filter(
+      (entry) =>
+        entry.version !== version && entry.publishedAtMs < requestedAt,
+    ),
+    ...versions.filter(
+      (entry) =>
+        entry.version !== version && entry.publishedAtMs >= requestedAt,
+    ),
+  ].map((entry) => entry.version);
+
+  let attempts = 0;
+  for (const candidate of candidates) {
+    attempts += 1;
+    if (attempts > GRAPH_FALLBACK_ATTEMPTS) break;
+    const bare = await loadBareDependencyGraph(packageName, candidate);
+    if (bare) return { bare, requestedVersion: version };
+  }
+
+  throw new Error(`deps.dev graph unavailable (404)`);
 }
 
 async function enrichAdvisories(
@@ -257,9 +344,13 @@ export async function fetchTransitiveDependencyGraph(
     return cached.data;
   }
 
-  const bare = await loadBareDependencyGraph(packageName, version);
+  const { bare, requestedVersion } = await loadBareDependencyGraphWithFallback(
+    packageName,
+    version,
+  );
   const edges = bare.edges;
   const nodes = await enrichAdvisories(bare.nodes);
+  const resolvedVersion = bare.version;
 
   const direct = nodes.filter((n) => n.relation === "DIRECT").length;
   const indirect = nodes.filter((n) => n.relation === "INDIRECT").length;
@@ -267,7 +358,10 @@ export async function fetchTransitiveDependencyGraph(
 
   const result: TransitiveDependencyGraph = {
     packageName,
-    version,
+    version: resolvedVersion,
+    ...(requestedVersion && requestedVersion !== resolvedVersion
+      ? { requestedVersion }
+      : {}),
     nodes,
     edges,
     stats: {
@@ -276,7 +370,7 @@ export async function fetchTransitiveDependencyGraph(
       indirect,
       withAdvisories,
     },
-    depsDevUrl: `https://deps.dev/npm/${encodePackagePath(packageName)}/${encodeURIComponent(version)}`,
+    depsDevUrl: `https://deps.dev/npm/${encodePackagePath(packageName)}/${encodeURIComponent(resolvedVersion)}`,
   };
 
   graphCache.set(cacheKey, { expires: Date.now() + GRAPH_CACHE_MS, data: result });
@@ -288,7 +382,10 @@ export async function fetchNpmDirectAdvisories(
   packageName: string,
   version: string,
 ): Promise<Array<{ name: string; version: string; ids: string[] }>> {
-  const bare = await loadBareDependencyGraph(packageName, version);
+  const { bare } = await loadBareDependencyGraphWithFallback(
+    packageName,
+    version,
+  );
   const directs = bare.nodes
     .filter((node) => node.relation === "DIRECT")
     .slice(0, DIRECT_ADVISORY_CAP);

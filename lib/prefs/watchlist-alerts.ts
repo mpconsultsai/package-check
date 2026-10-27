@@ -260,44 +260,51 @@ export function watchlistAfterPoll(
   };
 }
 
-/** A page view updates the baseline only when nothing is waiting to be read. */
+/**
+ * A page view never silently acknowledges a newer version or new advisories.
+ * It polls like a registry check, then only adds quality/recommendation onto
+ * the baseline when nothing is waiting to be read.
+ */
 export function watchlistAfterVisit(
   entry: WatchlistEntry,
   summary: WatchlistSummary,
   visitedAt: number,
 ): WatchlistEntry {
-  if (watchlistEntryHasAlerts(entry)) {
-    return {
-      ...entry,
-      summary: {
-        ...entry.summary,
-        qualityScore: summary.qualityScore,
-        recommendation: summary.recommendation,
-        dependencyAdvisories:
-          summary.dependencyAdvisories ?? entry.summary?.dependencyAdvisories,
-      },
-    };
-  }
-
-  const fresh = alertSnapshot({
+  const pageFresh = alertSnapshot({
     ...summary,
     dependencyAdvisories:
       summary.dependencyAdvisories ?? entry.fresh?.dependencyAdvisories,
   });
+  const polled = watchlistAfterPoll(entry, pageFresh, visitedAt);
+
+  if (watchlistEntryHasAlerts(polled) || watchlistEntryHasAlerts(entry)) {
+    return {
+      ...polled,
+      summary: {
+        ...polled.summary,
+        qualityScore: summary.qualityScore,
+        recommendation: summary.recommendation,
+        dependencyAdvisories:
+          polled.summary?.dependencyAdvisories ??
+          summary.dependencyAdvisories ??
+          entry.summary?.dependencyAdvisories,
+      },
+    };
+  }
+
   return {
-    ...entry,
-    lastCheckedAt: visitedAt,
+    ...polled,
     summary: {
       ...summary,
-      advisories: summary.advisories ?? entry.summary?.advisories,
+      advisories: summary.advisories ?? polled.summary?.advisories,
       dependencyAdvisories:
-        summary.dependencyAdvisories ?? entry.summary?.dependencyAdvisories,
+        summary.dependencyAdvisories ?? polled.summary?.dependencyAdvisories,
     },
     fresh: {
-      ...fresh,
-      advisories: fresh.advisories ?? entry.fresh?.advisories,
+      ...pageFresh,
+      advisories: pageFresh.advisories ?? polled.fresh?.advisories,
       dependencyAdvisories:
-        fresh.dependencyAdvisories ?? entry.fresh?.dependencyAdvisories,
+        pageFresh.dependencyAdvisories ?? polled.fresh?.dependencyAdvisories,
     },
   };
 }

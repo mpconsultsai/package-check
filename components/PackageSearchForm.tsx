@@ -441,7 +441,6 @@ export function PackageSearchForm({
   }, [activeOptionId]);
 
   const showClear = value.length > 0 && !disabled && !loading;
-  const isHome = pathname === "/";
   const pasteFeatures = featuresForEcosystem(ecosystem);
   const showPasteList = pasteFeatures.pasteList;
   const pasteLabel =
@@ -470,7 +469,7 @@ export function PackageSearchForm({
   const visibleAlerts = summarizeWatchlistAlerts(watchlist).total;
   const otherAlertCount = Math.max(0, alertSummary.total - visibleAlerts);
   const { checking: watchlistChecking, error: watchlistCheckError, checkNow } =
-    useWatchlistRefresh(isHome);
+    useWatchlistRefresh(true);
   const announce = useAnnounce();
 
   useEffect(() => {

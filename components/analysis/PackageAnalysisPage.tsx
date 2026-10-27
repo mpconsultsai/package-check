@@ -42,6 +42,7 @@ import { SITE_NAME } from "@/lib/site/site-brand";
 type ApiErrorBody = { error?: string };
 type VersionSecurityPayload = {
   security?: SecuritySummary;
+  deprecated?: string | null;
   depsDev?: {
     saferVersion: string | null;
     depsDevUrl: string;
@@ -731,9 +732,9 @@ function PackagePageContent({
               )}
 
               {insightTab === "security" && (
-                <AnalysisPanel id="insights-panel-security" title="Security">
+                <AnalysisPanel id="insights-panel-security" title="Version check">
                 {reportLoading || !analysisData?.packageInfo ? (
-                  <PanelSkeleton label="Loading security" />
+                  <PanelSkeleton label="Loading version check" />
                 ) : (
                   <SecurityCard
                     packageName={analysisData.packageInfo.name}
@@ -747,6 +748,7 @@ function PackagePageContent({
                     }}
                     securityLoading={versionSecurityLoading}
                     securityData={versionSecurityData}
+                    ecosystem={ecosystem}
                   />
                 )}
                 </AnalysisPanel>

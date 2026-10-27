@@ -135,6 +135,21 @@ describe("watchlistAfterVisit", () => {
     next.summary?.qualityScore!.should.equal(90);
     getWatchlistAlerts(next).newVersion.should.equal(true);
   });
+
+  it("should raise a notice when the page is ahead of the acknowledged version", () => {
+    const current = entry({
+      summary: { version: "4.0.0", vulnerabilityCount: 0, advisories: [] },
+      fresh: { version: "4.0.0", vulnerabilityCount: 0, advisories: [] },
+    });
+    const next = watchlistAfterVisit(
+      current,
+      { version: "5.0.0", vulnerabilityCount: 0, advisories: [], qualityScore: 88 },
+      30,
+    );
+    next.summary?.version!.should.equal("4.0.0");
+    next.fresh?.version!.should.equal("5.0.0");
+    getWatchlistAlerts(next).newVersion.should.equal(true);
+  });
 });
 
 describe("watchlistAfterAcknowledge", () => {

@@ -979,6 +979,11 @@ export function UpgradeAdvisorPanel({
                       </li>
                     ))}
                   </ol>
+                  <p className="mt-2 text-[11px] leading-relaxed text-gray-500 dark:text-gray-400">
+                    Example uses{" "}
+                    <span className="font-mono">npm i</span>. Same package works
+                    with pnpm, yarn, or bun.
+                  </p>
                 </div>
               )}
             </div>

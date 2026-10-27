@@ -12,7 +12,7 @@ Choose a registry above the search box, then open a package at `/npm/<name>`, `/
 
 All three registries:
 
-- **Security** - GitHub Advisory Database for the package version, with patched issues filtered out. Advisories are enriched with CVE identifiers, CISA Known Exploited Vulnerabilities, and EPSS scores when available
+- **Version check** - Pick a version (default latest) and get a use / wait / prefer-other / avoid verdict from advisories, release cooldown, and deprecation, with a suggested alternate when one exists. Advisories are enriched with CVE identifiers, CISA Known Exploited Vulnerabilities, and EPSS scores when available
 - **Health signals** - GitHub stars, forks, issues, and release activity when the package links a GitHub repository; days since the latest release; README deprecation and maintenance warnings
 - **Quality score** - A 0–100 score from the signals that are available for that package
 - **AI insights** - Recommendation, strengths, concerns, and scores. Gemini 2.5 Flash falls back to Flash-Lite, then Groq
@@ -24,7 +24,7 @@ All three registries:
 
 The toolbar next to the registry tabs has three text buttons: **Watchlist** (with a count, and a coloured dot when saved packages have updates), **Review package file**, and **Settings** (AI second opinion on or off, light or dark theme, and npm release cooldown).
 
-npm also includes monthly downloads and download charts, Bundlephobia size, dependents, a transitive dependency graph (deps.dev), OpenSSF Scorecard (highest scores first, with maintainer notes for any score under 5), related packages, and an upgrade advisor with an optional Groq upgrade brief. Related packages leave out `@types/*`. npm reviews also state a few facts that do not change the quality score: module format, whether TypeScript types ship (or which package an `@types` package is for), signed npm provenance when the registry recorded a CI build, maintainer names, the largest modules in a browser bundle, and which direct dependencies have advisories.
+npm also includes monthly downloads and download charts, Bundlephobia size, dependents, a transitive dependency graph (deps.dev), OpenSSF Scorecard (highest scores first, with maintainer notes for any score under 5), related packages, and an upgrade advisor with an optional Groq upgrade brief. Related packages leave out `@types/*`. Install examples use `npm i`; the same package works with pnpm, yarn, or bun. npm reviews also state a few facts that do not change the quality score: module format, whether TypeScript types ship (or which package an `@types` package is for), signed npm provenance when the registry recorded a CI build, maintainer names, the largest modules in a browser bundle, and which direct dependencies have advisories.
 
 PyPI uses the PyPI JSON API for project metadata, versions, license, and description. It shows distribution size (wheel or sdist), `Requires-Python`, core requirements, extras, and environment markers. Paste analysis accepts `requirements.txt`, `pyproject.toml`, or PEP 508 lines. PyPI reviews do not include download totals, download charts, a transitive dependency tree, related packages, the upgrade advisor, or a peer entry on the dependency chart legend.
 
@@ -213,7 +213,7 @@ A review includes:
 - **Package information** - Name, latest version, license, description, and days since the last release
 - **Metrics** - Quality score, GitHub stars when a repository is linked, and security counts (critical, high, moderate, low). npm also shows monthly downloads, dependents, and bundle size. PyPI shows distribution size. NuGet shows lifetime downloads, package size, and supported frameworks
 - **AI analysis** - `recommended`, `use-with-caution`, or `not-recommended`, with strengths, concerns, and scores
-- **Security** - Advisories that affect the selected version, with severity filters and links
+- **Version check** - Verdict for the selected version, plus advisories with severity filters and links
 - **Scorecard** (npm) - OpenSSF checks for the linked repository, highest scores first, with maintainer notes for any score under 5
 - **Dependencies** - The list of direct dependencies is the default view, then the tree, then the chart. npm shows runtime and peer dependencies, PyPI shows `Requires-Dist` (core, conditional, and extras), and NuGet shows package dependencies for the selected target framework. The chart legend includes Peer on npm only
 - **Maintenance** - README deprecation language and publish or commit frequency

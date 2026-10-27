@@ -344,10 +344,32 @@ export function WatchToggle({
   disabled?: boolean;
 }) {
   const watched = useIsWatched(packageName, ecosystem);
+  const entries = useWatchlist();
   const { toggle } = useWatchlistActions();
   const announce = useAnnounce();
+  const entry = entries.find(
+    (item) =>
+      item.name.toLowerCase() === packageName.trim().toLowerCase() &&
+      (item.ecosystem ?? "npm") === ecosystem,
+  );
+  const hasUpdates = Boolean(entry && watchlistEntryHasAlerts(entry));
+  const alerts = entry ? getWatchlistAlerts(entry) : null;
+  const updateTone =
+    alerts && (alerts.newVulns || alerts.newDependencyAdvisories.length > 0)
+      ? "vulns"
+      : alerts?.newVersion
+        ? "version"
+        : alerts?.newlyDeprecated
+          ? "deprecated"
+          : "none";
 
   if (!packageName) return null;
+
+  const label = watched
+    ? hasUpdates
+      ? `Watching ${packageName}, updates available`
+      : `Watching ${packageName}`
+    : `Watch ${packageName}`;
 
   return (
     <button
@@ -362,25 +384,41 @@ export function WatchToggle({
         );
       }}
       aria-pressed={watched}
-      className="inline-flex items-center gap-1.5 border border-ink px-3 py-1.5 text-sm font-medium text-ink transition-colors hover:bg-ink hover:text-paper disabled:opacity-50 dark:border-gray-400"
+      aria-label={label}
+      title={label}
+      className="relative inline-flex items-center gap-1.5 border border-ink px-3 py-1.5 text-sm font-medium text-ink transition-colors hover:bg-ink hover:text-paper disabled:opacity-50 dark:border-gray-400"
     >
-      <svg
-        className={`h-4 w-4 transition-colors ${
-          watched
-            ? "fill-amber-400 text-amber-400"
-            : "fill-none text-gray-500 dark:text-gray-400"
-        }`}
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-        aria-hidden="true"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
-        />
-      </svg>
+      <span className="relative inline-flex">
+        <svg
+          className={`h-4 w-4 transition-colors ${
+            watched
+              ? "fill-amber-400 text-amber-400"
+              : "fill-none text-gray-500 dark:text-gray-400"
+          }`}
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden="true"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
+          />
+        </svg>
+        {hasUpdates && (
+          <span
+            className={`absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full ${
+              updateTone === "vulns"
+                ? "bg-red-600"
+                : updateTone === "version"
+                  ? "bg-emerald-600"
+                  : "bg-orange-600"
+            }`}
+            aria-hidden="true"
+          />
+        )}
+      </span>
       {watched ? "Watching" : "Watch"}
     </button>
   );

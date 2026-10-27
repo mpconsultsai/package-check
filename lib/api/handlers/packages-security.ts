@@ -1,3 +1,4 @@
+import axios from "axios";
 import { fetchNpmDepsDevVersionInsight } from "@/lib/data-fetchers/deps-dev";
 import { checkPackageSecurity } from "@/lib/data-fetchers/security";
 import { advisoryEcosystem } from "@/lib/packages/package-routes";
@@ -9,6 +10,31 @@ import {
   requirePackageNameForEcosystem,
   requireVersion,
 } from "@/lib/api/params";
+
+const NPM_REGISTRY_URL = "https://registry.npmjs.org";
+
+/** npm deprecation message for a specific version, when present. */
+async function fetchNpmVersionDeprecated(
+  packageName: string,
+  version: string,
+): Promise<string | null> {
+  try {
+    const response = await axios.get(
+      `${NPM_REGISTRY_URL}/${encodeURIComponent(packageName)}/${encodeURIComponent(version)}`,
+      {
+        timeout: 4_000,
+        validateStatus: (status) => status === 200 || status === 404,
+      },
+    );
+    if (response.status !== 200) return null;
+    const raw = response.data?.deprecated;
+    if (typeof raw === "string" && raw.trim()) return raw.trim();
+    if (raw) return "This package has been deprecated";
+    return null;
+  } catch {
+    return null;
+  }
+}
 
 const securityCheck = async (
   packageName: string,
@@ -25,9 +51,14 @@ const securityCheck = async (
     ecosystem === "npm"
       ? fetchNpmDepsDevVersionInsight(packageName, version).catch(() => null)
       : Promise.resolve(null);
-  const [security, depsDev] = await Promise.all([
+  const deprecatedPromise =
+    ecosystem === "npm"
+      ? fetchNpmVersionDeprecated(packageName, version)
+      : Promise.resolve(null);
+  const [security, depsDev, deprecated] = await Promise.all([
     securityPromise,
     depsDevPromise,
+    deprecatedPromise,
   ]);
   return jsonOk({
     packageName,
@@ -35,6 +66,7 @@ const securityCheck = async (
     ecosystem,
     security,
     ...(depsDev ? { depsDev } : {}),
+    ...(ecosystem === "npm" ? { deprecated } : {}),
   });
 };
 

@@ -27,6 +27,8 @@ type TransitiveDepEdge = {
 type GraphPayload = {
   packageName: string;
   version: string;
+  /** Present when deps.dev had no graph for the package's latest yet. */
+  requestedVersion?: string;
   nodes: TransitiveDepNode[];
   edges?: TransitiveDepEdge[];
   stats: {
@@ -340,6 +342,15 @@ export function TransitiveDepsPanel({
             deps.dev
           </a>
           , with advisory counts from OSV.
+          {data.requestedVersion &&
+          data.requestedVersion !== data.version ? (
+            <>
+              {" "}
+              deps.dev has not indexed{" "}
+              <span className="font-mono">{data.requestedVersion}</span> yet,
+              so this tree is for the nearest available release.
+            </>
+          ) : null}
         </p>
       </div>
 

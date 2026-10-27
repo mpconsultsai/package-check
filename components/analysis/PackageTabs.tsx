@@ -240,8 +240,8 @@ export function InsightTabs({
       : []),
     {
       id: "security",
-      label: "Security",
-      shortLabel: "Security",
+      label: "Version check",
+      shortLabel: "Version",
     },
     ...(showRelated
       ? [
