@@ -8,7 +8,6 @@ import type { UpgradeAgentStreamEvent } from "@/lib/ai/upgrade-agent-events";
 import { AppError } from "@/lib/api/errors";
 import { jsonOk, withHandler } from "@/lib/api/http";
 import {
-  optionalPackageManager,
   readJsonBody,
   requireFromTo,
   requirePackageName,
@@ -40,7 +39,6 @@ export const POST = withHandler(
       typeof body.from === "string" ? body.from : "",
       typeof body.to === "string" ? body.to : "",
     );
-    const packageManager = optionalPackageManager(body.packageManager);
     const force = body.force === true;
     const wantsStream =
       body.stream === true ||
@@ -62,7 +60,6 @@ export const POST = withHandler(
               packageName,
               from,
               to,
-              packageManager,
               force,
             })) {
               if (request.signal.aborted) break;
@@ -94,7 +91,6 @@ export const POST = withHandler(
         packageName,
         from,
         to,
-        packageManager,
         force,
       });
 
@@ -102,7 +98,6 @@ export const POST = withHandler(
         packageName,
         from,
         to,
-        packageManager,
         ...result,
       });
     } catch (error: unknown) {

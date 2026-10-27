@@ -22,7 +22,7 @@ All three registries:
 - **Paste a list** - Analyse many packages from a dependency file
 - **Most checked this week** - The home page lists the packages people opened most in the last seven days, and the most recent ones, for the selected registry (needs the database, see below)
 
-The toolbar next to the registry tabs has three text buttons: **Watchlist** (with a count, and a coloured dot when saved packages have updates), **Review package file**, and **Settings** (AI second opinion on or off, light or dark theme, and the npm client used in upgrade commands).
+The toolbar next to the registry tabs has three text buttons: **Watchlist** (with a count, and a coloured dot when saved packages have updates), **Review package file**, and **Settings** (AI second opinion on or off, light or dark theme, and npm release cooldown).
 
 npm also includes monthly downloads and download charts, Bundlephobia size, dependents, a transitive dependency graph (deps.dev), OpenSSF Scorecard (highest scores first, with maintainer notes for any score under 5), related packages, and an upgrade advisor with an optional Groq upgrade brief. Related packages leave out `@types/*`. npm reviews also state a few facts that do not change the quality score: module format, whether TypeScript types ship (or which package an `@types` package is for), signed npm provenance when the registry recorded a CI build, maintainer names, the largest modules in a browser bundle, and which direct dependencies have advisories.
 

@@ -9,10 +9,7 @@ import {
 import { checkPackageSecurity } from "@/lib/data-fetchers/security";
 import { fetchNpmPackageData } from "@/lib/data-fetchers/npm-registry";
 import { getGroqUpgradeAgentModel, groqModelLabel } from "@/lib/ai/groq-config";
-import {
-  formatInstallStep,
-  type PackageManagerPreference,
-} from "@/lib/prefs/package-manager-pref";
+import { formatNpmInstallStep } from "@/lib/prefs/package-manager-pref";
 import { UPGRADE_AGENT_GENERIC_ERROR } from "@/lib/ai/upgrade-agent-messages";
 import type { UpgradeAgentStreamEvent } from "@/lib/ai/upgrade-agent-events";
 import {
@@ -40,7 +37,7 @@ const briefSchema = z.object({
     .array(z.string())
     .max(5)
     .describe(
-      "Ordered upgrade checklist (2-5 items). Review breaking risks first, then install with the preferred package manager from the facts.",
+      "Ordered upgrade checklist (2-5 items). Review breaking risks first, then install with npm i.",
     ),
 });
 
@@ -113,7 +110,6 @@ const AgentState = Annotation.Root({
   packageName: Annotation<string>,
   from: Annotation<string>,
   to: Annotation<string>,
-  packageManager: Annotation<PackageManagerPreference>,
   facts: Annotation<string>,
   toolCalls: Annotation<string[]>,
   brief: Annotation<UpgradeAgentBrief | null>,
@@ -123,7 +119,6 @@ type FactsPayload = {
   packageName?: string;
   from?: string;
   to?: string;
-  packageManager?: PackageManagerPreference;
   advice?: Record<string, unknown>;
   details?: {
     github?: {
@@ -422,35 +417,18 @@ async function enrichMigration(state: typeof AgentState.State) {
 const INSTALL_CMD_RE =
   /\b(?:npm\s+(?:install|i|update)|pnpm\s+(?:add|update|i)|yarn\s+(?:add|upgrade)|bun\s+add)\b/i;
 
-function installGuidance(pref: PackageManagerPreference): string {
-  if (pref === "auto") {
-    return (
-      "packageManager preference is auto - give install examples for npm, pnpm, and yarn " +
-      "(e.g. `npm install pkg@ver`, `pnpm add pkg@ver`, `yarn add pkg@ver`); do not assume only npm."
-    );
-  }
-  const examples: Record<Exclude<PackageManagerPreference, "auto">, string> = {
-    npm: "`npm install pkg@version`",
-    pnpm: "`pnpm add pkg@version`",
-    yarn: "`yarn add pkg@version`",
-    bun: "`bun add pkg@version`",
-  };
-  return `packageManager preference is ${pref} - use ${examples[pref]} for the install step (match this manager only).`;
-}
-
-/** Ensure next steps include a concrete install command after an initial review step. */
+/** Ensure next steps include a concrete `npm i` command after an initial review step. */
 export function normalizeNextSteps(
   steps: string[],
   packageName: string,
   to: string,
-  packageManager: PackageManagerPreference = "auto",
 ): string[] {
   const cleaned = steps
     .map((s) => s.trim())
     .filter(Boolean)
     .slice(0, 5);
 
-  const installStep = formatInstallStep(packageManager, packageName, to);
+  const installStep = formatNpmInstallStep(packageName, to);
   const installIdx = cleaned.findIndex((s) => INSTALL_CMD_RE.test(s));
 
   let ordered = cleaned;
@@ -460,7 +438,7 @@ export function normalizeNextSteps(
         ? [installStep]
         : [cleaned[0], installStep, ...cleaned.slice(1)];
   } else {
-    // Rewrite whatever manager the model used to match the user preference.
+    // Rewrite whatever install command the model used to `npm i`.
     ordered = cleaned.map((step, i) =>
       i === installIdx ? installStep : step,
     );
@@ -473,10 +451,10 @@ export function normalizeNextSteps(
   return ordered.slice(0, 5);
 }
 
-function nextStepsGuidance(packageManager: PackageManagerPreference): string {
+function nextStepsGuidance(): string {
   return `nextSteps must be a clear, ordered developer checklist (3–5 items):
 1. FIRST: review release notes / breaking-change notes and peer risks - use a real URL from facts.enrichment.migration.urls or details when available; otherwise say to check the package's changelog for this range. Do not invent URLs. Call out named breaking changes from the facts when present.
-2. THEN: install/upgrade to the target version. ${installGuidance(packageManager)} Only install after reviewing what may break.
+2. THEN: install the target version with \`npm i pkg@version\` (example form only - use the real package name and target version from the facts). Only install after reviewing what may break. Do not suggest pnpm, yarn, or bun.
 3. If facts.enrichment.peers is present, include aligning those peers (name the packages from enrichment.peers.align).
 4. If facts.enrichment.securityDelta shows more advisories on the target, call that out before or with the install step. If details.manifest shows a deprecation, an engines change, or a module type change, mention that fact. Name dependency changes from details.manifest.dependencies when they are present.
 5. Run the project's tests and typecheck (or build) to catch breakages.
@@ -598,7 +576,6 @@ async function collectFacts(state: typeof AgentState.State) {
     packageName,
     from,
     to,
-    packageManager: state.packageManager,
     advice: adviceJson,
     details: detailsJson,
     security: { from: fromSecJson, to: toSecJson },
@@ -623,7 +600,7 @@ async function synthesizeBrief(state: typeof AgentState.State) {
   const messages = [
     {
       role: "system" as const,
-      content: `You are an npm upgrade advisor. Reply with a short structured brief using ONLY the JSON facts provided. Do not invent versions, advisory counts, or breaking changes. If notes are empty, say so. Keep bullets and nextSteps concise (short sentences). Prefer facts.enrichment summaries (peers, securityDelta, migration) when present.\n\n${nextStepsGuidance(state.packageManager)}`,
+      content: `You are an npm upgrade advisor. Reply with a short structured brief using ONLY the JSON facts provided. Do not invent versions, advisory counts, or breaking changes. If notes are empty, say so. Keep bullets and nextSteps concise (short sentences). Prefer facts.enrichment summaries (peers, securityDelta, migration) when present.\n\n${nextStepsGuidance()}`,
     },
     {
       role: "user" as const,
@@ -662,7 +639,6 @@ async function synthesizeBrief(state: typeof AgentState.State) {
         brief.nextSteps,
         state.packageName,
         state.to,
-        state.packageManager,
       ),
     },
     toolCalls: appendToolCall(state, "synthesize"),
@@ -701,14 +677,12 @@ export async function* streamUpgradeAgent(input: {
   packageName: string;
   from: string;
   to: string;
-  packageManager?: PackageManagerPreference;
   force?: boolean;
 }): AsyncGenerator<UpgradeAgentStreamEvent> {
-  const { packageName, from, to, packageManager = "auto", force = false } =
-    input;
+  const { packageName, from, to, force = false } = input;
   requireGroqKey();
 
-  const key = upgradeAgentCacheKey(packageName, from, to, packageManager);
+  const key = upgradeAgentCacheKey(packageName, from, to);
 
   if (!force) {
     const cached = getCachedUpgradeBrief(key);
@@ -762,7 +736,6 @@ export async function* streamUpgradeAgent(input: {
         packageName,
         from,
         to,
-        packageManager,
         facts: "",
         toolCalls: [],
         brief: null,
@@ -789,12 +762,7 @@ export async function* streamUpgradeAgent(input: {
           brief = ensureBriefDefaults(slice.brief);
           brief = {
             ...brief,
-            nextSteps: normalizeNextSteps(
-              brief.nextSteps,
-              packageName,
-              to,
-              packageManager,
-            ),
+            nextSteps: normalizeNextSteps(brief.nextSteps, packageName, to),
           };
           yield { type: "brief", brief };
         }
@@ -810,7 +778,6 @@ export async function* streamUpgradeAgent(input: {
       packageName,
       from,
       to,
-      packageManager,
       brief,
       model,
       toolCalls,
@@ -836,7 +803,6 @@ export async function runUpgradeAgent(input: {
   packageName: string;
   from: string;
   to: string;
-  packageManager?: PackageManagerPreference;
   force?: boolean;
 }): Promise<UpgradeAgentResult> {
   let brief: UpgradeAgentBrief | null = null;

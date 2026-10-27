@@ -5,7 +5,6 @@ export type CachedUpgradeBrief = {
   packageName: string;
   from: string;
   to: string;
-  packageManager: string;
   brief: {
     headline: string;
     bullets: string[];
@@ -29,14 +28,8 @@ export const upgradeAgentCacheKey = (
   packageName: string,
   from: string,
   to: string,
-  packageManager: string,
 ): string =>
-  [
-    packageName.trim().toLowerCase(),
-    from.trim(),
-    to.trim(),
-    packageManager.trim().toLowerCase() || "auto",
-  ].join("|");
+  [packageName.trim().toLowerCase(), from.trim(), to.trim()].join("|");
 
 const prune = () => {
   if (cache.size <= MAX_ENTRIES) return;

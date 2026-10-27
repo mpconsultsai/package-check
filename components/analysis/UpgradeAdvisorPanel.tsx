@@ -15,7 +15,6 @@ import type {
   BreakingReleaseNote,
   PeerChange,
 } from "@/lib/upgrade/upgrade-release-notes";
-import { usePackageManagerPreference } from "@/lib/prefs/use-package-manager-pref";
 import { LinkifiedText } from "@/components/LinkifiedText";
 import { useLiveMessage } from "@/components/LiveAnnouncer";
 import { SelectField } from "@/components/SelectField";
@@ -189,7 +188,6 @@ export function UpgradeAdvisorPanel({
   const [agentCached, setAgentCached] = useState(false);
   const [agentLoading, setAgentLoading] = useState(false);
   const [agentError, setAgentError] = useState<string | null>(null);
-  const packageManager = usePackageManagerPreference();
   const agentAbortRef = useRef<AbortController | null>(null);
   const changeNotesRef = useRef<HTMLDetailsElement | null>(null);
 
@@ -323,7 +321,6 @@ export function UpgradeAdvisorPanel({
           packageName,
           from: fromVersion,
           to: latest,
-          packageManager,
           stream: true,
           force,
         }),
@@ -403,13 +400,13 @@ export function UpgradeAdvisorPanel({
     }
   }, [packageName, fromVersion, latest, details, hasChangeDetail]);
 
-  // Clear brief when the upgrade range or package manager changes.
+  // Clear brief when the upgrade range changes.
   useEffect(() => {
     agentAbortRef.current?.abort();
     agentAbortRef.current = null;
     resetAgentState();
     setAgentLoading(false);
-  }, [packageName, fromVersion, latest, packageManager]);
+  }, [packageName, fromVersion, latest]);
 
   if (!latest) {
     return (

@@ -2,13 +2,12 @@ import { describe, it } from "vitest";
 import { featuresForEcosystem } from "@/lib/packages/ecosystem-features";
 
 describe("featuresForEcosystem", () => {
-  it("should enable npm charts, the upgrade advisor, and package manager settings", () => {
+  it("should enable npm charts and the upgrade advisor", () => {
     const features = featuresForEcosystem("npm");
     features.downloadCharts.should.be.true;
     features.transitiveDepsTree.should.be.true;
     features.upgradeAdvisor.should.be.true;
     features.relatedPackages.should.be.true;
-    features.npmPackageManagerSettings.should.be.true;
     features.downloadsAreTotal.should.be.false;
   });
 

@@ -1,9 +1,5 @@
 import type { NextRequest } from "next/server";
 import { AppError } from "@/lib/api/errors";
-import {
-  parsePackageManagerPreference,
-  type PackageManagerPreference,
-} from "@/lib/prefs/package-manager-pref";
 import type { PackageEcosystem } from "@/lib/packages/package-routes";
 import {
   extractPackageName,
@@ -100,10 +96,6 @@ export const requireFromTo = (
   }
   return { from, to };
 };
-
-export const optionalPackageManager = (
-  value: unknown,
-): PackageManagerPreference => parsePackageManagerPreference(value);
 
 export const readJsonBody = async (
   request: NextRequest,

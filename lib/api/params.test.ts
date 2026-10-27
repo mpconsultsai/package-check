@@ -2,7 +2,6 @@ import type { NextRequest } from "next/server";
 import { describe, it } from "vitest";
 import { AppError } from "@/lib/api/errors";
 import {
-  optionalPackageManager,
   parseEcosystem,
   readJsonBody,
   requireEcosystemFromQuery,
@@ -82,10 +81,6 @@ describe("query helpers", () => {
     missingRange.should.throw(AppError, "Both from and to versions are required");
   });
 
-  it("should parse an optional package manager", () => {
-    optionalPackageManager("pnpm").should.equal("pnpm");
-    optionalPackageManager(1).should.equal("auto");
-  });
 });
 
 describe("readJsonBody", () => {
