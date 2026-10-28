@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.14 - 2026-10-28
+
+- feat: Add initial Maven checks (77ade5a)
+
 ## 0.1.12 - 2026-10-27
 
 - chore: Minor updates and fixes (542b418)
