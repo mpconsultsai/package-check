@@ -7,6 +7,7 @@ import { fetchNpmDirectAdvisories } from "./deps-dev";
 import { checkPackageSecurity } from "./security";
 import { fetchPypiPackageData } from "./pypi-registry";
 import { fetchNugetPackageData } from "./nuget-registry";
+import { fetchMavenPackageData } from "./maven-registry";
 import {
   compactAdvisories,
   compactDependencyAdvisories,
@@ -77,6 +78,20 @@ async function fetchNugetLatestMeta(
   }
 }
 
+async function fetchMavenLatestMeta(
+  packageName: string,
+): Promise<{ version: string; deprecated: boolean } | null> {
+  try {
+    const { data } = await fetchMavenPackageData(packageName);
+    return {
+      version: data.version,
+      deprecated: Boolean(data.deprecated),
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchWatchlistPackageStatus(
   packageName: string,
   ecosystem: PackageEcosystem = "npm",
@@ -86,7 +101,9 @@ export async function fetchWatchlistPackageStatus(
       ? await fetchPypiLatestMeta(packageName)
       : ecosystem === "nuget"
         ? await fetchNugetLatestMeta(packageName)
-        : await fetchNpmLatestMeta(packageName);
+        : ecosystem === "maven"
+          ? await fetchMavenLatestMeta(packageName)
+          : await fetchNpmLatestMeta(packageName);
   if (!meta?.version) return null;
 
   let vulnerabilityCount = 0;

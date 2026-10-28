@@ -75,7 +75,9 @@ function normalizeEntry(entry: WatchlistEntry): WatchlistEntry {
         ? "pypi"
         : entry.ecosystem === "nuget"
           ? "nuget"
-          : "npm",
+          : entry.ecosystem === "maven"
+            ? "maven"
+            : "npm",
   };
 }
 

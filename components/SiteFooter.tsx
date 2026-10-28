@@ -46,7 +46,7 @@ export function SiteFooter() {
         </div>
         <div className="max-w-2xl space-y-2">
           <p>
-            Analysis uses public npm, PyPI, NuGet, GitHub, and security advisory data.
+            Analysis uses public npm, PyPI, NuGet, Maven Central, GitHub, and security advisory data.
             Optional AI summaries are{" "}
             <strong className="font-medium text-gray-700 dark:text-gray-300">advisory only</strong>{". They are not legal, security, or procurement advice. Verify before you ship. When AI is on, the package name and the public figures in the review are sent to Google Gemini. If Gemini is unavailable, that same request is sent to Groq."}
           </p>

@@ -10,6 +10,10 @@ import {
   fetchSimilarNugetPackages,
 } from "@/lib/data-fetchers/nuget-registry";
 import {
+  fetchMavenPackageCards,
+  fetchSimilarMavenPackages,
+} from "@/lib/data-fetchers/maven-registry";
+import {
   fetchNpmPackageCards,
   fetchNpmPackageData,
   fetchSimilarPackages,
@@ -122,11 +126,15 @@ export const GET = withHandler(
       isFirstPage && competitorNames.length
         ? ecosystem === "nuget"
           ? fetchNugetPackageCards(competitorNames)
-          : fetchNpmPackageCards(competitorNames)
+          : ecosystem === "maven"
+            ? fetchMavenPackageCards(competitorNames)
+            : fetchNpmPackageCards(competitorNames)
         : Promise.resolve([]),
       ecosystem === "nuget"
         ? fetchSimilarNugetPackages(packageName, keywordList, RELATED_POOL)
-        : fetchSimilarPackages(packageName, keywordList, RELATED_POOL),
+        : ecosystem === "maven"
+          ? fetchSimilarMavenPackages(packageName, RELATED_POOL)
+          : fetchSimilarPackages(packageName, keywordList, RELATED_POOL),
     ]);
 
     const competitorSet = new Set(

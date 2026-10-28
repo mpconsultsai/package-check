@@ -133,6 +133,11 @@ async function fetchRanking(ecosystem: PackageEcosystem): Promise<string[]> {
     });
     return namesFromPypiTopDownloads(response.data);
   }
+  if (ecosystem === "maven") {
+    return EXAMPLE_PACKAGES.maven.filter(
+      (name) => acceptedName(name, "maven") !== null,
+    );
+  }
   const response = await axios.get(NUGET_SEARCH_URL, {
     timeout: REQUEST_TIMEOUT_MS,
     headers: HEADERS,

@@ -6,6 +6,7 @@ import {
 } from "./npm-registry";
 import { fetchPypiPackageData } from "./pypi-registry";
 import { fetchNugetPackageData } from "./nuget-registry";
+import { fetchMavenPackageData } from "./maven-registry";
 import { fetchGitHubDataFromUrl, parseGitHubUrl } from "./github";
 import { checkPackageSecurity } from "./security";
 import { fetchBundleSize } from "./bundlephobia";
@@ -26,11 +27,17 @@ export async function analyzePackage(
     errors: {},
   };
 
-  if (ecosystem === "pypi" || ecosystem === "nuget") {
+  if (ecosystem === "pypi" || ecosystem === "nuget" || ecosystem === "maven") {
     try {
       if (ecosystem === "pypi") {
         const { data, readme, distributionSize } =
           await fetchPypiPackageData(packageName);
+        result.npm = data;
+        result.readme = readme;
+        result.distributionSize = distributionSize;
+      } else if (ecosystem === "maven") {
+        const { data, readme, distributionSize } =
+          await fetchMavenPackageData(packageName);
         result.npm = data;
         result.readme = readme;
         result.distributionSize = distributionSize;

@@ -1,10 +1,11 @@
-export const PACKAGE_ECOSYSTEMS = ["npm", "pypi", "nuget"] as const;
+export const PACKAGE_ECOSYSTEMS = ["npm", "pypi", "nuget", "maven"] as const;
 
 export type PackageEcosystem = (typeof PACKAGE_ECOSYSTEMS)[number];
 
 export function registryLabel(ecosystem: PackageEcosystem): string {
   if (ecosystem === "pypi") return "PyPI";
   if (ecosystem === "nuget") return "NuGet";
+  if (ecosystem === "maven") return "Maven";
   return "npm";
 }
 
@@ -15,15 +16,23 @@ export function registryPackageUrl(
   const id = encodeURIComponent(name);
   if (ecosystem === "pypi") return `https://pypi.org/project/${id}/`;
   if (ecosystem === "nuget") return `https://www.nuget.org/packages/${id}`;
+  if (ecosystem === "maven") {
+    const [groupId, artifactId] = name.split(":");
+    if (groupId && artifactId) {
+      return `https://central.sonatype.com/artifact/${encodeURIComponent(groupId)}/${encodeURIComponent(artifactId)}`;
+    }
+    return `https://central.sonatype.com/search?q=${id}`;
+  }
   return `https://www.npmjs.com/package/${id}`;
 }
 
 /** GitHub Advisory Database ecosystem query value. */
 export function advisoryEcosystem(
   ecosystem: PackageEcosystem,
-): "npm" | "pip" | "nuget" {
+): "npm" | "pip" | "nuget" | "maven" {
   if (ecosystem === "pypi") return "pip";
   if (ecosystem === "nuget") return "nuget";
+  if (ecosystem === "maven") return "maven";
   return "npm";
 }
 

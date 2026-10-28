@@ -4,6 +4,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import semver from "semver";
 import { listStablePypiVersions } from "@/lib/pypi/pypi-version";
 import { listStableNugetVersions } from "@/lib/nuget/nuget-version";
+import { listStableMavenVersions } from "@/lib/maven/maven-version";
+import { parseMavenCoordinate } from "@/lib/data-fetchers/maven-registry";
 import type { PackageEcosystem } from "@/lib/packages/package-routes";
 import { featuresForEcosystem } from "@/lib/packages/ecosystem-features";
 import { setEcosystemPreference } from "@/lib/prefs/ecosystem-pref";
@@ -495,8 +497,11 @@ function PackagePageContent({
     if (!pkgName || !version) return;
 
     const time = analysisData?.npm?.time as Record<string, string> | undefined;
+    // Presence in the map matters — Maven may list a version with an empty
+    // publish date when Solr has not indexed that release yet.
     const published =
-      Boolean(time?.[version]) &&
+      Boolean(time) &&
+      Object.prototype.hasOwnProperty.call(time, version) &&
       !["created", "modified", "unpublished"].includes(version);
     if (time && !published) {
       setVersionSecurityData({ error: "Version not found" });
@@ -526,10 +531,12 @@ function PackagePageContent({
         ? listStablePypiVersions(analysisData.npm.time)
         : ecosystem === "nuget"
           ? listStableNugetVersions(analysisData.npm.time)
-          : Object.keys(analysisData.npm.time)
-              .filter((k) => !["created", "modified", "unpublished"].includes(k))
-              .filter((v) => Boolean(semver.valid(v)) && !semver.prerelease(v))
-              .sort((a, b) => semver.compare(b, a))
+          : ecosystem === "maven"
+            ? listStableMavenVersions(analysisData.npm.time)
+            : Object.keys(analysisData.npm.time)
+                .filter((k) => !["created", "modified", "unpublished"].includes(k))
+                .filter((v) => Boolean(semver.valid(v)) && !semver.prerelease(v))
+                .sort((a, b) => semver.compare(b, a))
       ).slice(0, 10)
     : [];
 
@@ -551,6 +558,15 @@ function PackagePageContent({
 
   const packageDisplayName =
     analysisData?.packageInfo?.name ?? nameFromPath;
+  const mavenCoordinate =
+    ecosystem === "maven" && packageDisplayName
+      ? parseMavenCoordinate(packageDisplayName)
+      : null;
+  const headerPackageName =
+    mavenCoordinate?.artifactId ?? packageDisplayName;
+  const headerSubtitle = mavenCoordinate
+    ? `Maven Central · ${mavenCoordinate.groupId}`
+    : null;
   const watchSummary = analysisData
     ? summaryFromAnalysis(analysisData)
     : undefined;
@@ -600,9 +616,9 @@ function PackagePageContent({
           {showResults && (
             <div className="mb-4 flex flex-wrap items-start justify-between gap-3 sm:mb-6">
               <PackageNameHeader
-                packageName={
-                  analysisData?.packageInfo?.name ?? packageDisplayName
-                }
+                packageName={headerPackageName}
+                copyValue={packageDisplayName}
+                subtitle={headerSubtitle}
                 homepage={analysisData?.packageInfo?.homepage}
               />
               <div className="hidden sm:block shrink-0">

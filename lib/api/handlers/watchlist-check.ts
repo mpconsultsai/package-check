@@ -34,7 +34,9 @@ function parseWatchlistCheckItems(raw: unknown[]): WatchlistCheckItem[] {
           ? "pypi"
           : obj.ecosystem === "nuget"
             ? "nuget"
-            : "npm";
+            : obj.ecosystem === "maven"
+              ? "maven"
+              : "npm";
       if (name && validatePackageNameForEcosystem(name, ecosystem).valid) {
         items.push({ name, ecosystem });
       }

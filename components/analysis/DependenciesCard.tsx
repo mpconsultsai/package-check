@@ -67,7 +67,10 @@ function DependencyRow({
   const [loading, setLoading] = useState(false);
   const [children, setChildren] = useState<PackageDependency[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const explained = describeDependencySpec(dep.range);
+  const explained =
+    ecosystem === "nuget" || ecosystem === "maven"
+      ? null
+      : describeDependencySpec(dep.range);
 
   useEffect(() => {
     if (!open || children !== null) return;

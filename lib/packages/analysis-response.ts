@@ -147,7 +147,8 @@ export function buildAnalysisResponse(
   const ecosystem: PackageEcosystem = packageData.ecosystem ?? "npm";
   const daysSinceLastRelease = getDaysSinceLastRelease(packageData);
   const runtime = getPackageRuntime(packageData);
-  const registryUrl = registryPackageUrl(ecosystem, packageName);
+  const resolvedName = packageData.npm?.name?.trim() || packageName;
+  const registryUrl = registryPackageUrl(ecosystem, resolvedName);
   const directDependencyCount = countDirectDependencies(
     packageData.npm?.dependencies,
     packageData.npm?.peerDependencies,
@@ -158,7 +159,7 @@ export function buildAnalysisResponse(
     ecosystem,
     ai: aiAnalysis,
     packageInfo: {
-      name: packageName,
+      name: resolvedName,
       latestVersion: packageData.npm?.version || "Unknown",
       license: licenseDisplayName(packageData.npm?.license),
       npmUrl: registryUrl,

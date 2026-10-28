@@ -40,10 +40,15 @@ import { summarizeWatchlistAlerts } from "@/lib/prefs/watchlist-store";
 import { apiPaths } from "@/lib/api/paths";
 import { fetchJson } from "@/lib/prefs/fetch-client";
 import { EXAMPLE_PACKAGES } from "@/lib/site/example-packages";
+import { parseMavenCoordinate } from "@/lib/data-fetchers/maven-registry";
 import {
   ClearIcon,
   SearchIcon,
 } from "@/components/icons";
+
+function mavenArtifactLabel(name: string): string {
+  return parseMavenCoordinate(name)?.artifactId ?? name;
+}
 
 const THEME_OPTIONS: { value: "light" | "dark"; label: string }[] = [
   { value: "light", label: "Light" },
@@ -54,12 +59,14 @@ const REGISTRY_TABS = [
   { id: "npm" as const, label: "npm" },
   { id: "pypi" as const, label: "PyPI" },
   { id: "nuget" as const, label: "NuGet" },
+  { id: "maven" as const, label: "Maven" },
 ] as const;
 
 const INSTALL_PREFIX: Record<PackageEcosystem, string> = {
   npm: "npm i",
   pypi: "pip install",
   nuget: "dotnet add package",
+  maven: "mvn",
 };
 
 export interface PackageSearchSuggestion {
@@ -228,7 +235,8 @@ export function PackageSearchForm({
     if (
       nextId === "npm" ||
       nextId === "pypi" ||
-      nextId === "nuget"
+      nextId === "nuget" ||
+      nextId === "maven"
     ) {
       if (nextId !== ecosystem) setEcosystem(nextId);
     }
@@ -448,7 +456,9 @@ export function PackageSearchForm({
       ? "Analyse dependency file"
       : ecosystem === "nuget"
         ? "Analyse project file"
-        : "Analyse package.json";
+        : ecosystem === "maven"
+          ? "Analyse POM dependencies"
+          : "Analyse package.json";
   const { enabled: aiEnabled, setEnabled: setAiEnabled, ready: aiPrefReady } =
     useAiAnalysisPref();
   const themePreference = useThemePreference();
@@ -500,7 +510,9 @@ export function PackageSearchForm({
         ? "Searching PyPI…"
         : ecosystem === "nuget"
           ? "Searching NuGet…"
-          : "Searching npm…"
+          : ecosystem === "maven"
+            ? "Searching Maven…"
+            : "Searching npm…"
       : null;
   useLiveMessage(searchingMessage);
   useLiveMessage(showNoMatches ? "No matches found" : null);
@@ -690,7 +702,9 @@ export function PackageSearchForm({
                 placeholder={
                   ecosystem === "pypi"
                     ? "project name"
-                    : "package name"
+                    : ecosystem === "maven"
+                      ? "groupId:artifactId"
+                      : "package name"
                 }
                 className={`min-w-0 flex-1 bg-transparent py-3 font-mono text-base text-ink outline-none placeholder:text-gray-500 disabled:opacity-60 sm:py-3.5 sm:text-lg dark:placeholder:text-gray-400 [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden ${
                   showClear ? "pr-10" : "pr-3"
@@ -734,7 +748,9 @@ export function PackageSearchForm({
                   ? "Analyse PyPI package"
                   : ecosystem === "nuget"
                     ? "Analyse NuGet package"
-                    : "Analyse npm package"}
+                    : ecosystem === "maven"
+                      ? "Analyse Maven package"
+                      : "Analyse npm package"}
               </button>
             </div>
             {searchingMessage && (
@@ -761,6 +777,15 @@ export function PackageSearchForm({
               >
                 {suggestions.map((pkg, index) => {
                   const selected = index === highlightIndex;
+                  const label =
+                    ecosystem === "maven"
+                      ? mavenArtifactLabel(pkg.name)
+                      : pkg.name;
+                  const detail =
+                    ecosystem === "maven"
+                      ? parseMavenCoordinate(pkg.name)?.groupId ||
+                        pkg.description
+                      : pkg.description;
                   return (
                     <li
                       key={pkg.name}
@@ -770,6 +795,7 @@ export function PackageSearchForm({
                       onMouseDown={(e) => e.preventDefault()}
                       onMouseEnter={() => setHighlightIndex(index)}
                       onClick={() => runSearch(pkg.name)}
+                      title={ecosystem === "maven" ? pkg.name : undefined}
                       className={`cursor-pointer px-4 py-2.5 text-left ${
                         selected
                           ? "bg-gray-50 shadow-[inset_3px_0_0_var(--signal)] dark:bg-gray-900/60"
@@ -778,14 +804,14 @@ export function PackageSearchForm({
                     >
                       <span className="flex items-baseline justify-between gap-3">
                         <span className="truncate font-mono text-[0.9375rem] font-medium text-ink">
-                          {pkg.name}
+                          {label}
                         </span>
                         <span className="shrink-0 font-mono text-xs text-gray-500 tabular-nums dark:text-gray-400">
                           {pkg.version}
                         </span>
                       </span>
                       <span className="mt-0.5 block truncate text-sm text-gray-600 dark:text-gray-400">
-                        {pkg.description}
+                        {detail}
                       </span>
                     </li>
                   );
@@ -803,7 +829,9 @@ export function PackageSearchForm({
                       ? "Popular PyPI projects"
                       : ecosystem === "nuget"
                         ? "Popular NuGet packages"
-                        : "Popular npm packages"
+                        : ecosystem === "maven"
+                          ? "Popular Maven artifacts"
+                          : "Popular npm packages"
                   }
                   className="flex flex-wrap items-baseline gap-x-1"
                 >
@@ -813,9 +841,12 @@ export function PackageSearchForm({
                         type="button"
                         onClick={() => runSearch(name)}
                         disabled={disabled || loading}
+                        title={ecosystem === "maven" ? name : undefined}
                         className="link font-mono focus:outline-none focus-visible:ring-2 focus-visible:ring-signal disabled:opacity-60"
                       >
-                        {name}
+                        {ecosystem === "maven"
+                          ? mavenArtifactLabel(name)
+                          : name}
                       </button>
                       {index < all.length - 2 ? (
                         <span aria-hidden="true">,</span>

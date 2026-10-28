@@ -12,6 +12,7 @@ import {
   type PackageEcosystem,
 } from "@/lib/packages/package-routes";
 import { isNugetUpdateAvailable } from "@/lib/nuget/nuget-version";
+import { isMavenUpdateAvailable } from "@/lib/maven/maven-version";
 import { describePypiSpec, isPypiUpdateAvailable } from "@/lib/pypi/pypi-version";
 import { describeDependencySpec } from "@/lib/parse/describe-dependency-spec";
 import { useAnnounce } from "@/components/LiveAnnouncer";
@@ -362,7 +363,9 @@ export function PasteListPanel({
                   ? isPypiUpdateAvailable(entry.requested, latest)
                   : ecosystem === "nuget"
                     ? isNugetUpdateAvailable(entry.requested, latest)
-                    : isUpdateAvailable(entry.requested, latest);
+                    : ecosystem === "maven"
+                      ? isMavenUpdateAvailable(entry.requested, latest)
+                      : isUpdateAvailable(entry.requested, latest);
               if (updateAvailable) updatesFound += 1;
               doneOk += 1;
               setRows((prev) =>
@@ -454,14 +457,18 @@ export function PasteListPanel({
             ? "Analyse dependency file"
             : ecosystem === "nuget"
               ? "Analyse project file"
-              : "Analyse package.json"}
+              : ecosystem === "maven"
+                ? "Analyse POM dependencies"
+                : "Analyse package.json"}
         </label>
         <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
           {ecosystem === "pypi"
             ? `requirements.txt, pyproject.toml, or PEP 508 lines (max ${PASTE_LIST_MAX_PACKAGES}).`
             : ecosystem === "nuget"
               ? `csproj PackageReference entries, or a list of package ids (max ${PASTE_LIST_MAX_PACKAGES}).`
-              : `package.json, package-lock.json, yarn.lock, or a list of package names (max ${PASTE_LIST_MAX_PACKAGES}).`}
+              : ecosystem === "maven"
+                ? `POM <dependency> blocks, or groupId:artifactId[:version] lines (max ${PASTE_LIST_MAX_PACKAGES}).`
+                : `package.json, package-lock.json, yarn.lock, or a list of package names (max ${PASTE_LIST_MAX_PACKAGES}).`}
         </p>
         <textarea
           id={textareaId}
@@ -474,7 +481,9 @@ export function PasteListPanel({
               ? "[project]\nname = \"my-app\"\ndependencies = [\n  \"requests>=2.28.0\",\n  \"django>=4.2,<5\",\n]\n\n# or requirements.txt lines:\n# numpy==1.26.4"
               : ecosystem === "nuget"
                 ? "<Project>\n  <ItemGroup>\n    <PackageReference Include=\"Newtonsoft.Json\" Version=\"13.0.3\" />\n    <PackageReference Include=\"Serilog\" Version=\"4.0.0\" />\n  </ItemGroup>\n</Project>"
-                : `{\n  "dependencies": {\n    "react": "^19.0.0",\n    "lodash": "^4.17.21"\n  }\n}`
+                : ecosystem === "maven"
+                  ? "<dependencies>\n  <dependency>\n    <groupId>com.google.guava</groupId>\n    <artifactId>guava</artifactId>\n    <version>33.4.0-jre</version>\n  </dependency>\n</dependencies>"
+                  : `{\n  "dependencies": {\n    "react": "^19.0.0",\n    "lodash": "^4.17.21"\n  }\n}`
           }
           className="mt-2 w-full rounded-lg border border-gray-600 bg-white px-3 py-2 font-mono text-sm text-ink outline-none focus:border-ink focus:ring-2 focus:ring-inset focus:ring-signal/30 dark:border-gray-400 dark:bg-gray-700 dark:focus:border-gray-300"
           disabled={running}

@@ -10,7 +10,7 @@ import {
 } from "@/lib/mcp/tools";
 
 const ecosystem = z
-  .enum(["npm", "pypi", "pip", "nuget"])
+  .enum(["npm", "pypi", "pip", "nuget", "maven"])
   .optional()
   .describe("Registry. Defaults to npm. pip is accepted as PyPI.");
 
@@ -41,14 +41,14 @@ export function createPkglensMcpServer(): McpServer {
     { name: "package-check", version: "0.1.0" },
     {
       instructions:
-        "Package reviews for npm, PyPI, and NuGet. get_package returns registry, quality, and advisory counts without an LLM. upgrade_package compares an installed npm version with a newer one. analyse_package adds an AI recommendation and is slower.",
+        "Package reviews for npm, PyPI, NuGet, and Maven. get_package returns registry, quality, and advisory counts without an LLM. upgrade_package compares an installed npm version with a newer one. analyse_package adds an AI recommendation and is slower.",
     },
   );
 
   server.registerTool(
     "search_packages",
     {
-      description: "Search npm, PyPI, or NuGet by name.",
+      description: "Search npm, PyPI, NuGet, or Maven by name.",
       inputSchema: {
         query: z.string().describe("Search text. At least 2 characters."),
         ecosystem,

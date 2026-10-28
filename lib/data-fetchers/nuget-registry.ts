@@ -10,6 +10,7 @@ import type { NpmPackageData } from "@/lib/types/package-data";
 import type { DistributionSizeInfo } from "@/lib/data-fetchers/pypi-distribution-size";
 import {
   compareNugetVersions,
+  formatNugetVersionRange,
   isNugetPrerelease,
 } from "@/lib/nuget/nuget-version";
 import { isDotnetInboxPackageId } from "@/lib/nuget/dotnet-platform";
@@ -154,7 +155,7 @@ function pickDependencyGroup(
   for (const dep of best.dependencies ?? []) {
     const name = dep.id?.trim();
     if (!name) continue;
-    dependencies[name] = dep.range?.trim() || "*";
+    dependencies[name] = formatNugetVersionRange(dep.range);
   }
   return {
     framework: best.targetFramework?.trim() || null,

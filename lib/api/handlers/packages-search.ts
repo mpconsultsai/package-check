@@ -3,6 +3,7 @@ import { parseEcosystem } from "@/lib/api/params";
 import { searchNpmPackages } from "@/lib/data-fetchers/npm-registry";
 import { searchPypiPackages } from "@/lib/data-fetchers/pypi-registry";
 import { searchNugetPackages } from "@/lib/data-fetchers/nuget-registry";
+import { searchMavenPackages } from "@/lib/data-fetchers/maven-registry";
 import { clientMetadata } from "@/lib/db/client-metadata";
 import { recordPackageSearch } from "@/lib/db/package-searches";
 
@@ -59,7 +60,9 @@ export const GET = withHandler(
         ? await searchPypiPackages(q, limit)
         : ecosystem === "nuget"
           ? await searchNugetPackages(q, limit)
-          : await searchNpmPackages(q, limit));
+          : ecosystem === "maven"
+            ? await searchMavenPackages(q, limit)
+            : await searchNpmPackages(q, limit));
     if (!cached) setCached(cacheKey, packages);
     await recordPackageSearch({
       ecosystem,

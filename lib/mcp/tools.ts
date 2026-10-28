@@ -14,6 +14,10 @@ import {
   fetchNugetPackageData,
   searchNugetPackages,
 } from "@/lib/data-fetchers/nuget-registry";
+import {
+  fetchMavenPackageData,
+  searchMavenPackages,
+} from "@/lib/data-fetchers/maven-registry";
 import { listPackageDependencies, type PackageDependency } from "@/lib/packages/package-deps";
 import { advisoryEcosystem, type PackageEcosystem } from "@/lib/packages/package-routes";
 import {
@@ -202,7 +206,9 @@ export async function searchPackages(
       ? await searchPypiPackages(text, take)
       : ecosystem === "nuget"
         ? await searchNugetPackages(text, take)
-        : await searchNpmPackages(text, take);
+        : ecosystem === "maven"
+          ? await searchMavenPackages(text, take)
+          : await searchNpmPackages(text, take);
   await recordMcpTool({
     tool: "search_packages",
     ecosystem,
@@ -364,6 +370,23 @@ export async function getDependencies(rawName: string, rawEcosystem?: string) {
       name: data.name || packageName,
       version: data.version,
       targetFramework: data.engines?.dotnet ?? null,
+      ...dependencies,
+    };
+  }
+  if (ecosystem === "maven") {
+    const { data } = await fetchMavenPackageData(packageName);
+    const dependencies = capDependencies(listPackageDependencies(data.dependencies));
+    await recordMcpTool({
+      tool: "get_dependencies",
+      ecosystem,
+      query: packageName,
+      resultNames: dependencies.dependencies.map((dep) => dep.name),
+      metadata: { version: data.version },
+    });
+    return {
+      ecosystem,
+      name: data.name || packageName,
+      version: data.version,
       ...dependencies,
     };
   }

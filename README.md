@@ -1,16 +1,16 @@
 # Package Check
 
-Package reviews for npm, PyPI and NuGet: security, upkeep and dependencies in one place.
+Package reviews for npm, PyPI, NuGet and Maven: security, upkeep and dependencies in one place.
 
 The same review is available in the browser and over [MCP](#mcp-server). The site is for reading a package. The MCP server is for an agent that needs the same facts as JSON: search, the latest version, advisories, direct dependencies, an npm upgrade from a version you already have, or a full AI recommendation.
 
-Choose a registry above the search box, then open a package at `/npm/<name>`, `/pypi/<name>`, or `/nuget/<name>`.
+Choose a registry above the search box, then open a package at `/npm/<name>`, `/pypi/<name>`, `/nuget/<name>`, or `/maven/<groupId%3AartifactId>`.
 
 ![Package Check home page](docs/home.png)
 
 ## Features
 
-All three registries:
+All four registries:
 
 - **Version check** - Pick a version (default latest) and get a use / wait / prefer-other / avoid verdict from advisories, release cooldown, and deprecation, with a suggested alternate when one exists. Advisories are enriched with CVE identifiers, CISA Known Exploited Vulnerabilities, and EPSS scores when available
 - **Health signals** - GitHub stars, forks, issues, and release activity when the package links a GitHub repository; days since the latest release; README deprecation and maintenance warnings
@@ -29,6 +29,8 @@ npm also includes monthly downloads and download charts, Bundlephobia size, depe
 PyPI uses the PyPI JSON API for project metadata, versions, license, and description. It shows distribution size (wheel or sdist), `Requires-Python`, core requirements, extras, and environment markers. Paste analysis accepts `requirements.txt`, `pyproject.toml`, or PEP 508 lines. PyPI reviews do not include download totals, download charts, a transitive dependency tree, related packages, the upgrade advisor, or a peer entry on the dependency chart legend.
 
 NuGet uses the NuGet registration, flat-container, and search APIs. It shows the latest stable version, package size, lifetime downloads, every target framework the package supports, direct package dependencies, and related packages. `System.*` and `Microsoft.*` packages are left out of that related list. Paste analysis accepts `PackageReference` entries from a `.csproj` or `Directory.Packages.props`, or a plain list of package ids. NuGet reviews omit download charts, a transitive dependency tree, the upgrade advisor, and the peer entry on the dependency chart legend. Widely downloaded `System.*` and `Microsoft.*` packages stay recommended when the latest stable release is old and advisories are clear.
+
+Maven uses Maven Central search (Solr) plus `repo1.maven.org` metadata and POM files. Coordinates are `groupId:artifactId`; the page title shows the artifact id with the group under it. It shows the latest release, jar size, direct compile dependencies from the POM, and related artifacts in the same group. Paste analysis accepts POM `<dependency>` blocks or `groupId:artifactId[:version]` lines. Maven reviews omit download totals, download charts, a transitive dependency tree, and the upgrade advisor.
 
 The header shows a **GitHub** link. Before a review loads it points at this repository. After a package loads it points at that package's repository. Set `NEXT_PUBLIC_GITHUB_REPO` to `owner/name` to change the site link (the default is `mpconsultsai/package-check`). Set `NEXT_PUBLIC_CONTACT_EMAIL` to show a Contact link in the footer.
 
@@ -70,7 +72,7 @@ Point `url` at the deployed host for a remote agent. The bearer value is the `MC
 | `upgrade_package` | npm only. Compare `from` with the latest stable version, or with `to`. Returns the bump, releases behind, and breaking notes when an upgrade exists. No LLM call |
 | `analyse_package` | The `get_package` report plus an AI recommendation, strengths, concerns, and scores. This is the slow tool |
 
-`ecosystem` is `npm` (the default), `pypi`, or `nuget`. `pip` is accepted as PyPI.
+`ecosystem` is `npm` (the default), `pypi`, `nuget`, or `maven`. `pip` is accepted as PyPI.
 
 For npm, `get_package` and `analyse_package` also return module format, whether types ship, the separate `@types` package when one exists, provenance (repository, commit, and ref when the signed build can be read), maintainers, and bundle composition. Those fields are facts. They do not move `qualityScore`.
 
@@ -83,7 +85,7 @@ For npm, `get_package` and `analyse_package` also return module format, whether 
 - **Styling**: Tailwind CSS 4 with a custom paper-and-ink theme (`app/globals.css`), IBM Plex Sans and IBM Plex Mono
 - **Database**: Postgres on Supabase through Drizzle and `postgres` (transaction pooler, optional)
 - **AI**: Google Gemini 2.5 (Flash, then Flash-Lite) and Groq
-- **Registries**: npm Registry, PyPI, NuGet
+- **Registries**: npm Registry, PyPI, NuGet, Maven Central
 - **MCP**: Model Context Protocol SDK, Streamable HTTP at `/api/mcp`
 - **Other APIs**: GitHub GraphQL, GitHub Advisory Database, deps.dev and OpenSSF Scorecard (npm), Bundlephobia (npm)
 
@@ -137,7 +139,7 @@ Runs Vitest with coverage. The suite covers `lib/**/*.ts` and fails below 25% li
 
 ## Project structure
 
-The browser and the MCP server call the same functions. A page route renders the response. An MCP tool returns a shorter copy of it. Registry differences live in one feature map, so a PyPI or NuGet review does not grow npm-only panels.
+The browser and the MCP server call the same functions. A page route renders the response. An MCP tool returns a shorter copy of it. Registry differences live in one feature map, so a PyPI, NuGet, or Maven review does not grow npm-only panels.
 
 ```
 package-check/
@@ -147,20 +149,22 @@ package-check/
 │   ├── npm/[name]/      # npm package page
 │   ├── pypi/[name]/     # PyPI package page
 │   ├── nuget/[name]/    # NuGet package page
+│   ├── maven/[name]/    # Maven package page (groupId:artifactId)
 │   ├── page.tsx         # Home (search, most checked, what gets checked)
 │   └── layout.tsx       # Skip link, header, main, footer
 ├── components/          # Search, analysis panels, shared form controls
 ├── lib/
 │   ├── ai/              # Review graph, then Gemini (Flash, Flash-Lite) or Groq
 │   ├── api/             # HTTP handlers shared by the Next.js routes
-│   ├── data-fetchers/   # npm, PyPI, NuGet, GitHub, advisories, deps.dev, Scorecard
+│   ├── data-fetchers/   # npm, PyPI, NuGet, Maven, GitHub, advisories, deps.dev, Scorecard
 │   ├── db/              # Search log (web, api, or mcp) and the home-page lists
 │   ├── mcp/             # Auth, stateless transport, and the five tools
 │   ├── packages/        # Analysis response, quality score, npm facts, provenance
-│   ├── parse/           # package.json, requirements, and csproj list parsers
+│   ├── parse/           # package.json, requirements, csproj, and POM list parsers
 │   ├── prefs/           # Theme, registry, AI, and watchlist in the browser
 │   ├── site/            # Name, strapline, URL, and fonts
 │   ├── upgrade/         # npm upgrade notes and the Groq upgrade brief
+│   ├── maven/           # Maven version ordering
 │   ├── nuget/           # NuGet version, description, and platform-package rules
 │   └── pypi/            # PyPI version and Requires-Dist
 └── supabase/
@@ -171,7 +175,7 @@ The AI review is a short graph: collect the package, then advisories, dependenci
 
 ## API
 
-Routes live under `/api/v1` (`lib/api/paths.ts`). Pass `ecosystem=npm`, `ecosystem=pypi`, or `ecosystem=nuget` (`pip` is accepted as an alias for PyPI). When the parameter is omitted, the ecosystem is npm.
+Routes live under `/api/v1` (`lib/api/paths.ts`). Pass `ecosystem=npm`, `ecosystem=pypi`, `ecosystem=nuget`, or `ecosystem=maven` (`pip` is accepted as an alias for PyPI). When the parameter is omitted, the ecosystem is npm.
 
 | Method | Path | Purpose |
 | --- | --- | --- |
@@ -182,7 +186,7 @@ Routes live under `/api/v1` (`lib/api/paths.ts`). Pass `ecosystem=npm`, `ecosyst
 | GET | `/api/v1/packages/dependencies` | Direct dependencies. PyPI responses include extras and markers |
 | GET | `/api/v1/packages/dependencies/graph` | Transitive graph for npm |
 | GET | `/api/v1/packages/charts` | Download, release, and issue series. Download series are npm-only |
-| GET | `/api/v1/packages/similar` | Related packages for npm and NuGet. NuGet omits `System.*` and `Microsoft.*` |
+| GET | `/api/v1/packages/similar` | Related packages for npm, NuGet, and Maven. NuGet omits `System.*` and `Microsoft.*` |
 | GET | `/api/v1/packages/dependents` | Packages that depend on an npm package |
 | GET | `/api/v1/packages/scorecard` | OpenSSF Scorecard for an npm package's GitHub repo |
 | GET | `/api/v1/upgrade` | npm upgrade notes for a version range |

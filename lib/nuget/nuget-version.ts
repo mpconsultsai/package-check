@@ -48,3 +48,44 @@ export function isNugetUpdateAvailable(
   if (!match) return false;
   return compareNugetVersions(latest, match[1]) > 0;
 }
+
+const NUGET_VERSION =
+  String.raw`\d+(?:\.\d+){0,3}(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?`;
+
+/**
+ * Turn NuGet bracket ranges into a short display string.
+ * Catalog entries often look like `[1.0.0, )` (minimum 1.0.0, no upper bound).
+ */
+export function formatNugetVersionRange(range: string | undefined): string {
+  const raw = range?.trim() || "";
+  if (!raw || raw === "*") return "*";
+
+  const exactBracket = raw.match(
+    new RegExp(`^\\[(${NUGET_VERSION})\\]$`),
+  );
+  if (exactBracket) return exactBracket[1];
+
+  const exactBare = raw.match(new RegExp(`^(${NUGET_VERSION})$`));
+  if (exactBare) return exactBare[1];
+
+  const bracket = raw.match(
+    new RegExp(
+      `^([\\[(])\\s*(${NUGET_VERSION})?\\s*,\\s*(${NUGET_VERSION})?\\s*([\\])])$`,
+    ),
+  );
+  if (!bracket) return raw;
+
+  const [, lowerInc, lower, upper, upperInc] = bracket;
+  const parts: string[] = [];
+  if (lower) {
+    parts.push(`${lowerInc === "[" ? "≥" : ">"} ${lower}`);
+  }
+  if (upper) {
+    parts.push(`${upperInc === "]" ? "≤" : "<"} ${upper}`);
+  }
+  if (parts.length === 0) return "*";
+  if (parts.length === 1 && lower && !upper && lowerInc === "[") {
+    return `≥ ${lower}`;
+  }
+  return parts.join(" · ");
+}

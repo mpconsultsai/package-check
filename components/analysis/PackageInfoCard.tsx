@@ -415,6 +415,12 @@ export const PackageInfoCard = ({
               </Fact>
             )}
 
+            {ecosystem === "maven" && packageInfo.name.includes(":") && (
+              <Fact label="Maven coordinate">
+                <span className="font-mono break-all">{packageInfo.name}</span>
+              </Fact>
+            )}
+
             {ecosystem === "nuget" && supportedFrameworks.length > 0 && (
               <Fact label="Supported frameworks" wide>
                 <ul

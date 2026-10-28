@@ -1,6 +1,7 @@
 import { describe, it } from "vitest";
 import {
   compareNugetVersions,
+  formatNugetVersionRange,
   isNugetPrerelease,
   isNugetUpdateAvailable,
   listStableNugetVersions,
@@ -65,3 +66,27 @@ describe("isNugetUpdateAvailable", () => {
     isNugetUpdateAvailable("13.0.3", "13.0.3").should.be.false;
   });
 });
+
+describe("formatNugetVersionRange", () => {
+  it("should keep a bare version and exact bracket pin", () => {
+    formatNugetVersionRange("13.0.3").should.equal("13.0.3");
+    formatNugetVersionRange("[13.0.3]").should.equal("13.0.3");
+  });
+
+  it("should turn a minimum-only bracket range into ≥", () => {
+    formatNugetVersionRange("[1.0.0, )").should.equal("≥ 1.0.0");
+    formatNugetVersionRange("[1.0.0,)").should.equal("≥ 1.0.0");
+    formatNugetVersionRange("(1.0.0,)").should.equal("> 1.0.0");
+  });
+
+  it("should keep both bounds when present", () => {
+    formatNugetVersionRange("[1.0.0, 2.0.0)").should.equal("≥ 1.0.0 · < 2.0.0");
+    formatNugetVersionRange("(, 2.0.0]").should.equal("≤ 2.0.0");
+  });
+
+  it("should treat empty and star as any", () => {
+    formatNugetVersionRange(undefined).should.equal("*");
+    formatNugetVersionRange("*").should.equal("*");
+  });
+});
+

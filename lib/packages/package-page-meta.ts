@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { parseMavenCoordinate } from "@/lib/data-fetchers/maven-registry";
 import type { PackageEcosystem } from "@/lib/packages/package-routes";
 import { SITE_NAME } from "@/lib/site/site-brand";
 import { registryLabel } from "@/lib/packages/package-routes";
@@ -17,13 +18,17 @@ export function packagePageMetadata(
 ): Metadata {
   const packageName = decodePackageParam(rawName);
   const registry = registryLabel(ecosystem);
-  const title = `${packageName} ${registry} package review`;
+  const maven = ecosystem === "maven" ? parseMavenCoordinate(packageName) : null;
+  const titleName = maven?.artifactId ?? packageName;
+  const title = `${titleName} ${registry} package review`;
   const description =
     ecosystem === "npm"
       ? `Review the npm package ${packageName} before you install it. Security advisories, maintenance, dependencies, downloads, and an optional AI summary.`
       : ecosystem === "pypi"
         ? `Review the PyPI project ${packageName} before you install it. Security advisories, maintenance, dependencies, distribution size, and an optional AI summary.`
-        : `Review the NuGet package ${packageName} before you install it. Security advisories, maintenance, dependencies, package size, and an optional AI summary.`;
+        : ecosystem === "maven"
+          ? `Review the Maven artifact ${packageName} before you install it. Security advisories, maintenance, dependencies, jar size, and an optional AI summary.`
+          : `Review the NuGet package ${packageName} before you install it. Security advisories, maintenance, dependencies, package size, and an optional AI summary.`;
   const path = `/${ecosystem}/${encodeURIComponent(packageName)}`;
   const socialTitle = `${title} | ${SITE_NAME}`;
 

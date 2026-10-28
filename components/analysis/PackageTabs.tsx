@@ -28,9 +28,15 @@ type TabDef<T extends string> = {
 export function PackageNameHeader({
   packageName,
   homepage,
+  subtitle,
+  copyValue,
 }: {
   packageName: string;
   homepage?: string | null;
+  /** Secondary line under the title (e.g. Maven groupId). */
+  subtitle?: string | null;
+  /** Value for the copy control; defaults to packageName. */
+  copyValue?: string | null;
 }) {
   if (!packageName) return null;
 
@@ -48,12 +54,22 @@ export function PackageNameHeader({
   );
 
   return (
-    <h1 className="font-mono text-3xl font-semibold tracking-tight break-all sm:text-4xl">
-      <span className="inline-flex min-w-0 items-center gap-2">
-        {nameNode}
-        <CopyButton value={packageName} label="Copy package name" />
-      </span>
-    </h1>
+    <div className="min-w-0">
+      <h1 className="font-mono text-3xl font-semibold tracking-tight break-all sm:text-4xl">
+        <span className="inline-flex min-w-0 items-center gap-2">
+          {nameNode}
+          <CopyButton
+            value={copyValue?.trim() || packageName}
+            label="Copy package name"
+          />
+        </span>
+      </h1>
+      {subtitle ? (
+        <p className="mt-1.5 font-mono text-sm text-gray-500 dark:text-gray-400 break-all">
+          {subtitle}
+        </p>
+      ) : null}
+    </div>
   );
 }
 

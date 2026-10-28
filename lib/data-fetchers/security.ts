@@ -116,7 +116,7 @@ async function fetchAdvisoryPage(url: string, includeToken: boolean) {
  * List GitHub global advisories that affect this npm package (optionally a specific version).
  * Uses REST so version matching is done by GitHub, not a local semver parse of GHSA ranges.
  */
-export type SecurityEcosystem = "npm" | "pip" | "nuget";
+export type SecurityEcosystem = "npm" | "pip" | "nuget" | "maven";
 
 async function fetchAdvisories(
   packageName: string,

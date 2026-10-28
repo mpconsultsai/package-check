@@ -78,7 +78,9 @@ const isPublishedVersion = (
   versionTimes?: Record<string, string>,
 ): boolean => {
   if (!versionTimes) return false;
-  return Boolean(versionTimes[version]) && !TIME_META.has(version);
+  if (TIME_META.has(version)) return false;
+  // Empty publish dates still count (common for newly indexed Maven releases).
+  return Object.prototype.hasOwnProperty.call(versionTimes, version);
 };
 
 const SEVERITY_SEGMENTS = [

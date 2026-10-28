@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-export const alt = "Package Check, npm, PyPI and NuGet package reviews";
+export const alt = "Package Check, npm, PyPI, NuGet and Maven package reviews";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -55,7 +55,7 @@ export default function OpenGraphImage() {
             lineHeight: 1.1,
           }}
         >
-          Package reviews for npm, PyPI and NuGet: security, upkeep and
+          Package reviews for npm, PyPI, NuGet and Maven: security, upkeep and
           dependencies in one place.
         </div>
         <div style={{ display: "flex", fontSize: 28, color: "#5d5951" }}>

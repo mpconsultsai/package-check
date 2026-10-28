@@ -28,6 +28,18 @@ export function featuresForEcosystem(
       downloadsAreTotal: true,
     };
   }
+  if (ecosystem === "maven") {
+    return {
+      chartsTab: true,
+      downloadCharts: false,
+      downloadMetrics: false,
+      transitiveDepsTree: false,
+      upgradeAdvisor: false,
+      relatedPackages: true,
+      pasteList: true,
+      downloadsAreTotal: false,
+    };
+  }
   if (ecosystem !== "npm") {
     return {
       chartsTab: true,

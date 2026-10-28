@@ -4,6 +4,7 @@ import {
 } from "@/lib/parse/parse-pyproject-toml";
 import { parsePep508Line } from "@/lib/parse/parse-pep508-line";
 import { parseNugetPackageList } from "@/lib/parse/parse-nuget-list";
+import { parseMavenPackageList } from "@/lib/parse/parse-maven-list";
 import type { PackageEcosystem } from "@/lib/packages/package-routes";
 import {
   parseDependencyList,
@@ -84,5 +85,6 @@ export function parseDependencyListForEcosystem(
 ): ParseDependencyListResult {
   if (ecosystem === "pypi") return parseRequirementsList(input);
   if (ecosystem === "nuget") return parseNugetPackageList(input);
+  if (ecosystem === "maven") return parseMavenPackageList(input);
   return parseDependencyList(input);
 }

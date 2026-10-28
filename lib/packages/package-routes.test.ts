@@ -10,13 +10,14 @@ import {
 } from "@/lib/packages/package-routes";
 
 describe("registry labels and urls", () => {
-  it("should list npm, pypi, and nuget", () => {
-    PACKAGE_ECOSYSTEMS.should.deep.equal(["npm", "pypi", "nuget"]);
+  it("should list npm, pypi, nuget, and maven", () => {
+    PACKAGE_ECOSYSTEMS.should.deep.equal(["npm", "pypi", "nuget", "maven"]);
   });
 
-  it("should label PyPI and NuGet and keep npm lowercase", () => {
+  it("should label PyPI, NuGet, and Maven and keep npm lowercase", () => {
     registryLabel("pypi").should.equal("PyPI");
     registryLabel("nuget").should.equal("NuGet");
+    registryLabel("maven").should.equal("Maven");
     registryLabel("npm").should.equal("npm");
   });
 
@@ -30,11 +31,15 @@ describe("registry labels and urls", () => {
     registryPackageUrl("nuget", "Newtonsoft.Json").should.equal(
       "https://www.nuget.org/packages/Newtonsoft.Json",
     );
+    registryPackageUrl("maven", "com.google.guava:guava").should.equal(
+      "https://central.sonatype.com/artifact/com.google.guava/guava",
+    );
   });
 
-  it("should map PyPI advisories to pip", () => {
+  it("should map PyPI advisories to pip and Maven to maven", () => {
     advisoryEcosystem("pypi").should.equal("pip");
     advisoryEcosystem("nuget").should.equal("nuget");
+    advisoryEcosystem("maven").should.equal("maven");
     advisoryEcosystem("npm").should.equal("npm");
   });
 });

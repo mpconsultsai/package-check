@@ -7,6 +7,7 @@ import {
 } from "@/lib/data-fetchers/npm-registry";
 import { fetchPypiPackageData } from "@/lib/data-fetchers/pypi-registry";
 import { fetchNugetPackageData } from "@/lib/data-fetchers/nuget-registry";
+import { fetchMavenPackageData } from "@/lib/data-fetchers/maven-registry";
 import {
   fetchOpenIssuesByMonth,
   parseGitHubUrl,
@@ -71,7 +72,9 @@ export const GET = withHandler(
           ? fetchPypiPackageData(packageName)
           : ecosystem === "nuget"
             ? fetchNugetPackageData(packageName)
-            : fetchNpmPackageData(packageName)
+            : ecosystem === "maven"
+              ? fetchMavenPackageData(packageName)
+              : fetchNpmPackageData(packageName)
       )
         .then(({ data: meta }) => {
           const githubInfo = meta.repository?.url

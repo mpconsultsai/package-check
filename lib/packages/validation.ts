@@ -71,12 +71,63 @@ export function validateNugetPackageName(packageName: string): {
   };
 }
 
+/** Maven coordinates: groupId:artifactId (optional :version is stripped for validation). */
+const VALID_MAVEN_SEGMENT =
+  /^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,126}[A-Za-z0-9])?$/;
+
+export function validateMavenPackageName(packageName: string): {
+  valid: boolean;
+  error?: string;
+} {
+  const trimmed = extractPackageName(packageName);
+  if (!trimmed) {
+    return { valid: false, error: "Maven coordinate is required" };
+  }
+  // Bare artifact ids are allowed in search; package pages resolve via Solr.
+  if (!trimmed.includes(":")) {
+    if (trimmed.length <= 128 && VALID_MAVEN_SEGMENT.test(trimmed)) {
+      return { valid: true };
+    }
+    return {
+      valid: false,
+      error:
+        'Invalid Maven id. Use "artifactId" or "groupId:artifactId".',
+    };
+  }
+  const [groupId, artifactId] = trimmed.split(":");
+  if (
+    groupId &&
+    artifactId &&
+    !trimmed.split(":")[2] &&
+    VALID_MAVEN_SEGMENT.test(groupId) &&
+    VALID_MAVEN_SEGMENT.test(artifactId)
+  ) {
+    return { valid: true };
+  }
+  // Allow group:artifact:version in paste lists — validate the first two segments.
+  const parts = trimmed.split(":");
+  if (
+    parts.length >= 2 &&
+    parts[0] &&
+    parts[1] &&
+    VALID_MAVEN_SEGMENT.test(parts[0]) &&
+    VALID_MAVEN_SEGMENT.test(parts[1])
+  ) {
+    return { valid: true };
+  }
+  return {
+    valid: false,
+    error: 'Invalid Maven coordinate. Use "groupId:artifactId".',
+  };
+}
+
 export function validatePackageNameForEcosystem(
   packageName: string,
-  ecosystem: "npm" | "pypi" | "nuget",
+  ecosystem: "npm" | "pypi" | "nuget" | "maven",
 ): { valid: boolean; error?: string } {
   if (ecosystem === "pypi") return validatePyPiPackageName(packageName);
   if (ecosystem === "nuget") return validateNugetPackageName(packageName);
+  if (ecosystem === "maven") return validateMavenPackageName(packageName);
   return validatePackageName(packageName);
 }
 

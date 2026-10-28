@@ -4,6 +4,7 @@ import { requirePackageFromQueryWithEcosystem } from "@/lib/api/params";
 import { fetchNpmPackageData } from "@/lib/data-fetchers/npm-registry";
 import { fetchPypiPackageData } from "@/lib/data-fetchers/pypi-registry";
 import { fetchNugetPackageData } from "@/lib/data-fetchers/nuget-registry";
+import { fetchMavenPackageData } from "@/lib/data-fetchers/maven-registry";
 import { fetchTransitiveDependencyGraph } from "@/lib/data-fetchers/deps-dev";
 import {
   attachDirectAdvisories,
@@ -39,6 +40,15 @@ export const GET = withHandler(
           version: data.version,
           dependencies: listPackageDependencies(data.dependencies),
           targetFramework: data.engines?.dotnet ?? null,
+        });
+      }
+
+      if (ecosystem === "maven") {
+        const { data } = await fetchMavenPackageData(packageName);
+        return jsonOk({
+          name: data.name || packageName,
+          version: data.version,
+          dependencies: listPackageDependencies(data.dependencies),
         });
       }
 

@@ -19,11 +19,14 @@ describe("packagePageMetadata", () => {
     meta.alternates!.canonical!.should.equal("/npm/lodash");
   });
 
-  it("should describe PyPI and NuGet reviews", () => {
+  it("should describe PyPI, NuGet, and Maven reviews", () => {
     packagePageMetadata("pypi", "requests").description!.should.match(/PyPI project/);
     packagePageMetadata("nuget", "Serilog").description!.should.match(/NuGet package/);
     packagePageMetadata("nuget", "A B").alternates!.canonical!.should.equal(
       "/nuget/A%20B",
     );
+    const maven = packagePageMetadata("maven", "com.google.guava:guava");
+    maven.title!.should.equal("guava Maven package review");
+    maven.description!.should.match(/Maven artifact/);
   });
 });
