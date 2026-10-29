@@ -17,13 +17,31 @@ function splitTrailingPunctuation(raw: string): {
   return { href, trailing };
 }
 
+function compactUrlLabel(href: string): string {
+  try {
+    const url = new URL(href);
+    const path =
+      url.pathname.length > 36
+        ? `…${url.pathname.slice(-28)}`
+        : url.pathname === "/"
+          ? ""
+          : url.pathname;
+    return `${url.hostname}${path}`;
+  } catch {
+    return href;
+  }
+}
+
 /** Render plain text with http(s) URLs as external links. */
 export function LinkifiedText({
   text,
   className = "link break-all",
+  compactLinks = false,
 }: {
   text: string;
   className?: string;
+  /** Show hostname + short path instead of the full URL. */
+  compactLinks?: boolean;
 }): ReactNode {
   if (!text) return null;
 
@@ -45,8 +63,9 @@ export function LinkifiedText({
           target="_blank"
           rel="noopener noreferrer"
           className={className}
+          title={compactLinks ? href : undefined}
         >
-          {href}
+          {compactLinks ? compactUrlLabel(href) : href}
         </a>,
       );
     }

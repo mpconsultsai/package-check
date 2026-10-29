@@ -12,6 +12,7 @@ import { CopyButton } from "@/components/CopyButton";
 import type { PackageEcosystem } from "@/lib/packages/package-routes";
 import { packagePagePath, registryLabel } from "@/lib/packages/package-routes";
 import { featuresForEcosystem } from "@/lib/packages/ecosystem-features";
+import { LinkifiedText } from "@/components/LinkifiedText";
 import { dotnetApiReferenceUrl } from "@/lib/nuget/nuget-description";
 import type { InstallScript } from "@/lib/packages/install-scripts";
 import {
@@ -326,8 +327,11 @@ export const PackageInfoCard = ({
         <>
           {packageInfo.description && (
             <div className="mb-5">
-              <p className="max-w-3xl text-lg leading-snug text-ink sm:text-xl">
-                {packageInfo.description}
+              <p className="max-w-3xl text-lg leading-relaxed text-ink sm:text-xl">
+                <LinkifiedText
+                  text={packageInfo.description}
+                  compactLinks
+                />
               </p>
               {(packageInfo.commonlyUsedTypes?.length ?? 0) > 0 && (
                 <div className="mt-4">
@@ -362,7 +366,10 @@ export const PackageInfoCard = ({
               )}
               {packageInfo.descriptionNote && (
                 <p className="mt-3 text-sm text-gray-500 dark:text-gray-400">
-                  {packageInfo.descriptionNote}
+                  <LinkifiedText
+                    text={packageInfo.descriptionNote}
+                    compactLinks
+                  />
                 </p>
               )}
               {badgeRow && <div className="mt-3">{badgeRow}</div>}

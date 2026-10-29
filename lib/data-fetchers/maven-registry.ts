@@ -154,6 +154,26 @@ function homepageFromPom(pom: string): string | undefined {
   return xmlTag(projectHead(pom), "url");
 }
 
+/**
+ * Many Apache POMs append CI / upgrade notes after the real summary.
+ * Keep the lead sentence(s) as the description; move the rest to a note.
+ */
+function splitMavenDescription(text: string): {
+  description: string;
+  descriptionNote?: string;
+} {
+  const trimmed = text.trim();
+  if (!trimmed) return { description: "" };
+  const splitAt = trimmed.search(
+    /\.\s+(?=See https?:\/\/|Please ensure|Starting with |For advice on )/i,
+  );
+  if (splitAt < 40) return { description: trimmed };
+  return {
+    description: trimmed.slice(0, splitAt + 1).trim(),
+    descriptionNote: trimmed.slice(splitAt + 1).trim() || undefined,
+  };
+}
+
 function propertiesFromPom(pom: string): Record<string, string> {
   const block = xmlTag(pom, "properties");
   if (!block) return {};
@@ -381,9 +401,12 @@ export async function fetchMavenPackageData(packageName: string): Promise<{
     ]);
 
     const descriptionRaw = pom ? xmlTag(pom, "description") : undefined;
-    const description = descriptionRaw
+    const cleaned = descriptionRaw
       ? sanitizeDescription(stripHtml(descriptionRaw))
-      : `${groupId}:${artifactId}`;
+      : "";
+    const { description, descriptionNote } = cleaned
+      ? splitMavenDescription(cleaned)
+      : { description: `${groupId}:${artifactId}` };
     const licensesBlock = pom ? xmlTag(pom, "licenses") ?? "" : "";
     const licenseName =
       xmlTag(licensesBlock, "name") ||
@@ -400,6 +423,7 @@ export async function fetchMavenPackageData(packageName: string): Promise<{
         name,
         version,
         description: description || `${groupId}:${artifactId}`,
+        descriptionNote: descriptionNote ?? null,
         license: licenseName,
         repository: pom ? repositoryFromPom(pom) : undefined,
         homepage: pom ? homepageFromPom(pom) : undefined,
