@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.16 - 2026-10-29
+
+- chore: Update Maven popular packages (84802ec)
+
 ## 0.1.15 - 2026-10-29
 
 - chore: Fix Maven descriptions (44c6f8b)
