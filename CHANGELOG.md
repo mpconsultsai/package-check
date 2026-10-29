@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.15 - 2026-10-29
+
+- chore: Fix Maven descriptions (44c6f8b)
+
 ## 0.1.14 - 2026-10-28
 
 - feat: Add initial Maven checks (77ade5a)
