@@ -2,7 +2,10 @@ import axios from "axios";
 import type { PackageEcosystem } from "@/lib/packages/package-routes";
 import { isDotnetInboxPackageId } from "@/lib/nuget/dotnet-platform";
 import { validatePackageNameForEcosystem } from "@/lib/packages/validation";
-import { EXAMPLE_PACKAGES } from "@/lib/site/example-packages";
+import {
+  EXAMPLE_PACKAGES,
+  MAVEN_POPULAR_PACKAGES,
+} from "@/lib/site/example-packages";
 
 const TOP_COUNT = 100;
 /** NuGet's first page is mostly Microsoft.* and System.*. Read further so 100 others remain. */
@@ -134,9 +137,10 @@ async function fetchRanking(ecosystem: PackageEcosystem): Promise<string[]> {
     return namesFromPypiTopDownloads(response.data);
   }
   if (ecosystem === "maven") {
-    return EXAMPLE_PACKAGES.maven.filter(
+    // Central has no public top-downloads feed; sample a curated popular set.
+    return MAVEN_POPULAR_PACKAGES.filter(
       (name) => acceptedName(name, "maven") !== null,
-    );
+    ).slice(0, TOP_COUNT);
   }
   const response = await axios.get(NUGET_SEARCH_URL, {
     timeout: REQUEST_TIMEOUT_MS,

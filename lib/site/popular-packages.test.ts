@@ -1,4 +1,5 @@
 import { describe, it } from "vitest";
+import { MAVEN_POPULAR_PACKAGES } from "@/lib/site/example-packages";
 import {
   namesFromNpmTopDownloads,
   namesFromNugetSearch,
@@ -48,5 +49,15 @@ describe("namesFromNugetSearch", () => {
         { id: "Newtonsoft.Json", totalDownloads: 50 },
       ],
     }).should.deep.equal(["Newtonsoft.Json", "Serilog"]);
+  });
+});
+
+describe("Maven Try pool", () => {
+  it("should draw varying triples from the curated popular set", () => {
+    const a = pickExamplePackages(MAVEN_POPULAR_PACKAGES, 3, () => 0.1);
+    const b = pickExamplePackages(MAVEN_POPULAR_PACKAGES, 3, () => 0.9);
+    a.should.have.length(3);
+    b.should.have.length(3);
+    a.should.not.deep.equal(b);
   });
 });
