@@ -6,6 +6,7 @@ import { validatePackageNameForEcosystem } from "@/lib/packages/validation";
 import { sanitizeDescription } from "@/lib/packages/sanitize";
 import type { NpmPackageData } from "@/lib/types/package-data";
 import type { DistributionSizeInfo } from "@/lib/data-fetchers/pypi-distribution-size";
+import { splitMavenDescription } from "@/lib/maven/maven-description";
 import {
   compareMavenVersions,
   isMavenPrerelease,
@@ -152,26 +153,6 @@ function repositoryFromPom(pom: string): NpmPackageData["repository"] | undefine
 
 function homepageFromPom(pom: string): string | undefined {
   return xmlTag(projectHead(pom), "url");
-}
-
-/**
- * Many Apache POMs append CI / upgrade notes after the real summary.
- * Keep the lead sentence(s) as the description; move the rest to a note.
- */
-function splitMavenDescription(text: string): {
-  description: string;
-  descriptionNote?: string;
-} {
-  const trimmed = text.trim();
-  if (!trimmed) return { description: "" };
-  const splitAt = trimmed.search(
-    /\.\s+(?=See https?:\/\/|Please ensure|Starting with |For advice on )/i,
-  );
-  if (splitAt < 40) return { description: trimmed };
-  return {
-    description: trimmed.slice(0, splitAt + 1).trim(),
-    descriptionNote: trimmed.slice(splitAt + 1).trim() || undefined,
-  };
 }
 
 function propertiesFromPom(pom: string): Record<string, string> {

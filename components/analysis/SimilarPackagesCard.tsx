@@ -9,6 +9,7 @@ import {
   type CompareColumn,
 } from "@/lib/packages/package-compare";
 import { PackageCompareTable } from "./PackageCompareTable";
+import { parseMavenCoordinate } from "@/lib/data-fetchers/maven-registry";
 import type { PackageEcosystem } from "@/lib/packages/package-routes";
 import { packagePagePath } from "@/lib/packages/package-routes";
 
@@ -283,6 +284,16 @@ export function SimilarPackagesCard({
             const checked = selected.includes(pkg.name);
             const disabled = atCap && !checked;
             const compareId = `compare-${pkg.name.replace(/[^A-Za-z0-9_-]/g, "-")}`;
+            const maven =
+              ecosystem === "maven" ? parseMavenCoordinate(pkg.name) : null;
+            const title = maven?.artifactId ?? pkg.name;
+            const detail = maven
+              ? pkg.description &&
+                pkg.description !== maven.groupId &&
+                pkg.description !== pkg.name
+                ? pkg.description
+                : maven.groupId
+              : pkg.description;
             return (
               <div
                 key={pkg.name}
@@ -293,9 +304,10 @@ export function SimilarPackagesCard({
                     <Link
                       href={packagePagePath(ecosystem, pkg.name)}
                       scroll={false}
+                      title={maven ? pkg.name : undefined}
                       className="link font-mono font-semibold truncate"
                     >
-                      {pkg.name}
+                      {title}
                     </Link>
                   </div>
                   <label
@@ -325,9 +337,11 @@ export function SimilarPackagesCard({
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-1">
                   v{pkg.version}
                 </p>
-                <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2">
-                  {pkg.description}
-                </p>
+                {detail ? (
+                  <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2">
+                    {detail}
+                  </p>
+                ) : null}
               </div>
             );
           })}
