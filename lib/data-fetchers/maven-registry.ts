@@ -466,6 +466,7 @@ export async function searchMavenPackages(
   }
 }
 
+/** Lightweight Solr cards for AI-named Maven alternatives (no POM fetch). */
 export async function fetchMavenPackageCards(
   names: string[],
 ): Promise<MavenSearchResult[]> {
@@ -473,11 +474,25 @@ export async function fetchMavenPackageCards(
     names.map(async (name) => {
       if (!validatePackageNameForEcosystem(name, "maven").valid) return null;
       try {
-        const { data } = await fetchMavenPackageData(name);
+        const parsed = parseMavenCoordinate(name);
+        // Prefer unquoted g:/a: — quoted forms often hang on Central Solr.
+        const q = parsed
+          ? `g:${parsed.groupId} AND a:${parsed.artifactId}`
+          : name.trim();
+        const { docs } = await solrSelect({ q, rows: 3 });
+        const hit =
+          (parsed &&
+            docs.find(
+              (doc) =>
+                doc.g?.toLowerCase() === parsed.groupId.toLowerCase() &&
+                doc.a?.toLowerCase() === parsed.artifactId.toLowerCase(),
+            )) ||
+          docs.find((doc) => doc.g && doc.a);
+        if (!hit?.g || !hit.a) return null;
         return {
-          name: data.name,
-          description: data.description || data.name,
-          version: data.version || "Unknown",
+          name: coordKey(hit.g, hit.a),
+          description: hit.g,
+          version: hit.latestVersion || hit.v || "Unknown",
         };
       } catch {
         return null;
@@ -487,36 +502,55 @@ export async function fetchMavenPackageCards(
   return cards.filter((card): card is MavenSearchResult => card !== null);
 }
 
-/** Related artifacts sharing a groupId prefix. */
+/**
+ * Related artifacts from the same groupId, then a narrow parent wildcard.
+ * Avoids broad prefixes like `g:org.apache*` which time out on Central.
+ */
 export async function fetchSimilarMavenPackages(
   packageId: string,
   limit: number = 30,
 ): Promise<MavenSearchResult[]> {
   try {
     const { groupId, artifactId } = await resolveCoordinate(packageId);
-    const prefix = groupId.split(".").slice(0, 2).join(".");
-    const { docs } = await solrSelect({
-      q: prefix ? `g:${prefix}*` : groupId,
-      rows: Math.min(Math.max(limit * 2, 20), 40),
-    });
     const current = coordKey(groupId, artifactId).toLowerCase();
     const results: MavenSearchResult[] = [];
     const seen = new Set<string>([current]);
+    const rowCap = Math.min(Math.max(limit, 12), 30);
 
-    for (const doc of docs) {
-      if (!doc.g || !doc.a) continue;
-      const name = coordKey(doc.g, doc.a);
-      const key = name.toLowerCase();
-      if (seen.has(key)) continue;
-      if (!validatePackageNameForEcosystem(name, "maven").valid) continue;
-      seen.add(key);
-      results.push({
-        name,
-        description: doc.g,
-        version: doc.latestVersion || doc.v || "Unknown",
-      });
-      if (results.length >= limit) break;
+    const collect = async (q: string) => {
+      if (results.length >= limit) return;
+      const { docs } = await solrSelect({ q, rows: rowCap });
+      for (const doc of docs) {
+        if (!doc.g || !doc.a) continue;
+        const name = coordKey(doc.g, doc.a);
+        const key = name.toLowerCase();
+        if (seen.has(key)) continue;
+        if (!validatePackageNameForEcosystem(name, "maven").valid) continue;
+        seen.add(key);
+        results.push({
+          name,
+          description: doc.g,
+          version: doc.latestVersion || doc.v || "Unknown",
+        });
+        if (results.length >= limit) break;
+      }
+    };
+
+    // Same group first (fast and most relevant).
+    await collect(`g:${groupId}`);
+
+    // Then sibling groups under the immediate parent — never a 2-segment
+    // mega-prefix like org.apache* / com.google*, which hangs Solr.
+    if (results.length < limit) {
+      const parts = groupId.split(".").filter(Boolean);
+      if (parts.length >= 3) {
+        const parent = parts.slice(0, -1).join(".");
+        await collect(`g:${parent}*`);
+      } else if (parts.length === 2) {
+        await collect(`g:${groupId}*`);
+      }
     }
+
     return results;
   } catch {
     return [];
