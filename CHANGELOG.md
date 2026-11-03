@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.18 - 2026-11-03
+
+- chore: Update Maven related packages (40f056e)
+
 ## 0.1.17 - 2026-11-02
 
 - chore: Update Maven related packages (795e632)
