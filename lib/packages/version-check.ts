@@ -35,28 +35,6 @@ function hasAnyAdvisories(security: VersionCheckSecurityCounts | null): boolean 
   return security.totalCount > 0;
 }
 
-function advisoryReason(security: VersionCheckSecurityCounts): string {
-  const parts: string[] = [];
-  if (security.critical > 0) {
-    parts.push(
-      `${security.critical} critical`,
-    );
-  }
-  if (security.high > 0) {
-    parts.push(`${security.high} high`);
-  }
-  if (security.moderate && security.moderate > 0) {
-    parts.push(`${security.moderate} moderate`);
-  }
-  if (security.low && security.low > 0) {
-    parts.push(`${security.low} low`);
-  }
-  const detail = parts.length > 0 ? parts.join(", ") : String(security.totalCount);
-  return security.totalCount === 1
-    ? `1 advisory (${detail}).`
-    : `${security.totalCount} advisories (${detail}).`;
-}
-
 /**
  * Newest stable release strictly older than `selectedVersion` whose publish
  * time is outside the cooldown window. Null when none fits.
@@ -150,7 +128,7 @@ export function versionCheckVerdict(options: {
   }
 
   if (hasSevereAdvisories(security) && !safer) {
-    reasons.push(advisoryReason(security!));
+    // Advisory counts are listed under "Advisories on this version" — skip here.
     return {
       verdict: "avoid",
       recommendedVersion: null,
@@ -160,7 +138,6 @@ export function versionCheckVerdict(options: {
   }
 
   if (hasAnyAdvisories(security) && safer) {
-    reasons.push(advisoryReason(security!));
     reasons.push(`deps.dev lists a clearer release: ${safer}.`);
     return {
       verdict: hasSevereAdvisories(security) ? "avoid" : "prefer_other",
@@ -172,12 +149,8 @@ export function versionCheckVerdict(options: {
     };
   }
 
-  if (hasAnyAdvisories(security) && !safer) {
-    // Moderate/low only, no clearer release — still usable with caution via `use`,
-    // but surface the advisory count in reasons. Plan: avoid only for critical/high
-    // without safer. Moderate/low alone → use with reason.
-    reasons.push(advisoryReason(security!));
-  }
+  // Moderate/low only with no clearer release → still usable (`use`).
+  // Advisory detail lives in the list below the verdict.
 
   if (cooldown.withinCooldown && cooldown.hoursSincePublish !== null) {
     reasons.push(
@@ -200,10 +173,6 @@ export function versionCheckVerdict(options: {
         : `Wait on ${selected}`,
       reasons,
     };
-  }
-
-  if (reasons.length === 0) {
-    reasons.push("No known advisories for this version.");
   }
 
   return {

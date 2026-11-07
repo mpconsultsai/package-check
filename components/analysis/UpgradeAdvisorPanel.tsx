@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import semver from "semver";
 import { fetchJson } from "@/lib/prefs/fetch-client";
 import { formatPublishDate } from "@/lib/utils/format";
 import {
@@ -19,10 +21,32 @@ import { LinkifiedText } from "@/components/LinkifiedText";
 import { useLiveMessage } from "@/components/LiveAnnouncer";
 import { SelectField } from "@/components/SelectField";
 import { AgentGraphSteps } from "@/components/analysis/AgentGraphSteps";
+import {
+  ArrowPathIcon,
+  MinusIcon,
+  PlusIcon,
+} from "@/components/icons";
 import { severityBadgeClass } from "@/lib/utils/severity";
 import { apiPaths } from "@/lib/api/paths";
 import { UPGRADE_AGENT_GENERIC_ERROR } from "@/lib/ai/upgrade-agent-messages";
 import { consumeUpgradeAgentSse } from "@/lib/upgrade/upgrade-agent-stream-client";
+import { checkNodeAgainstTargetEngines } from "@/lib/packages/node-engine-check";
+import {
+  npmReleaseCooldownCaution,
+  npmReleaseCooldownStatus,
+} from "@/lib/packages/npm-release-cooldown";
+import { useNpmReleaseCooldownHours } from "@/lib/prefs/use-npm-release-cooldown-pref";
+import { useNodeRuntimePref } from "@/lib/prefs/use-node-runtime-pref";
+import {
+  getNodeRuntimeVersion,
+  parseNodeRuntimeVersion,
+} from "@/lib/prefs/node-runtime-pref";
+import { fetchLatestNodeLts } from "@/lib/data-fetchers/nodejs-releases";
+import { packagePagePath } from "@/lib/packages/package-routes";
+import {
+  peerRangePartLabel,
+  summarizePeerRangeChange,
+} from "@/lib/upgrade/peer-range-diff";
 
 const VERSION_OPTIONS = 40;
 
@@ -31,6 +55,7 @@ type AgentBrief = {
   bullets: string[];
   risk: "low" | "moderate" | "high";
   nextSteps: string[];
+  watchFor?: string[];
 };
 
 interface UpgradeDetailsPayload {
@@ -113,32 +138,164 @@ function bumpLabel(advice: UpgradeAdvice): string | null {
   return null;
 }
 
-function PeerChangeRow({ change }: { change: PeerChange }) {
-  const verb =
-    change.kind === "added"
-      ? "Added"
-      : change.kind === "removed"
-        ? "Removed"
-        : "Changed";
-  const tone =
-    change.kind === "added"
-      ? "text-emerald-700 dark:text-emerald-300"
-      : change.kind === "removed"
-        ? "text-red-700 dark:text-red-300"
-        : "text-amber-800 dark:text-amber-200";
-  const detail =
-    change.kind === "changed"
-      ? `${change.from} → ${change.to}`
-      : change.range;
+function peerChangeLabel(kind: PeerChange["kind"]): string {
+  if (kind === "added") return "Added";
+  if (kind === "removed") return "Removed";
+  return "Changed";
+}
+
+function PeerChangeKindIcon({ kind }: { kind: PeerChange["kind"] }) {
+  const label = peerChangeLabel(kind);
+  const badge =
+    kind === "added"
+      ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-200"
+      : kind === "removed"
+        ? "bg-red-100 text-red-800 dark:bg-red-950/70 dark:text-red-200"
+        : "bg-amber-100 text-amber-950 dark:bg-amber-950/60 dark:text-amber-100";
+  const Icon =
+    kind === "added" ? PlusIcon : kind === "removed" ? MinusIcon : ArrowPathIcon;
 
   return (
-    <li className="text-sm text-gray-700 dark:text-gray-200">
-      <span className={`font-medium ${tone}`}>{verb}</span>{" "}
-      <span className="font-mono">{change.name}</span>{" "}
-      <span className="font-mono text-xs text-gray-500 dark:text-gray-400">
-        {detail}
-      </span>
-    </li>
+    <span
+      className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded ${badge}`}
+      title={label}
+      aria-hidden="true"
+    >
+      <Icon className="h-3 w-3" />
+    </span>
+  );
+}
+
+/** Short note only — majors dropped/added, not a second copy of the range. */
+function peerChangeImpact(change: PeerChange): string | null {
+  if (change.kind !== "changed") return null;
+  const summary = summarizePeerRangeChange(change.from, change.to);
+  if (summary.dropped.length > 0) {
+    const majors = [
+      ...new Set(summary.dropped.map((part) => peerRangePartLabel(part))),
+    ];
+    return `Drops ${majors.join(", ")}`;
+  }
+  if (summary.added.length > 0) {
+    const majors = [
+      ...new Set(summary.added.map((part) => peerRangePartLabel(part))),
+    ];
+    return `Adds ${majors.join(", ")}`;
+  }
+  if (summary.narrowed) return "Narrowed";
+  return null;
+}
+
+function peerChangeRange(change: PeerChange): string {
+  if (change.kind === "changed") return `${change.from} → ${change.to}`;
+  if (change.kind === "added") return change.range;
+  return change.range;
+}
+
+const NON_PACKAGE_ENGINE_NAMES = new Set([
+  "node",
+  "npm",
+  "yarn",
+  "pnpm",
+  "bun",
+  "deno",
+]);
+
+function isLinkableNpmPackage(name: string): boolean {
+  return !NON_PACKAGE_ENGINE_NAMES.has(name.trim().toLowerCase());
+}
+
+const PEER_CHANGE_GROUPS: Array<{
+  kind: PeerChange["kind"];
+  label: string;
+}> = [
+  { kind: "removed", label: "Removed" },
+  { kind: "changed", label: "Changed" },
+  { kind: "added", label: "Added" },
+];
+
+function groupPeerChanges(changes: PeerChange[]) {
+  return PEER_CHANGE_GROUPS.map(({ kind, label }) => {
+    const items = changes
+      .filter((change) => change.kind === kind)
+      .sort((a, b) => {
+        if (kind === "changed") {
+          const aDrop = peerChangeImpact(a)?.startsWith("Drops") ? 0 : 1;
+          const bDrop = peerChangeImpact(b)?.startsWith("Drops") ? 0 : 1;
+          if (aDrop !== bDrop) return aDrop - bDrop;
+        }
+        return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+      });
+    return { kind, label, items };
+  }).filter((group) => group.items.length > 0);
+}
+
+function PeerChangePackageName({ name }: { name: string }) {
+  if (!isLinkableNpmPackage(name)) {
+    return <span className="font-mono text-xs sm:text-sm">{name}</span>;
+  }
+  return (
+    <Link
+      href={packagePagePath("npm", name)}
+      scroll={false}
+      className="link font-mono text-xs sm:text-sm"
+    >
+      {name}
+    </Link>
+  );
+}
+
+function PeerChangeTable({
+  changes,
+  caption,
+}: {
+  changes: PeerChange[];
+  caption: string;
+}) {
+  const groups = groupPeerChanges(changes);
+  return (
+    <div className="space-y-2.5" aria-label={caption}>
+      {groups.map((group) => (
+        <section
+          key={group.kind}
+          className="overflow-hidden rounded-lg border border-black/10 dark:border-white/10"
+          aria-label={`${group.label}, ${group.items.length}`}
+        >
+          <header className="flex items-center gap-2 border-b border-black/10 bg-black/[0.03] px-2.5 py-1.5 dark:border-white/10 dark:bg-white/[0.04]">
+            <PeerChangeKindIcon kind={group.kind} />
+            <h4 className="text-xs font-semibold tracking-wide text-ink">
+              {group.label}
+            </h4>
+            <span className="text-[11px] tabular-nums opacity-50">
+              {group.items.length}
+            </span>
+          </header>
+          <ul className="divide-y divide-black/10 dark:divide-white/10">
+            {group.items.map((change) => {
+              const impact = peerChangeImpact(change);
+              return (
+                <li
+                  key={`${change.kind}:${change.name}`}
+                  className="px-2.5 py-2"
+                >
+                  <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                    <PeerChangePackageName name={change.name} />
+                    {impact ? (
+                      <span className="text-[11px] font-medium text-amber-800 dark:text-amber-200">
+                        {impact}
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="mt-0.5 break-all font-mono text-[11px] leading-snug opacity-60">
+                    {peerChangeRange(change)}
+                  </p>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ))}
+    </div>
   );
 }
 
@@ -173,7 +330,19 @@ export function UpgradeAdvisorPanel({
   const latest =
     latestVersion && latestVersion !== "Unknown" ? latestVersion : versions[0];
 
+  const cooldownHours = useNpmReleaseCooldownHours();
+  const { version: nodeRuntime, setVersion: setNodeRuntime } =
+    useNodeRuntimePref();
+  const [nodeDraft, setNodeDraft] = useState("");
+  const [latestNodeLts, setLatestNodeLts] = useState<string | null>(null);
+
   const [fromVersion, setFromVersion] = useState("");
+  const [toVersion, setToVersion] = useState("");
+  /** Applied range — fetches run only after Check upgrade. */
+  const [checkedRange, setCheckedRange] = useState<{
+    from: string;
+    to: string;
+  } | null>(null);
   const [details, setDetails] = useState<UpgradeDetailsPayload | null>(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [detailsError, setDetailsError] = useState<string | null>(null);
@@ -181,6 +350,8 @@ export function UpgradeAdvisorPanel({
     null,
   );
   const [fromSecurityLoading, setFromSecurityLoading] = useState(false);
+  const [toSecurity, setToSecurity] = useState<SecuritySummary | null>(null);
+  const [toSecurityLoading, setToSecurityLoading] = useState(false);
   const [agentBrief, setAgentBrief] = useState<AgentBrief | null>(null);
   const [agentModel, setAgentModel] = useState<string | null>(null);
   const [agentTools, setAgentTools] = useState<string[]>([]);
@@ -191,6 +362,9 @@ export function UpgradeAdvisorPanel({
   const agentAbortRef = useRef<AbortController | null>(null);
   const changeNotesRef = useRef<HTMLDetailsElement | null>(null);
 
+  const checkedFrom = checkedRange?.from ?? "";
+  const checkedTo = checkedRange?.to ?? "";
+
   const resetAgentState = () => {
     setAgentBrief(null);
     setAgentModel(null);
@@ -200,26 +374,78 @@ export function UpgradeAdvisorPanel({
     setAgentError(null);
   };
 
-  useEffect(() => {
-    setFromVersion("");
+  const clearResults = () => {
+    setCheckedRange(null);
     setDetails(null);
     setDetailsError(null);
+    setDetailsLoading(false);
     setFromSecurity(null);
+    setFromSecurityLoading(false);
+    setToSecurity(null);
+    setToSecurityLoading(false);
     resetAgentState();
-  }, [packageName]);
+    setAgentLoading(false);
+  };
+
+  useEffect(() => {
+    setFromVersion("");
+    setToVersion(latest ?? "");
+    clearResults();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset on package/latest only
+  }, [packageName, latest]);
+
+  const nodeSeededRef = useRef(false);
+
+  useEffect(() => {
+    setNodeDraft(nodeRuntime);
+  }, [nodeRuntime]);
+
+  // Resolve latest Node LTS from nodejs.org for the default runtime.
+  useEffect(() => {
+    let cancelled = false;
+    void fetchLatestNodeLts()
+      .then((version) => {
+        if (cancelled || !version) return;
+        setLatestNodeLts(version);
+      })
+      .catch(() => {
+        /* keep empty */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Seed Node once after localStorage hydrate when the user has no preference.
+  useEffect(() => {
+    if (nodeSeededRef.current || !latestNodeLts) return;
+    let cancelled = false;
+    // Pref subscribe hydrates on a microtask; run after that so we don't
+    // overwrite a saved runtime before storage is read.
+    queueMicrotask(() => {
+      if (cancelled || nodeSeededRef.current) return;
+      nodeSeededRef.current = true;
+      if (getNodeRuntimeVersion()) return;
+      setNodeDraft(latestNodeLts);
+      setNodeRuntime(latestNodeLts);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [latestNodeLts, setNodeRuntime]);
 
   const advice = useMemo(() => {
-    if (!latest || !fromVersion) return null;
+    if (!checkedFrom || !checkedTo) return null;
     return buildUpgradeAdvice({
-      from: fromVersion,
-      to: latest,
+      from: checkedFrom,
+      to: checkedTo,
       versionTimes,
       versions: listStableVersions(versionTimes),
     });
-  }, [fromVersion, latest, versionTimes]);
+  }, [checkedFrom, checkedTo, versionTimes]);
 
   useEffect(() => {
-    if (!latest || !fromVersion || fromVersion === latest) {
+    if (!checkedFrom || !checkedTo || checkedFrom === checkedTo) {
       setDetails(null);
       setDetailsError(null);
       setDetailsLoading(false);
@@ -231,7 +457,7 @@ export function UpgradeAdvisorPanel({
     setDetailsError(null);
 
     void fetchJson<UpgradeDetailsPayload>(
-      `${apiPaths.upgrade.details}?package=${encodeURIComponent(packageName)}&from=${encodeURIComponent(fromVersion)}&to=${encodeURIComponent(latest)}`,
+      `${apiPaths.upgrade.details}?package=${encodeURIComponent(packageName)}&from=${encodeURIComponent(checkedFrom)}&to=${encodeURIComponent(checkedTo)}`,
       {
         signal: controller.signal,
         timeoutMs: 45_000,
@@ -258,10 +484,10 @@ export function UpgradeAdvisorPanel({
       });
 
     return () => controller.abort();
-  }, [packageName, fromVersion, latest]);
+  }, [packageName, checkedFrom, checkedTo]);
 
   useEffect(() => {
-    if (!fromVersion || fromVersion === latest) {
+    if (!checkedFrom || checkedFrom === checkedTo) {
       setFromSecurity(null);
       setFromSecurityLoading(false);
       return;
@@ -271,7 +497,7 @@ export function UpgradeAdvisorPanel({
     setFromSecurityLoading(true);
 
     void fetchJson<{ security?: SecuritySummary; error?: string }>(
-      `${apiPaths.packages.security}?package=${encodeURIComponent(packageName)}&version=${encodeURIComponent(fromVersion)}`,
+      `${apiPaths.packages.security}?package=${encodeURIComponent(packageName)}&version=${encodeURIComponent(checkedFrom)}`,
       {
         signal: controller.signal,
         timeoutMs: 45_000,
@@ -290,13 +516,50 @@ export function UpgradeAdvisorPanel({
       });
 
     return () => controller.abort();
-  }, [packageName, fromVersion, latest]);
+  }, [packageName, checkedFrom, checkedTo]);
+
+  useEffect(() => {
+    if (!checkedTo) {
+      setToSecurity(null);
+      setToSecurityLoading(false);
+      return;
+    }
+    if (checkedTo === latest && latestSecurity) {
+      setToSecurity(latestSecurity);
+      setToSecurityLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    setToSecurityLoading(true);
+
+    void fetchJson<{ security?: SecuritySummary; error?: string }>(
+      `${apiPaths.packages.security}?package=${encodeURIComponent(packageName)}&version=${encodeURIComponent(checkedTo)}`,
+      {
+        signal: controller.signal,
+        timeoutMs: 45_000,
+        retries: 1,
+      },
+    )
+      .then(({ ok, data }) => {
+        if (controller.signal.aborted) return;
+        setToSecurity(ok && data.security ? data.security : null);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setToSecurity(null);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setToSecurityLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [packageName, checkedTo, latest, latestSecurity]);
 
   const runAgentBrief = async (opts?: {
     force?: boolean;
     signal?: AbortSignal;
   }) => {
-    if (!latest || !fromVersion || fromVersion === latest) return;
+    if (!checkedFrom || !checkedTo || checkedFrom === checkedTo) return;
     const force = opts?.force === true;
     const signal = opts?.signal;
 
@@ -319,10 +582,12 @@ export function UpgradeAdvisorPanel({
         },
         body: JSON.stringify({
           packageName,
-          from: fromVersion,
-          to: latest,
+          from: checkedFrom,
+          to: checkedTo,
           stream: true,
           force,
+          runtimeNode: nodeRuntime || undefined,
+          cooldownHours,
         }),
         signal,
       });
@@ -398,15 +663,22 @@ export function UpgradeAdvisorPanel({
     if (changeNotesRef.current && hasChangeDetail) {
       changeNotesRef.current.open = true;
     }
-  }, [packageName, fromVersion, latest, details, hasChangeDetail]);
+  }, [packageName, checkedFrom, checkedTo, details, hasChangeDetail]);
 
-  // Clear brief when the upgrade range changes.
+  // Drop stale results when the draft range changes away from the last check.
   useEffect(() => {
+    if (!checkedRange) return;
+    if (
+      fromVersion === checkedRange.from &&
+      toVersion === checkedRange.to
+    ) {
+      return;
+    }
     agentAbortRef.current?.abort();
     agentAbortRef.current = null;
-    resetAgentState();
-    setAgentLoading(false);
-  }, [packageName, fromVersion, latest]);
+    clearResults();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional draft vs checked sync
+  }, [fromVersion, toVersion, checkedRange]);
 
   if (!latest) {
     return (
@@ -422,10 +694,67 @@ export function UpgradeAdvisorPanel({
       ? [fromVersion, ...versions]
       : versions;
 
+  const toSelectVersions = (() => {
+    const pool = versions.includes(toVersion)
+      ? versions
+      : toVersion
+        ? [toVersion, ...versions]
+        : versions;
+    if (!fromVersion) return pool.filter((v) => v !== fromVersion);
+    const fromClean = semver.valid(fromVersion);
+    if (!fromClean) return pool.filter((v) => v !== fromVersion);
+    return pool.filter((version) => {
+      const clean = semver.valid(version);
+      if (!clean) return false;
+      return semver.gt(clean, fromClean);
+    });
+  })();
+
+  const nodeParse = parseNodeRuntimeVersion(nodeDraft);
+  const nodeInvalid = !nodeParse.ok;
+
+  const canCheckUpgrade =
+    Boolean(fromVersion && toVersion) &&
+    fromVersion !== toVersion &&
+    toSelectVersions.includes(toVersion) &&
+    !nodeInvalid;
+
+  const runUpgradeCheck = () => {
+    if (!canCheckUpgrade) return;
+    const parsed = parseNodeRuntimeVersion(nodeDraft);
+    if (!parsed.ok) return;
+    setNodeDraft(parsed.value);
+    setNodeRuntime(parsed.value);
+    agentAbortRef.current?.abort();
+    agentAbortRef.current = null;
+    resetAgentState();
+    setAgentLoading(false);
+    setCheckedRange({ from: fromVersion, to: toVersion });
+  };
+
   const breakingNotes = details?.breaking?.notes ?? [];
   const peerChanges = details?.peers?.changes ?? [];
   const needsUpgrade =
     advice && advice.verdict !== "current" && advice.verdict !== "invalid";
+
+  const targetCooldown = npmReleaseCooldownStatus({
+    publishedAt: advice?.toPublishedAt,
+    cooldownHours,
+  });
+  const targetCooldownNote =
+    needsUpgrade &&
+    targetCooldown.withinCooldown &&
+    targetCooldown.hoursSincePublish !== null
+      ? npmReleaseCooldownCaution({
+          hoursSincePublish: targetCooldown.hoursSincePublish,
+          cooldownHours,
+        })
+      : null;
+
+  const nodeEngineCheck = checkNodeAgainstTargetEngines({
+    nodeVersion: nodeRuntime,
+    engines: details?.manifest?.engines,
+  });
 
   const agentStatusMessage = agentLoading
     ? agentStage
@@ -462,7 +791,7 @@ export function UpgradeAdvisorPanel({
     const fromVuln = fromSecurityLoading
       ? "…"
       : formatVulnCount(fromSecurity);
-    const toVuln = formatVulnCount(latestSecurity);
+    const toVuln = toSecurityLoading ? "…" : formatVulnCount(toSecurity);
     parts.push(`advisories ${fromVuln} → ${toVuln}`);
 
     return parts.join(" · ");
@@ -517,7 +846,26 @@ export function UpgradeAdvisorPanel({
           <SelectField
             id="upgradeFromVersion"
             value={fromVersion}
-            onChange={(e) => setFromVersion(e.target.value)}
+            onChange={(e) => {
+              const nextFrom = e.target.value;
+              setFromVersion(nextFrom);
+              if (!nextFrom) return;
+              const fromClean = semver.valid(nextFrom);
+              const toClean = semver.valid(toVersion);
+              const nextHigher =
+                fromClean &&
+                versions.find((version) => {
+                  const clean = semver.valid(version);
+                  return Boolean(clean && semver.gt(clean, fromClean));
+                });
+              if (
+                !toClean ||
+                !fromClean ||
+                !semver.gt(toClean, fromClean)
+              ) {
+                setToVersion(nextHigher || latest || "");
+              }
+            }}
             className="w-full"
           >
             <option value="">Select version</option>
@@ -535,19 +883,97 @@ export function UpgradeAdvisorPanel({
         >
           →
         </div>
+        <div className="w-full sm:w-44 shrink-0">
+          <label
+            htmlFor="upgradeToVersion"
+            className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+          >
+            Upgrade to
+          </label>
+          <SelectField
+            id="upgradeToVersion"
+            value={toSelectVersions.includes(toVersion) ? toVersion : ""}
+            onChange={(e) => setToVersion(e.target.value)}
+            disabled={!fromVersion || toSelectVersions.length === 0}
+            className="w-full"
+          >
+            <option value="">
+              {!fromVersion
+                ? "Select current first"
+                : toSelectVersions.length === 0
+                  ? "No newer versions"
+                  : "Select version"}
+            </option>
+            {toSelectVersions.map((v) => (
+              <option key={v} value={v}>
+                {v}
+                {v === latest ? " (latest)" : ""}
+              </option>
+            ))}
+          </SelectField>
+        </div>
         <div className="w-full sm:w-36 shrink-0">
-          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-            Latest
-          </p>
-          <p className="px-3 py-2 rounded-lg bg-gray-50 dark:bg-gray-700/40 text-sm font-semibold font-mono text-ink">
-            {latest}
-          </p>
+          <label
+            htmlFor="upgradeNodeVersion"
+            className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1"
+          >
+            Node Version
+          </label>
+          <input
+            id="upgradeNodeVersion"
+            type="text"
+            inputMode="decimal"
+            autoComplete="off"
+            spellCheck={false}
+            placeholder={latestNodeLts ?? "22.14.0"}
+            value={nodeDraft}
+            aria-invalid={nodeInvalid || undefined}
+            aria-describedby={nodeInvalid ? "upgradeNodeVersionError" : undefined}
+            onChange={(e) => setNodeDraft(e.target.value)}
+            onBlur={() => {
+              const parsed = parseNodeRuntimeVersion(nodeDraft);
+              if (!parsed.ok) return;
+              setNodeDraft(parsed.value);
+              setNodeRuntime(parsed.value);
+            }}
+            className={`w-full rounded-lg border bg-white px-3 py-2 font-mono text-sm text-ink outline-none dark:bg-gray-800 ${
+              nodeInvalid
+                ? "border-red-500 focus:border-red-600"
+                : "border-rule focus:border-signal"
+            }`}
+          />
+        </div>
+        <div className="w-full sm:w-auto shrink-0">
+          <span
+            className="mb-1 block text-xs font-medium text-transparent"
+            aria-hidden="true"
+          >
+            Check
+          </span>
+          <button
+            type="button"
+            onClick={runUpgradeCheck}
+            disabled={!canCheckUpgrade}
+            className="w-full rounded-lg bg-ink px-4 py-2 text-sm font-semibold text-paper enabled:hover:bg-signal disabled:pointer-events-none disabled:opacity-50 sm:w-auto sm:min-w-[9.5rem]"
+          >
+            Check upgrade
+          </button>
         </div>
       </div>
 
-      {!fromVersion && (
+      {nodeInvalid && (
+        <p
+          id="upgradeNodeVersionError"
+          className="text-sm text-red-600 dark:text-red-400"
+          role="alert"
+        >
+          {nodeParse.message}
+        </p>
+      )}
+
+      {!checkedRange && !nodeInvalid && (
         <p className="text-sm text-gray-500 dark:text-gray-400">
-          Select a version to see upgrade advice.
+          Choose current and target versions, then check the upgrade.
         </p>
       )}
 
@@ -581,6 +1007,25 @@ export function UpgradeAdvisorPanel({
                 {factLine}
               </p>
             )}
+            {targetCooldownNote && (
+              <p className="mt-3 rounded-lg border border-amber-300/60 bg-amber-50/80 px-3 py-2 text-sm leading-relaxed text-amber-950 dark:border-amber-700/40 dark:bg-amber-950/30 dark:text-amber-50">
+                <span className="font-semibold">New release. </span>
+                {targetCooldownNote}. Prefer waiting or pick an older target if
+                this package is high-risk.
+              </p>
+            )}
+            {needsUpgrade && nodeEngineCheck.message && (
+              <p
+                className={`mt-3 text-sm leading-relaxed ${
+                  nodeEngineCheck.satisfies === false
+                    ? "text-red-800 dark:text-red-200"
+                    : "opacity-90"
+                }`}
+              >
+                <span className="font-semibold">Node runtime. </span>
+                {nodeEngineCheck.message}
+              </p>
+            )}
             {needsUpgrade && details?.manifest?.deprecation.from && (
               <p className="mt-3 text-sm leading-relaxed">
                 <span className="font-semibold">Deprecated. </span>
@@ -600,12 +1045,22 @@ export function UpgradeAdvisorPanel({
                 <p className="text-xs font-semibold uppercase tracking-wide opacity-60">
                   Runtime
                 </p>
-                <ul className="mt-1 space-y-1">
+                <ul className="mt-1.5 space-y-1">
                   {details!.manifest!.engines.map((change) => (
-                    <PeerChangeRow
+                    <li
                       key={`${change.kind}:${change.name}`}
-                      change={change}
-                    />
+                      className="flex flex-wrap items-baseline gap-x-2 text-sm"
+                    >
+                      <span className="font-mono font-medium">{change.name}</span>
+                      <span className="font-mono text-xs opacity-70">
+                        {peerChangeRange(change)}
+                      </span>
+                      {peerChangeImpact(change) ? (
+                        <span className="text-xs text-amber-800 dark:text-amber-200">
+                          {peerChangeImpact(change)}
+                        </span>
+                      ) : null}
+                    </li>
                   ))}
                 </ul>
               </div>
@@ -692,77 +1147,15 @@ export function UpgradeAdvisorPanel({
                   {detailsSummaryLabel}
                 </span>
               </summary>
-              <div className="px-4 pb-4 sm:px-5 sm:pb-5 space-y-4 text-sm">
+              <div className="px-4 pb-4 sm:px-5 sm:pb-5 space-y-5 text-sm">
                 {detailsError && (
                   <p className="text-red-700 dark:text-red-300">{detailsError}</p>
                 )}
 
                 {!detailsLoading && !detailsError && details && (
                   <>
-                    {(details.releases?.shown.length ?? 0) > 0 && (
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-wide opacity-60 mb-2">
-                          Releases
-                          {details.releases &&
-                          details.releases.total > details.releases.shown.length
-                            ? ` · ${details.releases.shown.length} of ${details.releases.total}`
-                            : ""}
-                        </p>
-                        <ul className="space-y-1">
-                          {details.releases?.shown.map((release) => (
-                            <li
-                              key={release.version}
-                              className="flex flex-wrap items-baseline gap-x-2 text-sm"
-                            >
-                              <span className="font-mono font-semibold">
-                                {release.version}
-                              </span>
-                              {release.url ? (
-                                <a
-                                  href={release.url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="underline underline-offset-2 opacity-80"
-                                >
-                                  {release.title}
-                                </a>
-                              ) : (
-                                <span className="opacity-80">{release.title}</span>
-                              )}
-                              {release.publishedAt && (
-                                <span className="text-xs opacity-60">
-                                  {formatPublishDate(release.publishedAt)}
-                                </span>
-                              )}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                    {(details.manifest?.dependencyCount ?? 0) > 0 && (
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-wide opacity-60 mb-2">
-                          Dependencies
-                          {details.manifest &&
-                          details.manifest.dependencyCount >
-                            details.manifest.dependencies.length
-                            ? ` · ${details.manifest.dependencies.length} of ${details.manifest.dependencyCount}`
-                            : ""}
-                        </p>
-                        <ul className="space-y-1.5">
-                          {details.manifest?.dependencies.map((change) => (
-                            <PeerChangeRow
-                              key={`${change.kind}:${change.name}`}
-                              change={change}
-                            />
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
                     <div>
-                      <div className="flex flex-wrap items-baseline justify-between gap-2 mb-2">
+                      <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
                         <p className="text-xs font-semibold uppercase tracking-wide opacity-60">
                           Breaking
                         </p>
@@ -790,25 +1183,10 @@ export function UpgradeAdvisorPanel({
                         </div>
                       </div>
                       {breakingNotes.length === 0 ? (
-                        <p className="opacity-70 leading-relaxed">
+                        <p className="text-sm opacity-70 leading-relaxed">
                           {!details.github
                             ? "No GitHub repository linked."
                             : "No explicit breaking-change notes for this range."}
-                          {details.github?.changelogUrl && (
-                            <>
-                              {" "}
-                              Check the{" "}
-                              <a
-                                href={details.github.changelogUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="underline underline-offset-2"
-                              >
-                                changelog
-                              </a>
-                              .
-                            </>
-                          )}
                         </p>
                       ) : (
                         <ul className="space-y-3">
@@ -838,7 +1216,7 @@ export function UpgradeAdvisorPanel({
                                   </span>
                                 )}
                               </div>
-                              <ul className="mt-1.5 space-y-1 pl-3 border-l-2 border-current/20">
+                              <ul className="mt-1.5 space-y-1 border-l-2 border-current/20 pl-3">
                                 {release.items.map((item, idx) => (
                                   <li
                                     key={`${release.tag}-${idx}`}
@@ -865,34 +1243,80 @@ export function UpgradeAdvisorPanel({
                       )}
                     </div>
 
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide opacity-60 mb-2">
-                        Peers
-                      </p>
-                      {!details.peers?.available ? (
-                        <p className="opacity-70">
-                          Could not load peerDependencies.
+                    {(details.manifest?.dependencyCount ?? 0) > 0 && (
+                      <div>
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide opacity-60">
+                          Dependencies
+                          {details.manifest &&
+                          details.manifest.dependencyCount >
+                            details.manifest.dependencies.length
+                            ? ` · ${details.manifest.dependencies.length} of ${details.manifest.dependencyCount}`
+                            : ` · ${details.manifest?.dependencies.length ?? 0}`}
                         </p>
-                      ) : peerChanges.length === 0 ? (
-                        <p className="opacity-70">No peerDependency changes.</p>
-                      ) : (
-                        <ul className="space-y-1.5">
-                          {peerChanges.map((change) => (
-                            <PeerChangeRow
-                              key={`${change.kind}:${change.name}`}
-                              change={change}
-                            />
+                        <PeerChangeTable
+                          changes={details.manifest?.dependencies ?? []}
+                          caption="Dependency changes for this upgrade"
+                        />
+                      </div>
+                    )}
+
+                    {details.peers?.available && peerChanges.length > 0 ? (
+                      <div>
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide opacity-60">
+                          Peers · {peerChanges.length}
+                        </p>
+                        <PeerChangeTable
+                          changes={peerChanges}
+                          caption="Peer dependency changes for this upgrade"
+                        />
+                      </div>
+                    ) : null}
+
+                    {(details.releases?.shown.length ?? 0) > 0 && (
+                      <div>
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide opacity-60">
+                          Releases
+                          {details.releases &&
+                          details.releases.total >
+                            details.releases.shown.length
+                            ? ` · ${details.releases.shown.length} of ${details.releases.total}`
+                            : ""}
+                        </p>
+                        <ul className="space-y-1">
+                          {details.releases?.shown.map((release) => (
+                            <li
+                              key={release.version}
+                              className="flex flex-wrap items-baseline gap-x-2 text-sm"
+                            >
+                              <span className="font-mono font-semibold">
+                                {release.version}
+                              </span>
+                              {release.url ? (
+                                <a
+                                  href={release.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="underline underline-offset-2 opacity-80"
+                                >
+                                  {release.title}
+                                </a>
+                              ) : (
+                                <span className="opacity-80">
+                                  {release.title}
+                                </span>
+                              )}
+                              {release.publishedAt && (
+                                <span className="text-xs opacity-60">
+                                  {formatPublishDate(release.publishedAt)}
+                                </span>
+                              )}
+                            </li>
                           ))}
                         </ul>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </>
                 )}
-
-                <p className="text-[11px] opacity-50 leading-relaxed">
-                  From GitHub releases or CHANGELOG. Verify before upgrading{" "}
-                  <span className="font-mono">{packageName}</span>.
-                </p>
               </div>
             </details>
           )}
@@ -907,7 +1331,7 @@ export function UpgradeAdvisorPanel({
                 Agent brief
               </p>
               <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                Experimental · LangGraph
+                Prioritised checklist from the notes above · LangGraph
                 {agentModel ? ` · ${agentModel}` : ""}
                 {agentCached ? " · cached" : ""}
                 {agentLoading && agentStage ? ` · ${agentStage}` : ""}
@@ -925,7 +1349,7 @@ export function UpgradeAdvisorPanel({
                 });
               }}
               disabled={agentLoading}
-              className="w-full shrink-0 whitespace-nowrap rounded-lg bg-ink px-3 py-2 text-sm font-semibold text-paper hover:bg-signal disabled:opacity-50 sm:w-auto sm:min-w-[11.5rem]"
+              className="w-full shrink-0 whitespace-nowrap rounded-lg bg-ink px-3 py-2 text-sm font-semibold text-paper enabled:hover:bg-signal disabled:pointer-events-none disabled:opacity-50 sm:w-auto sm:min-w-[11.5rem]"
             >
               {agentLoading
                 ? "Generating…"
@@ -966,6 +1390,20 @@ export function UpgradeAdvisorPanel({
                     </li>
                   ))}
                 </ul>
+              )}
+              {(agentBrief.watchFor?.length ?? 0) > 0 && (
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">
+                    Watch for
+                  </p>
+                  <ul className="list-disc pl-5 space-y-1 text-sm text-gray-700 dark:text-gray-200">
+                    {agentBrief.watchFor!.map((item) => (
+                      <li key={item}>
+                        <LinkifiedText text={item} />
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
               {agentBrief.nextSteps.length > 0 && (
                 <div>

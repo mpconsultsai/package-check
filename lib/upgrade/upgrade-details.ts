@@ -308,12 +308,46 @@ export async function loadUpgradeDetails(
   };
 }
 
+function pickBreakingNotesForAgent(
+  notes: BreakingReleaseNote[],
+  maxNotes: number,
+): BreakingReleaseNote[] {
+  const concrete = notes.filter((note) => !note.inferredMajor);
+  const inferred = notes.filter((note) => note.inferredMajor);
+  return [...concrete, ...inferred].slice(0, maxNotes);
+}
+
+function buildManifestHighlights(
+  manifest: UpgradeDetailsResult["manifest"],
+): Record<string, unknown> | null {
+  if (!manifest?.available) return null;
+  const highlights: Record<string, unknown> = {};
+  if (manifest.deprecation.from || manifest.deprecation.to) {
+    highlights.deprecation = manifest.deprecation;
+  }
+  if (
+    manifest.moduleType &&
+    manifest.moduleType.from !== manifest.moduleType.to
+  ) {
+    highlights.moduleType = manifest.moduleType;
+  }
+  if (manifest.engines.length > 0) {
+    highlights.engines = manifest.engines;
+  }
+  if (manifest.dependencyCount > 0) {
+    highlights.dependencyCount = manifest.dependencyCount;
+    highlights.dependencies = manifest.dependencies.slice(0, 8);
+  }
+  return Object.keys(highlights).length > 0 ? highlights : null;
+}
+
 /** Compact payload for LLM tools (truncate long note text). */
 export function truncateUpgradeDetailsForAgent(
   details: UpgradeDetailsResult,
   maxNotes = 8,
   maxItemsPerNote = 4,
 ): Record<string, unknown> {
+  const notes = pickBreakingNotesForAgent(details.breaking.notes, maxNotes);
   return {
     packageName: details.packageName,
     from: details.from,
@@ -330,13 +364,14 @@ export function truncateUpgradeDetailsForAgent(
       hasNotes: details.breaking.hasNotes,
       matchedReleases: details.breaking.matchedReleases,
       scannedReleases: details.breaking.scannedReleases,
-      notes: details.breaking.notes.slice(0, maxNotes).map((note) => ({
+      notes: notes.map((note) => ({
         version: note.version,
         title: note.title,
         inferredMajor: note.inferredMajor,
         items: note.items.slice(0, maxItemsPerNote).map((item) => ({
           text:
             item.text.length > 240 ? `${item.text.slice(0, 237)}…` : item.text,
+          ...(item.url ? { url: item.url } : {}),
         })),
       })),
     },
@@ -353,6 +388,7 @@ export function truncateUpgradeDetailsForAgent(
           dependencies: details.manifest.dependencies.slice(0, 8),
         }
       : null,
+    manifestHighlights: buildManifestHighlights(details.manifest),
     releases: {
       total: details.releases.total,
       shown: details.releases.shown.slice(0, 6).map((release) => ({

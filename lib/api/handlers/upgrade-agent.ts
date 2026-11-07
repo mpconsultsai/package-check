@@ -40,6 +40,12 @@ export const POST = withHandler(
       typeof body.to === "string" ? body.to : "",
     );
     const force = body.force === true;
+    const runtimeNode =
+      typeof body.runtimeNode === "string" ? body.runtimeNode.trim() : "";
+    const cooldownHoursRaw = Number(body.cooldownHours);
+    const cooldownHours = Number.isFinite(cooldownHoursRaw)
+      ? Math.max(0, Math.floor(cooldownHoursRaw))
+      : 0;
     const wantsStream =
       body.stream === true ||
       (request.headers.get("accept") ?? "").includes("text/event-stream");
@@ -61,6 +67,8 @@ export const POST = withHandler(
               from,
               to,
               force,
+              runtimeNode,
+              cooldownHours,
             })) {
               if (request.signal.aborted) break;
               controller.enqueue(encodeSse(encoder, event));
@@ -92,6 +100,8 @@ export const POST = withHandler(
         from,
         to,
         force,
+        runtimeNode,
+        cooldownHours,
       });
 
       return jsonOk({

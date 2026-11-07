@@ -1,9 +1,12 @@
 export type { IconProps } from "@/components/icons/icon-props";
+export { ArrowPathIcon } from "@/components/icons/ArrowPathIcon";
 export { CheckIcon } from "@/components/icons/CheckIcon";
 export { ClearIcon } from "@/components/icons/ClearIcon";
 export { ClipboardIcon } from "@/components/icons/ClipboardIcon";
 export { CogIcon } from "@/components/icons/CogIcon";
 export { CopyIcon } from "@/components/icons/CopyIcon";
+export { MinusIcon } from "@/components/icons/MinusIcon";
+export { PlusIcon } from "@/components/icons/PlusIcon";
 export { RefreshIcon } from "@/components/icons/RefreshIcon";
 export { SearchIcon } from "@/components/icons/SearchIcon";
 export { StarIcon } from "@/components/icons/StarIcon";

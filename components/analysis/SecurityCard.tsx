@@ -464,11 +464,13 @@ export function SecurityCard({
             <p className="mt-2 text-base font-semibold leading-snug">
               {check.headline}
             </p>
-            <ul className="mt-2 space-y-1 text-sm leading-relaxed opacity-90">
-              {check.reasons.map((reason) => (
-                <li key={reason}>{reason}</li>
-              ))}
-            </ul>
+            {check.reasons.length > 0 ? (
+              <ul className="mt-2 space-y-1 text-sm leading-relaxed opacity-90">
+                {check.reasons.map((reason) => (
+                  <li key={reason}>{reason}</li>
+                ))}
+              </ul>
+            ) : null}
             {check.recommendedVersion ? (
               <button
                 type="button"

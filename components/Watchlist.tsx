@@ -170,7 +170,6 @@ export function WatchlistSection({
   checking = false,
   checkError = null,
   onCheck,
-  otherAlertCount = 0,
   ecosystem = "npm",
 }: {
   /** Compact list for the search-card Watchlist panel */
@@ -178,8 +177,6 @@ export function WatchlistSection({
   checking?: boolean;
   checkError?: string | null;
   onCheck?: () => void;
-  /** Notices on registries other than the one this list is showing. */
-  otherAlertCount?: number;
   /** Show only packages from this registry. */
   ecosystem?: PackageEcosystem;
 }) {
@@ -200,11 +197,7 @@ export function WatchlistSection({
     wasChecking.current = checking;
   }, [checking, checkError, announce]);
 
-  const statusNote = checkError
-    ? checkError
-    : otherAlertCount > 0
-      ? `${otherAlertCount} update${otherAlertCount === 1 ? "" : "s"} on another registry`
-      : null;
+  const statusNote = checkError || null;
 
   const checkButton =
     onCheck && entries.length > 0 ? (
@@ -212,7 +205,7 @@ export function WatchlistSection({
         type="button"
         onClick={onCheck}
         disabled={checking}
-        className="group inline-flex shrink-0 items-center gap-1.5 text-xs font-medium disabled:opacity-60"
+        className="group inline-flex shrink-0 items-center gap-1.5 text-xs font-medium disabled:pointer-events-none disabled:opacity-60"
       >
         <RefreshIcon
           className={`h-3.5 w-3.5 shrink-0 ${checking ? "animate-spin" : ""}`}
@@ -386,7 +379,7 @@ export function WatchToggle({
       aria-pressed={watched}
       aria-label={label}
       title={label}
-      className="relative inline-flex items-center gap-1.5 border border-ink px-3 py-1.5 text-sm font-medium text-ink transition-colors hover:bg-ink hover:text-paper disabled:opacity-50 dark:border-gray-400"
+      className="relative inline-flex items-center gap-1.5 border border-ink px-3 py-1.5 text-sm font-medium text-ink transition-colors enabled:hover:bg-ink enabled:hover:text-paper disabled:pointer-events-none disabled:opacity-50 dark:border-gray-400"
     >
       <span className="relative inline-flex">
         <svg

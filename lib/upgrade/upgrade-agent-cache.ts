@@ -10,6 +10,7 @@ export type CachedUpgradeBrief = {
     bullets: string[];
     risk: "low" | "moderate" | "high";
     nextSteps: string[];
+    watchFor?: string[];
   };
   model: string;
   toolCalls: string[];
@@ -28,8 +29,14 @@ export const upgradeAgentCacheKey = (
   packageName: string,
   from: string,
   to: string,
+  runtimeNode?: string | null,
 ): string =>
-  [packageName.trim().toLowerCase(), from.trim(), to.trim()].join("|");
+  [
+    packageName.trim().toLowerCase(),
+    from.trim(),
+    to.trim(),
+    (runtimeNode ?? "").trim(),
+  ].join("|");
 
 const prune = () => {
   if (cache.size <= MAX_ENTRIES) return;

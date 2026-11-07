@@ -475,9 +475,16 @@ export function PackageSearchForm({
     (entry) => (entry.ecosystem ?? "npm") === ecosystem,
   );
   const watchCount = watchlist.length;
-  const alertSummary = summarizeWatchlistAlerts(savedPackages);
-  const visibleAlerts = summarizeWatchlistAlerts(watchlist).total;
-  const otherAlertCount = Math.max(0, alertSummary.total - visibleAlerts);
+  const visibleAlertSummary = summarizeWatchlistAlerts(watchlist);
+  const visibleAlerts = visibleAlertSummary.total;
+  const alertDotClass = (tone: "none" | "vulns" | "version" | "deprecated") =>
+    tone === "vulns"
+      ? "bg-red-600"
+      : tone === "version"
+        ? "bg-emerald-600"
+        : tone === "deprecated"
+          ? "bg-orange-600"
+          : "bg-gray-400";
   const { checking: watchlistChecking, error: watchlistCheckError, checkNow } =
     useWatchlistRefresh(true);
   const announce = useAnnounce();
@@ -530,9 +537,7 @@ export function PackageSearchForm({
       ? `${watchlistAction} watchlist`
       : visibleAlerts > 0
         ? `${watchlistAction} watchlist (${watchedPackages}, ${visibleAlerts} with updates)`
-        : otherAlertCount > 0
-          ? `${watchlistAction} watchlist (${watchedPackages}, updates on another registry)`
-          : `${watchlistAction} watchlist (${watchedPackages})`;
+        : `${watchlistAction} watchlist (${watchedPackages})`;
 
   const utilityButtonClass = (active: boolean) =>
     `inline-flex items-center gap-1.5 border-b-2 pb-1 text-sm transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-signal ${
@@ -559,6 +564,11 @@ export function PackageSearchForm({
             >
               {REGISTRY_TABS.map((option) => {
                 const selected = ecosystem === option.id;
+                const tabAlerts = summarizeWatchlistAlerts(
+                  savedPackages.filter(
+                    (entry) => (entry.ecosystem ?? "npm") === option.id,
+                  ),
+                );
                 return (
                   <button
                     key={option.id}
@@ -570,13 +580,24 @@ export function PackageSearchForm({
                     aria-controls={registryPanelId}
                     tabIndex={selected ? 0 : -1}
                     onClick={() => setEcosystem(option.id)}
-                    className={`border-b-2 pb-1 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-2 focus-visible:ring-offset-paper ${
+                    aria-label={
+                      tabAlerts.total > 0
+                        ? `${option.label}, ${tabAlerts.total} watchlist update${tabAlerts.total === 1 ? "" : "s"}`
+                        : option.label
+                    }
+                    className={`inline-flex items-center gap-1.5 border-b-2 pb-1 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-signal focus-visible:ring-offset-2 focus-visible:ring-offset-paper ${
                       selected
                         ? "border-signal font-semibold text-ink"
                         : "border-transparent text-gray-500 hover:text-ink dark:text-gray-400"
                     }`}
                   >
                     {option.label}
+                    {tabAlerts.total > 0 ? (
+                      <span
+                        className={`h-1.5 w-1.5 shrink-0 rounded-full ${alertDotClass(tabAlerts.tone)}`}
+                        aria-hidden="true"
+                      />
+                    ) : null}
                   </button>
                 );
               })}
@@ -604,15 +625,9 @@ export function PackageSearchForm({
                     <span className="tabular-nums"> ({watchCount})</span>
                   )}
                 </span>
-                {alertSummary.total > 0 && (
+                {visibleAlerts > 0 && (
                   <span
-                    className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-                      alertSummary.tone === "vulns"
-                        ? "bg-red-600"
-                        : alertSummary.tone === "version"
-                          ? "bg-emerald-600"
-                          : "bg-orange-600"
-                    }`}
+                    className={`h-1.5 w-1.5 shrink-0 rounded-full ${alertDotClass(visibleAlertSummary.tone)}`}
                     aria-hidden="true"
                   />
                 )}
@@ -880,7 +895,6 @@ export function PackageSearchForm({
             checking={watchlistChecking}
             checkError={watchlistCheckError}
             onCheck={checkNow}
-            otherAlertCount={otherAlertCount}
           />
         </div>
       )}

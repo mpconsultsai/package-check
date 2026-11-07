@@ -1,11 +1,26 @@
 import { ChatGroq } from "@langchain/groq";
 import { Annotation, END, START, StateGraph } from "@langchain/langgraph";
 import { z } from "zod";
+import {
+  buildDeterministicBrief,
+  finalizeUpgradeBrief,
+  isQuietUpgrade,
+  type UpgradeBriefSeedInput,
+} from "@/lib/ai/upgrade-agent-brief";
 import { buildUpgradeAdvice, listStableVersions } from "@/lib/upgrade/upgrade-advisor";
 import {
   loadUpgradeDetails,
   truncateUpgradeDetailsForAgent,
 } from "@/lib/upgrade/upgrade-details";
+import { formatPeerChangeLine } from "@/lib/upgrade/peer-range-diff";
+import { advisoryStillAffects } from "@/lib/upgrade/upgrade-manifest";
+import {
+  checkNodeAgainstTargetEngines,
+} from "@/lib/packages/node-engine-check";
+import {
+  npmReleaseCooldownCaution,
+  npmReleaseCooldownStatus,
+} from "@/lib/packages/npm-release-cooldown";
 import { checkPackageSecurity } from "@/lib/data-fetchers/security";
 import { fetchNpmPackageData } from "@/lib/data-fetchers/npm-registry";
 import { getGroqUpgradeAgentModel, groqModelLabel } from "@/lib/ai/groq-config";
@@ -23,16 +38,38 @@ import {
 
 export { UPGRADE_AGENT_GENERIC_ERROR } from "@/lib/ai/upgrade-agent-messages";
 export type { UpgradeAgentStreamEvent } from "@/lib/ai/upgrade-agent-events";
+export {
+  computeUpgradeRisk,
+  buildSeedBullets,
+  buildSeedWatchFor,
+  buildContextualNextSteps,
+  mergeUpgradeNextSteps,
+  isQuietUpgrade,
+  finalizeUpgradeBrief,
+  upgradeAgeSignals,
+  dependencyChangeCount,
+  peerChangeCount,
+} from "@/lib/ai/upgrade-agent-brief";
 
 const briefSchema = z.object({
-  headline: z.string().describe("One-line upgrade verdict"),
+  headline: z.string().describe("One-line upgrade action verdict for this range"),
   bullets: z
     .array(z.string())
     .max(6)
-    .describe("Key facts grounded in tool results (1-6 items)"),
+    .describe(
+      "Package-specific facts (peers, named breakages, advisory titles) — not the bump label",
+    ),
   risk: z
     .enum(["low", "moderate", "high"])
-    .describe("Overall upgrade risk"),
+    .describe("Overall upgrade risk (will be overridden by deterministic scoring)"),
+  // Models often emit null for "none"; .optional() alone rejects null.
+  watchFor: z
+    .array(z.string())
+    .max(4)
+    .nullish()
+    .describe(
+      "Named breaking changes or peer risks to verify; use [] or omit when none (never null)",
+    ),
   nextSteps: z
     .array(z.string())
     .max(5)
@@ -41,7 +78,9 @@ const briefSchema = z.object({
     ),
 });
 
-export type UpgradeAgentBrief = z.infer<typeof briefSchema>;
+export type UpgradeAgentBrief = z.infer<typeof briefSchema> & {
+  watchFor: string[];
+};
 
 export type UpgradeAgentResult = {
   brief: UpgradeAgentBrief;
@@ -59,12 +98,46 @@ const clampFacts = (facts: string): string => {
 
 const isJsonValidateError = (error: unknown): boolean => {
   const message = error instanceof Error ? error.message : String(error ?? "");
+  const code =
+    error && typeof error === "object" && "lc_error_code" in error
+      ? String((error as { lc_error_code?: unknown }).lc_error_code ?? "")
+      : "";
   return (
     /json_validate_failed/i.test(message) ||
     /Failed to validate JSON/i.test(message) ||
     /failed_generation/i.test(message) ||
-    /Generated JSON does not match/i.test(message)
+    /Generated JSON does not match/i.test(message) ||
+    /OUTPUT_PARSING_FAILURE/i.test(message) ||
+    /OUTPUT_PARSING_FAILURE/i.test(code)
   );
+};
+
+/** Recover a brief when the structured parser rejects near-valid JSON (e.g. null fields). */
+const tryRecoverBriefFromParseError = (
+  error: unknown,
+): Partial<UpgradeAgentBrief> | null => {
+  if (!error || typeof error !== "object") return null;
+  const llmOutput = (error as { llmOutput?: unknown }).llmOutput;
+  if (typeof llmOutput !== "string" || !llmOutput.trim()) return null;
+  try {
+    const parsed: unknown = JSON.parse(llmOutput);
+    if (!parsed || typeof parsed !== "object") return null;
+    const record = parsed as Record<string, unknown>;
+    const coerced = {
+      ...record,
+      watchFor: Array.isArray(record.watchFor)
+        ? record.watchFor
+        : record.watchFor == null
+          ? undefined
+          : record.watchFor,
+      bullets: Array.isArray(record.bullets) ? record.bullets : undefined,
+      nextSteps: Array.isArray(record.nextSteps) ? record.nextSteps : undefined,
+    };
+    const result = briefSchema.safeParse(coerced);
+    return result.success ? result.data : null;
+  } catch {
+    return null;
+  }
 };
 
 export const isUpgradeAgentProviderError = (error: unknown): boolean => {
@@ -81,12 +154,25 @@ export const isUpgradeAgentProviderError = (error: unknown): boolean => {
 
 const ensureBriefDefaults = (
   brief: Partial<UpgradeAgentBrief> | null | undefined,
+  facts?: UpgradeBriefSeedInput,
+  context?: { packageName: string; from: string; to: string },
 ): UpgradeAgentBrief => {
+  if (facts) {
+    const finalized = finalizeUpgradeBrief(brief, facts, context);
+    return {
+      ...finalized,
+      watchFor: finalized.watchFor ?? [],
+    };
+  }
+
   const headline = brief?.headline?.trim() || "Upgrade brief unavailable";
   const bullets =
     brief?.bullets?.map((b) => b.trim()).filter(Boolean).slice(0, 6) ?? [];
   const nextSteps =
-    brief?.nextSteps?.map((s) => s.trim()).filter(Boolean).slice(0, 5) ?? [];
+    brief?.nextSteps?.map((s) => s.trim()).filter(Boolean).slice(0, 6) ?? [];
+  const watchFor = Array.isArray(brief?.watchFor)
+    ? brief.watchFor.map((w) => w.trim()).filter(Boolean).slice(0, 4)
+    : [];
   const risk =
     brief?.risk === "low" || brief?.risk === "high" || brief?.risk === "moderate"
       ? brief.risk
@@ -99,6 +185,7 @@ const ensureBriefDefaults = (
         ? bullets
         : ["Limited structured output from the model - rely on the breaking notes and peers above."],
     risk,
+    watchFor,
     nextSteps:
       nextSteps.length > 0
         ? nextSteps
@@ -110,30 +197,30 @@ const AgentState = Annotation.Root({
   packageName: Annotation<string>,
   from: Annotation<string>,
   to: Annotation<string>,
+  runtimeNode: Annotation<string>,
+  cooldownHours: Annotation<number>,
   facts: Annotation<string>,
   toolCalls: Annotation<string[]>,
   brief: Annotation<UpgradeAgentBrief | null>,
 });
 
-type FactsPayload = {
+type AdvisoryFact = {
+  title: string;
+  severity: string;
+  stillAffectsTo: boolean | null;
+  cveId?: string;
+};
+
+type FactsPayload = UpgradeBriefSeedInput & {
   packageName?: string;
   from?: string;
   to?: string;
-  advice?: Record<string, unknown>;
-  details?: {
+  details?: UpgradeBriefSeedInput["details"] & {
     github?: {
       changelogUrl?: string | null;
       compareUrl?: string | null;
       releasesUrl?: string | null;
     } | null;
-    breaking?: {
-      notes?: Array<{
-        version?: string;
-        title?: string;
-        items?: Array<{ text?: string; url?: string }>;
-      }>;
-      hasNotes?: boolean;
-    };
     peers?: {
       available?: boolean;
       changes?: Array<{
@@ -148,6 +235,7 @@ type FactsPayload = {
   security?: {
     from?: SecurityCounts;
     to?: SecurityCounts;
+    advisories?: AdvisoryFact[];
   };
   enrichment?: {
     peers?: PeersEnrichment | null;
@@ -240,20 +328,15 @@ const buildPeersEnrichment = (facts: FactsPayload): PeersEnrichment | null => {
   const changes = facts.details?.peers?.changes ?? [];
   if (changes.length === 0) return null;
 
-  const align = changes.slice(0, 8).map((change) => {
-    if (change.kind === "changed") {
-      return `${change.name} (${change.from} → ${change.to})`;
-    }
-    if (change.kind === "added") {
-      return `${change.name} (new peer: ${change.range ?? "?"})`;
-    }
-    return `${change.name} (removed peer)`;
-  });
+  const align = changes
+    .slice(0, 8)
+    .map((change) => formatPeerChangeLine(change))
+    .filter(Boolean);
 
   return {
     count: changes.length,
     align,
-    summary: `Align ${changes.length} peer dependenc${changes.length === 1 ? "y" : "ies"} with this upgrade: ${align.slice(0, 4).join("; ")}${align.length > 4 ? "…" : ""}`,
+    summary: `Review ${changes.length} peer dependenc${changes.length === 1 ? "y" : "ies"} for this upgrade: ${align.slice(0, 4).join("; ")}${align.length > 4 ? "…" : ""}`,
   };
 };
 
@@ -417,7 +500,7 @@ async function enrichMigration(state: typeof AgentState.State) {
 const INSTALL_CMD_RE =
   /\b(?:npm\s+(?:install|i|update)|pnpm\s+(?:add|update|i)|yarn\s+(?:add|upgrade)|bun\s+add)\b/i;
 
-/** Ensure next steps include a concrete `npm i` command after an initial review step. */
+/** Ensure next steps include a concrete `npm i` command after review / Node / peer prep. */
 export function normalizeNextSteps(
   steps: string[],
   packageName: string,
@@ -426,17 +509,42 @@ export function normalizeNextSteps(
   const cleaned = steps
     .map((s) => s.trim())
     .filter(Boolean)
-    .slice(0, 5);
+    .slice(0, 6);
 
   const installStep = formatNpmInstallStep(packageName, to);
   const installIdx = cleaned.findIndex((s) => INSTALL_CMD_RE.test(s));
 
   let ordered = cleaned;
   if (installIdx === -1) {
-    ordered =
-      cleaned.length === 0
-        ? [installStep]
-        : [cleaned[0], installStep, ...cleaned.slice(1)];
+    // Keep blocking prep (Node / peers / review) ahead of install.
+    const prepEnd = cleaned.findIndex((s) =>
+      /Align peer dependencies|Upgrade Node first|Confirm the runtime meets Node|Review (release notes|the changelog)|release cooldown/i.test(
+        s,
+      ),
+    );
+    if (cleaned.length === 0) {
+      ordered = [installStep];
+    } else if (prepEnd === -1) {
+      ordered = [cleaned[0], installStep, ...cleaned.slice(1)];
+    } else {
+      let insertAt = 0;
+      for (let i = 0; i < cleaned.length; i++) {
+        if (
+          /Upgrade Node first|Confirm the runtime meets Node|Review (release notes|the changelog)|release cooldown|Align peer dependencies|Security (improves|worsens|Advisory)/i.test(
+            cleaned[i],
+          )
+        ) {
+          insertAt = i + 1;
+        } else {
+          break;
+        }
+      }
+      ordered = [
+        ...cleaned.slice(0, insertAt),
+        installStep,
+        ...cleaned.slice(insertAt),
+      ];
+    }
   } else {
     // Rewrite whatever install command the model used to `npm i`.
     ordered = cleaned.map((step, i) =>
@@ -448,18 +556,40 @@ export function normalizeNextSteps(
     }
   }
 
-  return ordered.slice(0, 5);
+  return ordered.slice(0, 6);
 }
 
 function nextStepsGuidance(): string {
-  return `nextSteps must be a clear, ordered developer checklist (3–5 items):
-1. FIRST: review release notes / breaking-change notes and peer risks - use a real URL from facts.enrichment.migration.urls or details when available; otherwise say to check the package's changelog for this range. Do not invent URLs. Call out named breaking changes from the facts when present.
-2. THEN: install the target version with \`npm i pkg@version\` (example form only - use the real package name and target version from the facts). Only install after reviewing what may break. Do not suggest pnpm, yarn, or bun.
-3. If facts.enrichment.peers is present, include aligning those peers (name the packages from enrichment.peers.align).
-4. If facts.enrichment.securityDelta shows more advisories on the target, call that out before or with the install step. If details.manifest shows a deprecation, an engines change, or a module type change, mention that fact. Name dependency changes from details.manifest.dependencies when they are present.
-5. Run the project's tests and typecheck (or build) to catch breakages.
-Do NOT invent vague steps like "monitor application logs", "update the package lock and rebuild" as a separate step (the lockfile updates with install), or generic "confirm compatibility" without saying how.
-Write in UK English. Do not use "you" or "your". Use enrichment summaries when present - they are deterministic facts.`;
+  return `nextSteps must be a clear, ordered developer checklist (3–6 items) for facts.packageName from→to:
+1. If facts.runtime.nodeSatisfies is false: FIRST upgrade Node so the runtime meets facts.runtime.nodeEngine (cite runtime.node and the target package@version). Do this before install.
+2. Review release notes / breaking-change notes for this exact from→to range — use a real URL from facts.enrichment.migration.urls or details.github when available; otherwise say to check the package changelog for this range. Do not invent URLs.
+3. If the current version is old (advice.fromPublishedAt / advice.daysBetween ≥ ~1 year): call for extra regression coverage — stale baselines raise integration risk.
+4. If facts.enrichment.peers (or details.peers.changes) is present: review and align those peers. When align/summary says a peer "drops" a clause (e.g. graphql drops ^15.2.0 / 15.x), call that out explicitly — do not only restate from → to.
+5. If details.manifestHighlights.dependencyCount is material: review those dependency changes (lockfile / transitive impact) before install.
+6. If facts.runtime.targetWithinCooldown: wait out the cooldown or pick an older target before installing.
+7. THEN install with \`npm i pkg@version\` using the real package name and target version. Do not suggest pnpm, yarn, or bun.
+8. Run the project's tests and typecheck (or build).
+If facts.enrichment.securityDelta shows more advisories on the target, mention that before install. Name engines / module-format changes when present in facts.
+Do NOT invent vague steps like "monitor application logs", "update the package lock and rebuild" as a separate step, or generic "confirm compatibility" without saying how.
+Write in UK English. Do not use "you" or "your". Use enrichment summaries and security.advisories titles when present — they are deterministic facts.`;
+}
+
+function synthesizeSystemPrompt(): string {
+  return `You are an npm upgrade advisor writing a prioritised checklist for this from→to range.
+
+Use ONLY the JSON facts. Do not invent versions, advisory counts, URLs, or breaking changes.
+The selected range is facts.from → facts.to for facts.packageName, with runtime Node in facts.runtime — checklist steps must match that selection.
+Do NOT restate advice.bump, advice.releasesBehind, advice.headline, or advice.summary — the UI already shows those.
+Bullets must cite concrete names from the facts: peer packages, breaking note item text, security.advisories titles, engines, or module format.
+watchFor: up to 4 named breakages or peer risks to verify (short phrases). Use an empty array when none — never null.
+If details.breaking.hasNotes is false, say so once in bullets and lean on peers, security, and manifestHighlights instead.
+Prefer facts.enrichment summaries and security.advisories when present.
+If facts.runtime.nodeSatisfies is false or nodeMessage is set, include a concrete Node upgrade/compatibility step before install.
+If advice.fromPublishedAt is old or advice.daysBetween is large, treat that as higher risk and say so in bullets/nextSteps.
+If facts.enrichment.peers or details.manifestHighlights.dependencyCount is set, name peer/dependency review as part of the checklist for this range.
+When a peer range drops an OR-clause (for example GraphQL 15), say which major/line is no longer accepted.
+
+${nextStepsGuidance()}`;
 }
 
 function requireGroqKey(): string {
@@ -505,7 +635,7 @@ async function collectFacts(state: typeof AgentState.State) {
   const { packageName, from, to } = state;
   const toolCalls: string[] = [];
 
-  const [adviceJson, detailsJson, fromSecJson, toSecJson] = await Promise.all([
+  const [adviceJson, detailsRaw, fromSecurity, toSecurity] = await Promise.all([
     (async () => {
       toolCalls.push("get_upgrade_advice");
       const { data: npm } = await fetchNpmPackageData(packageName);
@@ -527,50 +657,100 @@ async function collectFacts(state: typeof AgentState.State) {
         intermediateMajors: advice.intermediateMajors,
         fromClean: advice.fromClean,
         toClean: advice.toClean,
+        fromPublishedAt: advice.fromPublishedAt,
+        toPublishedAt: advice.toPublishedAt,
       };
     })(),
     (async () => {
       toolCalls.push("get_upgrade_details");
-      const details = await loadUpgradeDetails(packageName, from, to);
-      // Keep peer list short - Angular-style majors can list dozens of peers.
-      const truncated = truncateUpgradeDetailsForAgent(details, 4, 2);
-      if (
-        truncated.peers &&
-        typeof truncated.peers === "object" &&
-        "changes" in truncated.peers &&
-        Array.isArray((truncated.peers as { changes: unknown[] }).changes)
-      ) {
-        (truncated.peers as { changes: unknown[] }).changes = (
-          truncated.peers as { changes: unknown[] }
-        ).changes.slice(0, 12);
-      }
-      return truncated;
+      return loadUpgradeDetails(packageName, from, to);
     })(),
     (async () => {
       toolCalls.push("get_version_security:from");
-      const security = await checkPackageSecurity(packageName, from);
-      return {
-        version: from,
-        totalCount: security.totalCount,
-        critical: security.critical,
-        high: security.high,
-        moderate: security.moderate,
-        low: security.low,
-      };
+      return checkPackageSecurity(packageName, from);
     })(),
     (async () => {
       toolCalls.push("get_version_security:to");
-      const security = await checkPackageSecurity(packageName, to);
-      return {
-        version: to,
-        totalCount: security.totalCount,
-        critical: security.critical,
-        high: security.high,
-        moderate: security.moderate,
-        low: security.low,
-      };
+      return checkPackageSecurity(packageName, to);
     })(),
   ]);
+
+  const majorRange =
+    adviceJson.bump === "major" || (adviceJson.majorsCrossed ?? 0) >= 1;
+  const maxNotes = majorRange ? 8 : 6;
+  const maxItems = majorRange ? 4 : 3;
+  const detailsJson = truncateUpgradeDetailsForAgent(
+    detailsRaw,
+    maxNotes,
+    maxItems,
+  );
+  if (
+    detailsJson.peers &&
+    typeof detailsJson.peers === "object" &&
+    "changes" in detailsJson.peers &&
+    Array.isArray((detailsJson.peers as { changes: unknown[] }).changes)
+  ) {
+    (detailsJson.peers as { changes: unknown[] }).changes = (
+      detailsJson.peers as { changes: unknown[] }
+    ).changes.slice(0, 12);
+  }
+
+  const fromSecJson = {
+    version: from,
+    totalCount: fromSecurity.totalCount,
+    critical: fromSecurity.critical,
+    high: fromSecurity.high,
+    moderate: fromSecurity.moderate,
+    low: fromSecurity.low,
+  };
+  const toSecJson = {
+    version: to,
+    totalCount: toSecurity.totalCount,
+    critical: toSecurity.critical,
+    high: toSecurity.high,
+    moderate: toSecurity.moderate,
+    low: toSecurity.low,
+  };
+
+  const advisories: AdvisoryFact[] = fromSecurity.vulnerabilities
+    .slice(0, 6)
+    .map((vuln) => ({
+      title: vuln.title,
+      severity: vuln.severity,
+      cveId: vuln.cveId,
+      stillAffectsTo: advisoryStillAffects(to, vuln.vulnerableVersionRange),
+    }));
+
+  const engines =
+    (
+      detailsJson.manifest as
+        | {
+            engines?: Array<{
+              name: string;
+              kind: string;
+              range?: string;
+              from?: string;
+              to?: string;
+            }>;
+          }
+        | null
+        | undefined
+    )?.engines ?? [];
+  const nodeCheck = checkNodeAgainstTargetEngines({
+    nodeVersion: state.runtimeNode,
+    engines,
+  });
+  const cooldown = npmReleaseCooldownStatus({
+    publishedAt: adviceJson.toPublishedAt,
+    cooldownHours: state.cooldownHours,
+  });
+  const cooldownMessage =
+    cooldown.withinCooldown && cooldown.hoursSincePublish !== null
+      ? npmReleaseCooldownCaution({
+          hoursSincePublish: cooldown.hoursSincePublish,
+          cooldownHours: state.cooldownHours,
+        })
+      : null;
 
   const facts = JSON.stringify({
     packageName,
@@ -578,13 +758,46 @@ async function collectFacts(state: typeof AgentState.State) {
     to,
     advice: adviceJson,
     details: detailsJson,
-    security: { from: fromSecJson, to: toSecJson },
+    security: { from: fromSecJson, to: toSecJson, advisories },
+    runtime: {
+      node: state.runtimeNode || null,
+      nodeEngine: nodeCheck.required,
+      nodeSatisfies: nodeCheck.satisfies,
+      nodeMessage: nodeCheck.message,
+      targetWithinCooldown: cooldown.withinCooldown,
+      cooldownHours: state.cooldownHours,
+      hoursSincePublish: cooldown.hoursSincePublish,
+      cooldownMessage,
+    },
   });
 
   return { facts, toolCalls };
 }
 
 async function synthesizeBrief(state: typeof AgentState.State) {
+  const facts = parseFacts(state.facts);
+
+  // Quiet patch/minor with no signals — deterministic brief, skip Groq.
+  if (isQuietUpgrade(facts)) {
+    const deterministic = buildDeterministicBrief(
+      facts,
+      state.packageName,
+      state.from,
+      state.to,
+    );
+    return {
+      brief: {
+        ...deterministic,
+        nextSteps: normalizeNextSteps(
+          deterministic.nextSteps,
+          state.packageName,
+          state.to,
+        ),
+      },
+      toolCalls: appendToolCall(state, "synthesize:deterministic"),
+    };
+  }
+
   requireGroqKey();
 
   const model = getGroqUpgradeAgentModel();
@@ -600,7 +813,7 @@ async function synthesizeBrief(state: typeof AgentState.State) {
   const messages = [
     {
       role: "system" as const,
-      content: `You are an npm upgrade advisor. Reply with a short structured brief using ONLY the JSON facts provided. Do not invent versions, advisory counts, or breaking changes. If notes are empty, say so. Keep bullets and nextSteps concise (short sentences). Prefer facts.enrichment summaries (peers, securityDelta, migration) when present.\n\n${nextStepsGuidance()}`,
+      content: synthesizeSystemPrompt(),
     },
     {
       role: "user" as const,
@@ -620,17 +833,33 @@ async function synthesizeBrief(state: typeof AgentState.State) {
   try {
     raw = await invokeStructured();
   } catch (error) {
-    if (!isJsonValidateError(error)) throw error;
-    // gpt-oss sometimes returns empty JSON under jsonSchema; jsonMode is more forgiving.
-    try {
-      raw = await invokeStructured("jsonMode");
-    } catch (retryError) {
-      if (!isJsonValidateError(retryError)) throw retryError;
-      throw new Error(UPGRADE_AGENT_GENERIC_ERROR);
+    const recovered = tryRecoverBriefFromParseError(error);
+    if (recovered) {
+      raw = recovered;
+    } else if (!isJsonValidateError(error)) {
+      throw error;
+    } else {
+      // gpt-oss sometimes returns empty JSON under jsonSchema; jsonMode is more forgiving.
+      try {
+        raw = await invokeStructured("jsonMode");
+      } catch (retryError) {
+        const retryRecovered = tryRecoverBriefFromParseError(retryError);
+        if (retryRecovered) {
+          raw = retryRecovered;
+        } else if (!isJsonValidateError(retryError)) {
+          throw retryError;
+        } else {
+          throw new Error(UPGRADE_AGENT_GENERIC_ERROR);
+        }
+      }
     }
   }
 
-  const brief = ensureBriefDefaults(raw);
+  const brief = ensureBriefDefaults(raw, facts, {
+    packageName: state.packageName,
+    from: state.from,
+    to: state.to,
+  });
 
   return {
     brief: {
@@ -678,11 +907,20 @@ export async function* streamUpgradeAgent(input: {
   from: string;
   to: string;
   force?: boolean;
+  runtimeNode?: string | null;
+  cooldownHours?: number;
 }): AsyncGenerator<UpgradeAgentStreamEvent> {
-  const { packageName, from, to, force = false } = input;
+  const {
+    packageName,
+    from,
+    to,
+    force = false,
+    runtimeNode = "",
+    cooldownHours = 0,
+  } = input;
   requireGroqKey();
 
-  const key = upgradeAgentCacheKey(packageName, from, to);
+  const key = upgradeAgentCacheKey(packageName, from, to, runtimeNode);
 
   if (!force) {
     const cached = getCachedUpgradeBrief(key);
@@ -736,6 +974,8 @@ export async function* streamUpgradeAgent(input: {
         packageName,
         from,
         to,
+        runtimeNode: (runtimeNode ?? "").trim(),
+        cooldownHours: Math.max(0, Math.floor(Number(cooldownHours) || 0)),
         facts: "",
         toolCalls: [],
         brief: null,
@@ -759,7 +999,12 @@ export async function* streamUpgradeAgent(input: {
           yield { type: "tools", toolCalls };
         }
         if (slice.brief?.headline) {
-          brief = ensureBriefDefaults(slice.brief);
+          // Synthesize already merged Node/peer/version steps for this range.
+          brief = ensureBriefDefaults(slice.brief, undefined, {
+            packageName,
+            from,
+            to,
+          });
           brief = {
             ...brief,
             nextSteps: normalizeNextSteps(brief.nextSteps, packageName, to),
@@ -804,6 +1049,8 @@ export async function runUpgradeAgent(input: {
   from: string;
   to: string;
   force?: boolean;
+  runtimeNode?: string | null;
+  cooldownHours?: number;
 }): Promise<UpgradeAgentResult> {
   let brief: UpgradeAgentBrief | null = null;
   let model = "";
@@ -814,7 +1061,11 @@ export async function runUpgradeAgent(input: {
       throw new Error(event.message);
     }
     if (event.type === "brief") {
-      brief = event.brief;
+      brief = ensureBriefDefaults(event.brief, undefined, {
+        packageName: input.packageName,
+        from: input.from,
+        to: input.to,
+      });
     }
     if (event.type === "done") {
       model = event.model;

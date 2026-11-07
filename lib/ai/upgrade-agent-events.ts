@@ -4,6 +4,8 @@ export type UpgradeAgentBriefPayload = {
   bullets: string[];
   risk: "low" | "moderate" | "high";
   nextSteps: string[];
+  /** Named breakages / peer risks to verify (optional for older cached briefs). */
+  watchFor?: string[];
 };
 
 export type UpgradeAgentStreamEvent =
