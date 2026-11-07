@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.20 - 2026-11-07
+
+- feat: Improve npm upgrade (6231eb1)
+
 ## 0.1.19 - 2026-11-07
 
 - feat: Improve npm upgrade (b77308e)
