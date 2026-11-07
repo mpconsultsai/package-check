@@ -78,8 +78,16 @@ const briefSchema = z.object({
     ),
 });
 
-export type UpgradeAgentBrief = z.infer<typeof briefSchema> & {
+/** Structured-output shape from the model (watchFor may be null). */
+type LlmUpgradeBrief = z.infer<typeof briefSchema>;
+
+export type UpgradeAgentBrief = Omit<LlmUpgradeBrief, "watchFor"> & {
   watchFor: string[];
+};
+
+/** Accepted before defaults — allows null watchFor from the LLM schema. */
+type RawUpgradeBrief = Partial<Omit<UpgradeAgentBrief, "watchFor">> & {
+  watchFor?: string[] | null;
 };
 
 export type UpgradeAgentResult = {
@@ -115,7 +123,7 @@ const isJsonValidateError = (error: unknown): boolean => {
 /** Recover a brief when the structured parser rejects near-valid JSON (e.g. null fields). */
 const tryRecoverBriefFromParseError = (
   error: unknown,
-): Partial<UpgradeAgentBrief> | null => {
+): LlmUpgradeBrief | null => {
   if (!error || typeof error !== "object") return null;
   const llmOutput = (error as { llmOutput?: unknown }).llmOutput;
   if (typeof llmOutput !== "string" || !llmOutput.trim()) return null;
@@ -153,12 +161,19 @@ export const isUpgradeAgentProviderError = (error: unknown): boolean => {
 };
 
 const ensureBriefDefaults = (
-  brief: Partial<UpgradeAgentBrief> | null | undefined,
+  brief: RawUpgradeBrief | null | undefined,
   facts?: UpgradeBriefSeedInput,
   context?: { packageName: string; from: string; to: string },
 ): UpgradeAgentBrief => {
   if (facts) {
-    const finalized = finalizeUpgradeBrief(brief, facts, context);
+    const finalized = finalizeUpgradeBrief(
+      {
+        ...brief,
+        watchFor: Array.isArray(brief?.watchFor) ? brief.watchFor : undefined,
+      },
+      facts,
+      context,
+    );
     return {
       ...finalized,
       watchFor: finalized.watchFor ?? [],
@@ -829,7 +844,7 @@ async function synthesizeBrief(state: typeof AgentState.State) {
     return withRateLimitRetry(() => structured.invoke(messages));
   };
 
-  let raw: Partial<UpgradeAgentBrief>;
+  let raw: RawUpgradeBrief;
   try {
     raw = await invokeStructured();
   } catch (error) {

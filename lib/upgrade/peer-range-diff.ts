@@ -99,13 +99,13 @@ export function summarizePeerRangeChange(
 
 /** Format a peer change for agent briefs and next-step lists. */
 export function formatPeerChangeLine(change: {
-  kind: string;
-  name: string;
+  kind?: string;
+  name?: string;
   range?: string;
   from?: string;
   to?: string;
 }): string {
-  const name = change.name.trim();
+  const name = change.name?.trim() ?? "";
   if (!name) return "";
   if (change.kind === "added") {
     return `${name} (new peer: ${change.range ?? change.to ?? "?"})`;
