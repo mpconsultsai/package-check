@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.19 - 2026-11-07
+
+- feat: Improve npm upgrade (b77308e)
+
 ## 0.1.18 - 2026-11-03
 
 - chore: Update Maven related packages (40f056e)
