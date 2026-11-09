@@ -26,6 +26,7 @@ import {
   PackageInfoCard,
   MetricsChartsCard,
   DependenciesCard,
+  UpgradeAdvisorPanel,
   SecurityCard,
   AIAnalysisCard,
   SimilarPackagesCard,
@@ -329,12 +330,16 @@ function PackagePageContent({
   // Hide until the count is known so a zero-deps package does not flash the tab.
   const showDependenciesTab =
     (analysisData?.packageInfo?.directDependencyCount ?? 0) > 0;
+  const showUpgradeTab = features.upgradeAdvisor;
 
   useEffect(() => {
     if (!features.chartsTab && overviewTab === "charts") {
       setOverviewTab("info");
     }
     if (!showDependenciesTab && overviewTab === "dependencies") {
+      setOverviewTab("info");
+    }
+    if (!showUpgradeTab && overviewTab === "upgrade") {
       setOverviewTab("info");
     }
     if (!features.relatedPackages && insightTab === "related") {
@@ -344,6 +349,7 @@ function PackagePageContent({
     features.chartsTab,
     features.relatedPackages,
     showDependenciesTab,
+    showUpgradeTab,
     overviewTab,
     insightTab,
     aiEnabled,
@@ -639,6 +645,7 @@ function PackagePageContent({
                 onChange={handleOverviewTabChange}
                 showCharts={features.chartsTab}
                 showDependencies={showDependenciesTab}
+                showUpgrade={showUpgradeTab}
               />
 
               {overviewTab === "info" && (
@@ -652,7 +659,6 @@ function PackagePageContent({
                       metrics={analysisData.metrics}
                       metricsLoading={!analysisData.metrics}
                       versionTimes={analysisData.npm?.time}
-                      latestSecurity={analysisData.security}
                     />
                   )}
                 </AnalysisPanel>
@@ -690,6 +696,26 @@ function PackagePageContent({
                       packageName={analysisData.packageInfo.name}
                       ecosystem={ecosystem}
                     />
+                  )}
+                </AnalysisPanel>
+              )}
+
+              {showUpgradeTab && overviewTab === "upgrade" && (
+                <AnalysisPanel id="overview-panel-upgrade" title="Upgrade">
+                  {reportLoading || !analysisData?.packageInfo ? (
+                    <PanelSkeleton label="Loading upgrade advisor" />
+                  ) : (
+                    <div className="rounded-lg border border-rule bg-white p-4 sm:p-6 dark:bg-gray-800">
+                      <UpgradeAdvisorPanel
+                        packageName={analysisData.packageInfo.name}
+                        latestVersion={
+                          analysisData.packageInfo.latestVersion ||
+                          analysisData.packageInfo.version
+                        }
+                        versionTimes={analysisData.npm?.time}
+                        latestSecurity={analysisData.security}
+                      />
+                    </div>
                   )}
                 </AnalysisPanel>
               )}

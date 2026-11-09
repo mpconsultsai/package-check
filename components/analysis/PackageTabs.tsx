@@ -8,7 +8,7 @@ import {
 import { CopyButton } from "@/components/CopyButton";
 
 /** Top row - package facts that load with analyse */
-export type OverviewTabId = "info" | "charts" | "dependencies";
+export type OverviewTabId = "info" | "charts" | "dependencies" | "upgrade";
 /** Bottom row - deeper review (AI is slowest) */
 export type InsightTabId = "ai" | "security" | "related";
 
@@ -182,17 +182,19 @@ function TabRow<T extends string>({
   );
 }
 
-/** Top row: Package info, Charts, Dependencies */
+/** Top row: Package info, Charts, Upgrade, Dependencies */
 export function OverviewTabs({
   active,
   onChange,
   showCharts = true,
   showDependencies = true,
+  showUpgrade = false,
 }: {
   active: OverviewTabId;
   onChange: (tab: OverviewTabId) => void;
   showCharts?: boolean;
   showDependencies?: boolean;
+  showUpgrade?: boolean;
 }) {
   const tabs: TabDef<OverviewTabId>[] = [
     { id: "info", label: "Package info", shortLabel: "Package" },
@@ -202,6 +204,15 @@ export function OverviewTabs({
             id: "charts" as const,
             label: "Charts",
             shortLabel: "Charts",
+          },
+        ]
+      : []),
+    ...(showUpgrade
+      ? [
+          {
+            id: "upgrade" as const,
+            label: "Upgrade",
+            shortLabel: "Upgrade",
           },
         ]
       : []),

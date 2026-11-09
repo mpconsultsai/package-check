@@ -1,5 +1,6 @@
 import {
   runUpgradeAgent,
+  sanitizeProjectUpgradeFacts,
   streamUpgradeAgent,
   UPGRADE_AGENT_GENERIC_ERROR,
   isUpgradeAgentProviderError,
@@ -46,6 +47,7 @@ export const POST = withHandler(
     const cooldownHours = Number.isFinite(cooldownHoursRaw)
       ? Math.max(0, Math.floor(cooldownHoursRaw))
       : 0;
+    const project = sanitizeProjectUpgradeFacts(body.project);
     const wantsStream =
       body.stream === true ||
       (request.headers.get("accept") ?? "").includes("text/event-stream");
@@ -69,6 +71,7 @@ export const POST = withHandler(
               force,
               runtimeNode,
               cooldownHours,
+              project,
             })) {
               if (request.signal.aborted) break;
               controller.enqueue(encodeSse(encoder, event));
@@ -102,6 +105,7 @@ export const POST = withHandler(
         force,
         runtimeNode,
         cooldownHours,
+        project,
       });
 
       return jsonOk({

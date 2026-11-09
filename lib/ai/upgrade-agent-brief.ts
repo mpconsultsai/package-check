@@ -83,6 +83,29 @@ export type UpgradeBriefSeedInput = {
     hoursSincePublish?: number | null;
     cooldownMessage?: string | null;
   };
+  /** Declared package.json / lockfile context for project-aware upgrades. */
+  project?: {
+    hasContext?: boolean;
+    fingerprint?: string;
+    packageRequested?: string | null;
+    peerFits?: Array<{
+      name?: string;
+      required?: string;
+      project?: string | null;
+      status?: "satisfies" | "missing" | "conflicts";
+    }>;
+    reversePeerFits?: Array<{
+      name?: string;
+      at?: string;
+      required?: string;
+      target?: string;
+      status?: "satisfies" | "conflicts";
+    }>;
+    enginesNode?: string | null;
+    enginesConflict?: boolean;
+    conflictCount?: number;
+    missingCount?: number;
+  };
 };
 
 export type UpgradeAgentBriefShape = {
@@ -140,6 +163,43 @@ export function peerChangeCount(facts: UpgradeBriefSeedInput): number {
 
 export function dependencyChangeCount(facts: UpgradeBriefSeedInput): number {
   return facts.details?.manifestHighlights?.dependencyCount ?? 0;
+}
+
+/** Project-declared peer conflicts / missing peers for contextual checklist. */
+export function projectPeerAlignSteps(
+  facts: UpgradeBriefSeedInput,
+): string[] {
+  const fits = facts.project?.peerFits ?? [];
+  const steps: string[] = [];
+  const conflicts = fits.filter((p) => p.status === "conflicts" && p.name);
+  const missing = fits.filter((p) => p.status === "missing" && p.name);
+
+  for (const peer of conflicts.slice(0, 3)) {
+    const project = peer.project ? ` (project has ${peer.project})` : "";
+    steps.push(
+      `Align project peer ${peer.name}${project} to satisfy ${peer.required}.`,
+    );
+  }
+  if (missing.length > 0) {
+    const names = missing
+      .slice(0, 3)
+      .map((p) => `${p.name}@${p.required}`)
+      .join(", ");
+    steps.push(
+      `Add missing peer${missing.length === 1 ? "" : "s"} to the project: ${names}${missing.length > 3 ? "…" : ""}.`,
+    );
+  }
+
+  const reverse = (facts.project?.reversePeerFits ?? []).filter(
+    (p) => p.status === "conflicts" && p.name && p.required,
+  );
+  for (const peer of reverse.slice(0, 3)) {
+    const at = peer.at ? `@${peer.at}` : "";
+    steps.push(
+      `Upgrade or replace ${peer.name}${at}: its peer range ${peer.required} does not accept the target.`,
+    );
+  }
+  return steps;
 }
 
 /** Stale current version and/or a long from→to publish gap. */
@@ -509,6 +569,23 @@ export function buildContextualNextSteps(
     );
   }
 
+  for (const step of projectPeerAlignSteps(facts)) {
+    steps.push(step);
+  }
+
+  const projectEngines = facts.project?.enginesNode;
+  const targetEngine = facts.runtime?.nodeEngine;
+  if (
+    facts.project?.hasContext &&
+    facts.project.enginesConflict &&
+    projectEngines &&
+    targetEngine
+  ) {
+    steps.push(
+      `Update package.json engines.node (currently ${projectEngines}) so it satisfies ${targetEngine} required by ${packageName}@${to}.`,
+    );
+  }
+
   const depCount = dependencyChangeCount(facts);
   if (depCount >= 5) {
     steps.push(
@@ -548,6 +625,13 @@ export function buildContextualNextSteps(
     if (/Align peer dependencies|Review and align peer|peer dependency/i.test(steps[i])) {
       mustKeep.add(i);
     }
+    if (
+      /Align project peer|missing peer|engines\.node|Upgrade or replace .+peer range/i.test(
+        steps[i],
+      )
+    ) {
+      mustKeep.add(i);
+    }
     if (/dependency changes between/i.test(steps[i])) mustKeep.add(i);
     if (/extra regression coverage|stale baselines/i.test(steps[i])) {
       mustKeep.add(i);
@@ -585,7 +669,16 @@ export function mergeUpgradeNextSteps(
     if (/pnpm\s+add|yarn\s+add/i.test(step)) return true;
     if (/tests and typecheck|run (the )?project/i.test(step)) return true;
     if (/review (the )?(changelog|release notes)/i.test(step)) return true;
-    if (/align peer|peer dependenc/i.test(step)) return true;
+    if (
+      /align peer|peer dependenc|Align project peer|missing peer|Upgrade or replace .+peer range/i.test(
+        step,
+      )
+    ) {
+      return true;
+    }
+    if (/package\.json engines\.node|Update package\.json engines/i.test(step)) {
+      return true;
+    }
     if (/dependency changes between|extra regression coverage|stale baselines/i.test(step)) {
       return true;
     }

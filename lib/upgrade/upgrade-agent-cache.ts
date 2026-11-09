@@ -30,12 +30,14 @@ export const upgradeAgentCacheKey = (
   from: string,
   to: string,
   runtimeNode?: string | null,
+  projectFingerprint?: string | null,
 ): string =>
   [
     packageName.trim().toLowerCase(),
     from.trim(),
     to.trim(),
     (runtimeNode ?? "").trim(),
+    (projectFingerprint ?? "").trim(),
   ].join("|");
 
 const prune = () => {

@@ -41,12 +41,22 @@ import {
   getNodeRuntimeVersion,
   parseNodeRuntimeVersion,
 } from "@/lib/prefs/node-runtime-pref";
+import { useNpmProjectContext } from "@/lib/prefs/use-npm-project-context";
+import { getNpmProjectContext } from "@/lib/prefs/npm-project-context";
 import { fetchLatestNodeLts } from "@/lib/data-fetchers/nodejs-releases";
 import { packagePagePath } from "@/lib/packages/package-routes";
 import {
   peerRangePartLabel,
   summarizePeerRangeChange,
 } from "@/lib/upgrade/peer-range-diff";
+import {
+  buildProjectUpgradeFacts,
+  computeProjectUpgradeFit,
+  resolveProjectPackageVersion,
+  seedNodeVersionFromEngines,
+  type ProjectUpgradeFit,
+  type ReversePeerFit,
+} from "@/lib/upgrade/project-upgrade-fit";
 
 const VERSION_OPTIONS = 40;
 
@@ -79,6 +89,10 @@ interface UpgradeDetailsPayload {
   peers?: {
     available: boolean;
     changes: PeerChange[];
+  };
+  target?: {
+    peers: Record<string, string>;
+    engines: Record<string, string>;
   };
   manifest?: UpgradeManifestPayload | null;
   releases?: {
@@ -333,8 +347,18 @@ export function UpgradeAdvisorPanel({
   const cooldownHours = useNpmReleaseCooldownHours();
   const { version: nodeRuntime, setVersion: setNodeRuntime } =
     useNodeRuntimePref();
+  const {
+    context: projectContext,
+    applyText: applyProjectContext,
+    clear: clearProjectContext,
+  } = useNpmProjectContext();
   const [nodeDraft, setNodeDraft] = useState("");
   const [latestNodeLts, setLatestNodeLts] = useState<string | null>(null);
+  const [projectDraft, setProjectDraft] = useState("");
+  const [projectOpen, setProjectOpen] = useState(false);
+  const [projectApplyError, setProjectApplyError] = useState<string | null>(
+    null,
+  );
 
   const [fromVersion, setFromVersion] = useState("");
   const [toVersion, setToVersion] = useState("");
@@ -346,6 +370,10 @@ export function UpgradeAdvisorPanel({
   const [details, setDetails] = useState<UpgradeDetailsPayload | null>(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [detailsError, setDetailsError] = useState<string | null>(null);
+  const [reversePeers, setReversePeers] = useState<ReversePeerFit[] | null>(
+    null,
+  );
+  const [reversePeersLoading, setReversePeersLoading] = useState(false);
   const [fromSecurity, setFromSecurity] = useState<SecuritySummary | null>(
     null,
   );
@@ -379,6 +407,8 @@ export function UpgradeAdvisorPanel({
     setDetails(null);
     setDetailsError(null);
     setDetailsLoading(false);
+    setReversePeers(null);
+    setReversePeersLoading(false);
     setFromSecurity(null);
     setFromSecurityLoading(false);
     setToSecurity(null);
@@ -394,11 +424,32 @@ export function UpgradeAdvisorPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reset on package/latest only
   }, [packageName, latest]);
 
+  // Seed Current version from project context when the package is listed.
+  useEffect(() => {
+    if (!projectContext) return;
+    const requested = projectContext.deps[packageName];
+    if (!requested) return;
+    const resolved = resolveProjectPackageVersion(
+      requested,
+      listStableVersions(versionTimes),
+    );
+    if (resolved) {
+      setFromVersion(resolved);
+    }
+  }, [packageName, projectContext, versionTimes]);
+
   const nodeSeededRef = useRef(false);
 
   useEffect(() => {
     setNodeDraft(nodeRuntime);
   }, [nodeRuntime]);
+
+  useEffect(() => {
+    if (projectContext?.rawText) {
+      setProjectDraft(projectContext.rawText);
+      setProjectOpen(true);
+    }
+  }, [projectContext?.rawText]);
 
   // Resolve latest Node LTS from nodejs.org for the default runtime.
   useEffect(() => {
@@ -416,23 +467,38 @@ export function UpgradeAdvisorPanel({
     };
   }, []);
 
-  // Seed Node once after localStorage hydrate when the user has no preference.
+  // Seed Node once after prefs hydrate: saved pref → project engines → LTS.
   useEffect(() => {
-    if (nodeSeededRef.current || !latestNodeLts) return;
+    if (nodeSeededRef.current) return;
     let cancelled = false;
-    // Pref subscribe hydrates on a microtask; run after that so we don't
-    // overwrite a saved runtime before storage is read.
+    // Pref subscribe hydrates on a microtask; double-tick so project context
+    // and Node pref both land before we choose a default.
     queueMicrotask(() => {
-      if (cancelled || nodeSeededRef.current) return;
-      nodeSeededRef.current = true;
-      if (getNodeRuntimeVersion()) return;
-      setNodeDraft(latestNodeLts);
-      setNodeRuntime(latestNodeLts);
+      queueMicrotask(() => {
+        if (cancelled || nodeSeededRef.current) return;
+        if (getNodeRuntimeVersion()) {
+          nodeSeededRef.current = true;
+          return;
+        }
+        const fromProject = seedNodeVersionFromEngines(
+          getNpmProjectContext()?.enginesNode ?? null,
+        );
+        if (fromProject) {
+          nodeSeededRef.current = true;
+          setNodeDraft(fromProject);
+          setNodeRuntime(fromProject);
+          return;
+        }
+        if (!latestNodeLts) return;
+        nodeSeededRef.current = true;
+        setNodeDraft(latestNodeLts);
+        setNodeRuntime(latestNodeLts);
+      });
     });
     return () => {
       cancelled = true;
     };
-  }, [latestNodeLts, setNodeRuntime]);
+  }, [latestNodeLts, setNodeRuntime, projectContext]);
 
   const advice = useMemo(() => {
     if (!checkedFrom || !checkedTo) return null;
@@ -443,6 +509,87 @@ export function UpgradeAdvisorPanel({
       versions: listStableVersions(versionTimes),
     });
   }, [checkedFrom, checkedTo, versionTimes]);
+
+  const projectRequested = projectContext?.deps[packageName] ?? null;
+
+  const projectFit = useMemo((): ProjectUpgradeFit | null => {
+    if (!projectContext || !details?.target || !checkedFrom || !checkedTo) {
+      return null;
+    }
+    return computeProjectUpgradeFit({
+      projectDeps: projectContext.deps,
+      projectEnginesNode: projectContext.enginesNode,
+      runtimeNode: nodeRuntime || null,
+      targetPeers: details.target.peers ?? {},
+      targetEngines: details.target.engines ?? null,
+    });
+  }, [
+    projectContext,
+    details?.target,
+    checkedFrom,
+    checkedTo,
+    nodeRuntime,
+  ]);
+
+  const projectFacts = useMemo(() => {
+    if (!projectContext) return null;
+    return buildProjectUpgradeFacts({
+      hasContext: true,
+      fingerprint: projectContext.fingerprint,
+      packageRequested: projectRequested,
+      fit: projectFit,
+      reversePeers,
+      enginesNode: projectContext.enginesNode,
+    });
+  }, [projectContext, projectRequested, projectFit, reversePeers]);
+
+  // Reverse peer scan: other project packages that peer-depend on this upgrade.
+  useEffect(() => {
+    if (!projectContext || !checkedTo || !checkedFrom || checkedFrom === checkedTo) {
+      setReversePeers(null);
+      setReversePeersLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    setReversePeersLoading(true);
+    setReversePeers(null);
+
+    void fetchJson<{
+      reversePeers?: ReversePeerFit[];
+      error?: string;
+    }>(apiPaths.upgrade.projectFit, {
+      signal: controller.signal,
+      timeoutMs: 60_000,
+      retries: 1,
+      init: {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          packageName,
+          to: checkedTo,
+          projectDeps: projectContext.deps,
+        }),
+      },
+    })
+      .then(({ ok, data }) => {
+        if (controller.signal.aborted) return;
+        if (!ok) {
+          setReversePeers([]);
+          return;
+        }
+        setReversePeers(data.reversePeers ?? []);
+      })
+      .catch(() => {
+        if (controller.signal.aborted) return;
+        setReversePeers([]);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setReversePeersLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [packageName, checkedFrom, checkedTo, projectContext]);
 
   useEffect(() => {
     if (!checkedFrom || !checkedTo || checkedFrom === checkedTo) {
@@ -588,6 +735,7 @@ export function UpgradeAdvisorPanel({
           force,
           runtimeNode: nodeRuntime || undefined,
           cooldownHours,
+          project: projectFacts ?? undefined,
         }),
         signal,
       });
@@ -833,8 +981,114 @@ export function UpgradeAdvisorPanel({
     return bits.join(" · ");
   })();
 
+  const sourceLabel =
+    projectContext?.source === "package.json"
+      ? "package.json"
+      : projectContext?.source === "package-lock"
+        ? "package-lock"
+        : projectContext?.source === "yarn.lock"
+          ? "yarn.lock"
+          : projectContext
+            ? "project file"
+            : null;
+
+  const projectFitIssues =
+    projectFit?.peers.filter(
+      (p) => p.status === "conflicts" || p.status === "missing",
+    ) ?? [];
+  const reversePeerIssues =
+    reversePeers?.filter((p) => p.status === "conflicts") ?? [];
+  const projectFitClear =
+    Boolean(projectFit) &&
+    projectFit!.conflictCount === 0 &&
+    projectFit!.missingCount === 0 &&
+    projectFit!.engines.projectSatisfiesTarget !== false &&
+    reversePeerIssues.length === 0 &&
+    !reversePeersLoading;
+
   return (
     <div className="space-y-4">
+      <details
+        className="group rounded-xl border border-rule bg-white/70 dark:bg-gray-800/40"
+        open={projectOpen}
+        onToggle={(e) => setProjectOpen(e.currentTarget.open)}
+      >
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-medium hover:bg-black/[0.03] dark:hover:bg-white/[0.04] sm:px-5 [&::-webkit-details-marker]:hidden">
+          <span className="inline-flex min-w-0 items-center gap-2">
+            <span
+              className="shrink-0 text-xs opacity-50 transition-transform group-open:rotate-90"
+              aria-hidden="true"
+            >
+              ▶
+            </span>
+            <span className="font-semibold text-ink">Paste package.json</span>
+          </span>
+          <span className="truncate text-xs font-normal text-gray-500 dark:text-gray-400">
+            {projectContext
+              ? `Using ${sourceLabel} · ${projectContext.packageCount} package${projectContext.packageCount === 1 ? "" : "s"}`
+              : "Seed versions and check peers"}
+          </span>
+        </summary>
+        <div className="space-y-3 border-t border-rule px-4 py-3 sm:px-5">
+          <label htmlFor="upgradeProjectContext" className="sr-only">
+            Paste package.json
+          </label>
+          <textarea
+            id="upgradeProjectContext"
+            value={projectDraft}
+            onChange={(e) => {
+              setProjectDraft(e.target.value);
+              setProjectApplyError(null);
+            }}
+            rows={6}
+            spellCheck={false}
+            placeholder='{ "dependencies": { … }, "engines": { "node": ">=18" } }'
+            className="w-full rounded-lg border border-rule bg-white px-3 py-2 font-mono text-xs leading-relaxed text-ink outline-none focus:border-signal dark:bg-gray-900"
+          />
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                const next = applyProjectContext(projectDraft);
+                if (!next) {
+                  setProjectApplyError(
+                    "Could not find dependencies or engines.node in that paste.",
+                  );
+                  return;
+                }
+                setProjectApplyError(null);
+                setProjectDraft(next.rawText);
+              }}
+              className="rounded-lg bg-ink px-3 py-1.5 text-sm font-semibold text-paper enabled:hover:bg-signal"
+            >
+              Apply
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                clearProjectContext();
+                setProjectDraft("");
+                setProjectApplyError(null);
+              }}
+              disabled={!projectContext && !projectDraft.trim()}
+              className="rounded-lg border border-rule px-3 py-1.5 text-sm font-medium text-ink enabled:hover:border-signal disabled:pointer-events-none disabled:opacity-50"
+            >
+              Clear
+            </button>
+            {projectContext?.truncated ? (
+              <span className="text-[11px] text-amber-800 dark:text-amber-200">
+                Truncated to {projectContext.packageCount} packages
+              </span>
+            ) : null}
+          </div>
+          {projectApplyError ? (
+            <p className="text-sm text-red-600 dark:text-red-400" role="alert">
+              {projectApplyError}
+            </p>
+          ) : null}
+        </div>
+      </details>
+
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:flex-wrap">
         <div className="w-full sm:w-44 shrink-0">
           <label
@@ -1065,6 +1319,68 @@ export function UpgradeAdvisorPanel({
                 </ul>
               </div>
             )}
+            {needsUpgrade && projectContext && (projectFit || reversePeersLoading) ? (
+              <div className="mt-3">
+                <p className="text-xs font-semibold uppercase tracking-wide opacity-60">
+                  Project fit
+                </p>
+                {projectFitClear ? (
+                  <p className="mt-1.5 text-sm leading-relaxed opacity-90">
+                    Declared dependencies, engines, and other packages that
+                    peer-depend on {packageName} look compatible with{" "}
+                    {packageName}@{advice.toClean ?? advice.to}.
+                  </p>
+                ) : (
+                  <ul className="mt-1.5 space-y-1.5">
+                    {projectFit?.engines.projectSatisfiesTarget === false &&
+                    projectFit.engines.target ? (
+                      <li className="text-sm leading-snug">
+                        <span className="font-medium text-amber-900 dark:text-amber-100">
+                          engines.node conflicts
+                        </span>
+                        <span className="mt-0.5 block font-mono text-[11px] opacity-70">
+                          project {projectFit.engines.project} · target needs{" "}
+                          {projectFit.engines.target}
+                        </span>
+                      </li>
+                    ) : null}
+                    {projectFitIssues.map((peer) => (
+                      <li key={peer.name} className="text-sm leading-snug">
+                        <span className="font-mono font-medium">{peer.name}</span>
+                        <span className="ml-2 text-[11px] font-medium text-amber-800 dark:text-amber-200">
+                          {peer.status === "missing" ? "missing" : "conflicts"}
+                        </span>
+                        <span className="mt-0.5 block font-mono text-[11px] opacity-70">
+                          needs {peer.required}
+                          {peer.project ? ` · project ${peer.project}` : ""}
+                        </span>
+                      </li>
+                    ))}
+                    {reversePeerIssues.map((peer) => (
+                      <li
+                        key={`reverse:${peer.name}@${peer.at}`}
+                        className="text-sm leading-snug"
+                      >
+                        <span className="font-mono font-medium">{peer.name}</span>
+                        <span className="ml-2 text-[11px] font-medium text-amber-800 dark:text-amber-200">
+                          rejects {packageName}@{peer.target}
+                        </span>
+                        <span className="mt-0.5 block font-mono text-[11px] opacity-70">
+                          {peer.name}@{peer.at} peers {packageName}@
+                          {peer.required}
+                        </span>
+                      </li>
+                    ))}
+                    {reversePeersLoading ? (
+                      <li className="text-sm opacity-70">
+                        Checking other packages that peer-depend on{" "}
+                        {packageName}…
+                      </li>
+                    ) : null}
+                  </ul>
+                )}
+              </div>
+            ) : null}
             {needsUpgrade && fromSecurity?.vulnerabilities && fromSecurity.vulnerabilities.length > 0 && (
               <div className="mt-3">
                 <p className="text-xs font-semibold uppercase tracking-wide opacity-60">

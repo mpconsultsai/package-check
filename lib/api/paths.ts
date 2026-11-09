@@ -34,6 +34,8 @@ export const apiPaths = {
   upgrade: {
     /** Breaking notes + peer diff for from→to */
     details: "/api/v1/upgrade",
+    /** Reverse peer scan against pasted project deps */
+    projectFit: "/api/v1/upgrade/project-fit",
     /** LangGraph upgrade brief */
     agent: "/api/v1/upgrade/agent",
   },

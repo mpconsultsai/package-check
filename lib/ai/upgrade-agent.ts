@@ -35,6 +35,7 @@ import {
   upgradeAgentCacheKey,
   type CachedUpgradeBrief,
 } from "@/lib/upgrade/upgrade-agent-cache";
+import type { ProjectUpgradeFacts } from "@/lib/upgrade/project-upgrade-fit";
 
 export { UPGRADE_AGENT_GENERIC_ERROR } from "@/lib/ai/upgrade-agent-messages";
 export type { UpgradeAgentStreamEvent } from "@/lib/ai/upgrade-agent-events";
@@ -214,6 +215,7 @@ const AgentState = Annotation.Root({
   to: Annotation<string>,
   runtimeNode: Annotation<string>,
   cooldownHours: Annotation<number>,
+  project: Annotation<ProjectUpgradeFacts | null>,
   facts: Annotation<string>,
   toolCalls: Annotation<string[]>,
   brief: Annotation<UpgradeAgentBrief | null>,
@@ -580,6 +582,7 @@ function nextStepsGuidance(): string {
 2. Review release notes / breaking-change notes for this exact from→to range — use a real URL from facts.enrichment.migration.urls or details.github when available; otherwise say to check the package changelog for this range. Do not invent URLs.
 3. If the current version is old (advice.fromPublishedAt / advice.daysBetween ≥ ~1 year): call for extra regression coverage — stale baselines raise integration risk.
 4. If facts.enrichment.peers (or details.peers.changes) is present: review and align those peers. When align/summary says a peer "drops" a clause (e.g. graphql drops ^15.2.0 / 15.x), call that out explicitly — do not only restate from → to.
+4b. If facts.project.hasContext and facts.project.peerFits lists conflicts/missing: add steps to align those project peers (cite name + required range). If facts.project.reversePeerFits lists conflicts: other project packages peer-depend on this upgrade and reject the target — cite consumer name + peer range. If facts.project.enginesConflict: update package.json engines.node.
 5. If details.manifestHighlights.dependencyCount is material: review those dependency changes (lockfile / transitive impact) before install.
 6. If facts.runtime.targetWithinCooldown: wait out the cooldown or pick an older target before installing.
 7. THEN install with \`npm i pkg@version\` using the real package name and target version. Do not suggest pnpm, yarn, or bun.
@@ -784,6 +787,19 @@ async function collectFacts(state: typeof AgentState.State) {
       hoursSincePublish: cooldown.hoursSincePublish,
       cooldownMessage,
     },
+    project: state.project?.hasContext
+      ? {
+          hasContext: true,
+          fingerprint: state.project.fingerprint || undefined,
+          packageRequested: state.project.packageRequested,
+          peerFits: state.project.peerFits.slice(0, 12),
+          reversePeerFits: state.project.reversePeerFits.slice(0, 12),
+          enginesNode: state.project.enginesNode,
+          enginesConflict: state.project.enginesConflict,
+          conflictCount: state.project.conflictCount,
+          missingCount: state.project.missingCount,
+        }
+      : { hasContext: false },
   });
 
   return { facts, toolCalls };
@@ -917,6 +933,86 @@ function buildUpgradeAgentGraph() {
  * collect → (peers? → securityDelta? → migration?) → synthesize.
  * Yields progress events for SSE; caches successful briefs.
  */
+/** Sanitize client-supplied project facts for the agent brief. */
+export function sanitizeProjectUpgradeFacts(
+  value: unknown,
+): ProjectUpgradeFacts | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const raw = value as Record<string, unknown>;
+  if (raw.hasContext !== true) {
+    return {
+      hasContext: false,
+      fingerprint: "",
+      packageRequested: null,
+      peerFits: [],
+      reversePeerFits: [],
+      enginesNode: null,
+      enginesConflict: false,
+      conflictCount: 0,
+      missingCount: 0,
+    };
+  }
+  const peerFitsRaw = Array.isArray(raw.peerFits) ? raw.peerFits : [];
+  const peerFits: ProjectUpgradeFacts["peerFits"] = [];
+  for (const row of peerFitsRaw.slice(0, 12)) {
+    if (!row || typeof row !== "object") continue;
+    const peer = row as Record<string, unknown>;
+    const name = typeof peer.name === "string" ? peer.name.trim() : "";
+    const required =
+      typeof peer.required === "string" ? peer.required.trim() : "";
+    if (!name || !required) continue;
+    const status =
+      peer.status === "conflicts" ||
+      peer.status === "missing" ||
+      peer.status === "satisfies"
+        ? peer.status
+        : "missing";
+    peerFits.push({
+      name,
+      required,
+      project: typeof peer.project === "string" ? peer.project : null,
+      status,
+    });
+  }
+
+  const reverseRaw = Array.isArray(raw.reversePeerFits)
+    ? raw.reversePeerFits
+    : [];
+  const reversePeerFits: ProjectUpgradeFacts["reversePeerFits"] = [];
+  for (const row of reverseRaw.slice(0, 12)) {
+    if (!row || typeof row !== "object") continue;
+    const peer = row as Record<string, unknown>;
+    const name = typeof peer.name === "string" ? peer.name.trim() : "";
+    const required =
+      typeof peer.required === "string" ? peer.required.trim() : "";
+    const target =
+      typeof peer.target === "string" ? peer.target.trim() : "";
+    const at = typeof peer.at === "string" ? peer.at.trim() : "";
+    if (!name || !required || !target) continue;
+    reversePeerFits.push({
+      name,
+      at: at || target,
+      required,
+      target,
+      status: peer.status === "satisfies" ? "satisfies" : "conflicts",
+    });
+  }
+
+  return {
+    hasContext: true,
+    fingerprint:
+      typeof raw.fingerprint === "string" ? raw.fingerprint.slice(0, 160) : "",
+    packageRequested:
+      typeof raw.packageRequested === "string" ? raw.packageRequested : null,
+    peerFits,
+    reversePeerFits,
+    enginesNode: typeof raw.enginesNode === "string" ? raw.enginesNode : null,
+    enginesConflict: raw.enginesConflict === true,
+    conflictCount: Math.max(0, Math.floor(Number(raw.conflictCount) || 0)),
+    missingCount: Math.max(0, Math.floor(Number(raw.missingCount) || 0)),
+  };
+}
+
 export async function* streamUpgradeAgent(input: {
   packageName: string;
   from: string;
@@ -924,6 +1020,7 @@ export async function* streamUpgradeAgent(input: {
   force?: boolean;
   runtimeNode?: string | null;
   cooldownHours?: number;
+  project?: ProjectUpgradeFacts | null;
 }): AsyncGenerator<UpgradeAgentStreamEvent> {
   const {
     packageName,
@@ -932,10 +1029,20 @@ export async function* streamUpgradeAgent(input: {
     force = false,
     runtimeNode = "",
     cooldownHours = 0,
+    project = null,
   } = input;
   requireGroqKey();
 
-  const key = upgradeAgentCacheKey(packageName, from, to, runtimeNode);
+  const projectFingerprint = project?.hasContext
+    ? project.fingerprint || "ctx"
+    : "";
+  const key = upgradeAgentCacheKey(
+    packageName,
+    from,
+    to,
+    runtimeNode,
+    projectFingerprint,
+  );
 
   if (!force) {
     const cached = getCachedUpgradeBrief(key);
@@ -991,6 +1098,7 @@ export async function* streamUpgradeAgent(input: {
         to,
         runtimeNode: (runtimeNode ?? "").trim(),
         cooldownHours: Math.max(0, Math.floor(Number(cooldownHours) || 0)),
+        project: project?.hasContext ? project : null,
         facts: "",
         toolCalls: [],
         brief: null,
@@ -1066,6 +1174,7 @@ export async function runUpgradeAgent(input: {
   force?: boolean;
   runtimeNode?: string | null;
   cooldownHours?: number;
+  project?: ProjectUpgradeFacts | null;
 }): Promise<UpgradeAgentResult> {
   let brief: UpgradeAgentBrief | null = null;
   let model = "";

@@ -417,6 +417,69 @@ describe("buildContextualNextSteps", () => {
     );
     steps.some((s) => /11 dependency changes/i.test(s)).should.equal(true);
   });
+
+  it("should include project peer conflict and engines steps when present", () => {
+    const steps = buildContextualNextSteps(
+      {
+        runtime: {
+          node: "20.11.0",
+          nodeEngine: ">=18",
+          nodeSatisfies: true,
+        },
+        project: {
+          hasContext: true,
+          packageRequested: "^5.0.0",
+          enginesNode: ">=16",
+          enginesConflict: true,
+          conflictCount: 2,
+          missingCount: 0,
+          peerFits: [
+            {
+              name: "react",
+              required: "^18.0.0",
+              project: "^17.0.0",
+              status: "conflicts",
+            },
+          ],
+        },
+      },
+      "next",
+      "14.0.0",
+      "15.0.0",
+    );
+    steps.some((s) => /Align project peer react/.test(s)).should.equal(true);
+    steps.some((s) => /\^17\.0\.0/.test(s)).should.equal(true);
+    steps.some((s) => /Update package\.json engines\.node/.test(s)).should.equal(
+      true,
+    );
+    steps.some((s) => /npm i next@15\.0\.0/.test(s)).should.equal(true);
+  });
+
+  it("should call out reverse peer conflicts from other project packages", () => {
+    const steps = buildContextualNextSteps(
+      {
+        project: {
+          hasContext: true,
+          reversePeerFits: [
+            {
+              name: "@typescript-eslint/parser",
+              at: "8.0.0",
+              required: "^5.0.0",
+              target: "6.0.0",
+              status: "conflicts",
+            },
+          ],
+        },
+      },
+      "typescript",
+      "5.7.2",
+      "6.0.0",
+    );
+    steps.some((s) => /@typescript-eslint\/parser@8\.0\.0/.test(s)).should.equal(
+      true,
+    );
+    steps.some((s) => /peer range \^5\.0\.0/.test(s)).should.equal(true);
+  });
 });
 
 describe("mergeUpgradeNextSteps", () => {

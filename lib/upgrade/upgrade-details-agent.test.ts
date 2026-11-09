@@ -19,6 +19,7 @@ function baseDetails(
       hasNotes: false,
     },
     peers: { available: false, changes: [] },
+    target: { peers: {}, engines: {} },
     manifest: null,
     releases: { total: 0, shown: [] },
     ...overrides,

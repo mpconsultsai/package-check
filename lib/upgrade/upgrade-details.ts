@@ -51,6 +51,11 @@ export type UpgradeDetailsResult = {
     available: boolean;
     changes: PeerChange[];
   };
+  /** Target package peerDependencies / engines for project-fit checks. */
+  target: {
+    peers: Record<string, string>;
+    engines: Record<string, string>;
+  };
   manifest: {
     available: boolean;
     deprecation: ManifestComparison["deprecation"];
@@ -288,6 +293,10 @@ export async function loadUpgradeDetails(
     peers: {
       available: Boolean(fromManifest && toManifest),
       changes: peerChanges,
+    },
+    target: {
+      peers: toManifest?.peerDependencies ?? {},
+      engines: toManifest?.engines ?? {},
     },
     manifest: compared
       ? {

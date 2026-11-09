@@ -6,7 +6,6 @@ import { formatDaysSinceRelease } from "@/lib/utils/format";
 import { describeLicense } from "@/lib/packages/license-info";
 import { MetricsCard } from "./MetricsCard";
 import { OpenSSFScorecardStrip } from "./OpenSSFScorecardStrip";
-import { UpgradeAdvisorPanel } from "./UpgradeAdvisorPanel";
 import { DependentsModal } from "./DependentsModal";
 import { CopyButton } from "@/components/CopyButton";
 import type { PackageEcosystem } from "@/lib/packages/package-routes";
@@ -86,13 +85,6 @@ interface PackageInfoCardProps {
   metricsLoading?: boolean;
   versionTimes?: Record<string, string> | null;
   ecosystem?: PackageEcosystem;
-  latestSecurity?: {
-    totalCount?: number;
-    critical?: number;
-    high?: number;
-    moderate?: number;
-    low?: number;
-  } | null;
 }
 
 const formatDependents = (count: number): string => {
@@ -184,15 +176,14 @@ export const PackageInfoCard = ({
   metrics,
   metricsLoading = false,
   versionTimes,
-  latestSecurity,
   ecosystem = "npm",
 }: PackageInfoCardProps) => {
   const features = featuresForEcosystem(ecosystem);
   const registryName = registryLabel(ecosystem);
   const releaseCooldownHours = useNpmReleaseCooldownHours();
-  const [section, setSection] = useState<
-    "info" | "metrics" | "scorecard" | "upgrade"
-  >("info");
+  const [section, setSection] = useState<"info" | "metrics" | "scorecard">(
+    "info",
+  );
   const [dependentsOpen, setDependentsOpen] = useState(false);
   const closeDependents = useCallback(() => setDependentsOpen(false), []);
 
@@ -263,9 +254,6 @@ export const PackageInfoCard = ({
             { id: "info" as const, label: "Info" },
             { id: "metrics" as const, label: "Metrics" },
             { id: "scorecard" as const, label: "Scorecard" },
-            ...(features.upgradeAdvisor
-              ? [{ id: "upgrade" as const, label: "Upgrade" }]
-              : []),
           ] as const
         ).map((option) => {
           const selected = section === option.id;
@@ -315,13 +303,6 @@ export const PackageInfoCard = ({
           packageName={packageInfo.name}
           repository={packageInfo.repository}
           embedded
-        />
-      ) : section === "upgrade" ? (
-        <UpgradeAdvisorPanel
-          packageName={packageInfo.name}
-          latestVersion={packageInfo.latestVersion || packageInfo.version}
-          versionTimes={versionTimes}
-          latestSecurity={latestSecurity}
         />
       ) : (
         <>
