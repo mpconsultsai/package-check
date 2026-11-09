@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.21 - 2026-11-09
+
+- chore: Improve upgrades for npm (b6cdf88)
+
 ## 0.1.20 - 2026-11-07
 
 - feat: Improve npm upgrade (6231eb1)
