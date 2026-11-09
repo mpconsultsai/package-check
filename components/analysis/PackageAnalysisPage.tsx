@@ -708,10 +708,7 @@ function PackagePageContent({
                     <div className="rounded-lg border border-rule bg-white p-4 sm:p-6 dark:bg-gray-800">
                       <UpgradeAdvisorPanel
                         packageName={analysisData.packageInfo.name}
-                        latestVersion={
-                          analysisData.packageInfo.latestVersion ||
-                          analysisData.packageInfo.version
-                        }
+                        latestVersion={analysisData.packageInfo.latestVersion}
                         versionTimes={analysisData.npm?.time}
                         latestSecurity={analysisData.security}
                       />
