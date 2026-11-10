@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.23 - 2026-11-10
+
+- chore: Update Most checked and doc updates (c1cd31e)
+
 ## 0.1.22 - 2026-11-09
 
 - chore: Improve upgrades for npm (1a394ea)
