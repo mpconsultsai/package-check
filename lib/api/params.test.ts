@@ -21,15 +21,16 @@ function request(query: string, body?: unknown): NextRequest {
 }
 
 describe("parseEcosystem", () => {
-  it("should accept npm, pypi, pip, and nuget", () => {
+  it("should accept npm, pypi, pip, nuget, and maven", () => {
     parseEcosystem("PyPI").should.equal("pypi");
     parseEcosystem("pip").should.equal("pypi");
     parseEcosystem("nuget").should.equal("nuget");
     parseEcosystem("npm").should.equal("npm");
+    parseEcosystem("maven").should.equal("maven");
   });
 
   it("should fall back when the value is unknown", () => {
-    parseEcosystem("maven", "nuget").should.equal("nuget");
+    parseEcosystem("cargo", "nuget").should.equal("nuget");
     parseEcosystem(null).should.equal("npm");
   });
 });
