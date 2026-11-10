@@ -7,7 +7,7 @@ import type { Database } from "@/lib/db/client";
 import { getDb } from "@/lib/db/client";
 
 const ACTIVITY_DAYS = 7;
-const LIST_LIMIT = 8;
+const LIST_LIMIT = 5;
 const NAME_MAX = 100;
 /** npm/PyPI/NuGet names, plus Maven groupId:artifactId. */
 const PACKAGE_NAME =

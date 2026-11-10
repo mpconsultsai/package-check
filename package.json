@@ -11,8 +11,11 @@
     "build": "bash scripts/render-next-build.sh",
     "start": "next start",
     "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run --coverage",
-    "icons": "node scripts/generate-icons.mjs"
+    "test:unit": "vitest run",
+    "icons": "node scripts/generate-icons.mjs",
+    "prepare": "husky"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
@@ -45,6 +48,7 @@
     "chai": "^6.3.0",
     "eslint": "^9.39.5",
     "eslint-config-next": "^16.4.1",
+    "husky": "^9.1.7",
     "postcss": "^8.5.26",
     "release-it": "^21.1.1",
     "sharp": "^0.35.5",

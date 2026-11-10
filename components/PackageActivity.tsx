@@ -22,7 +22,7 @@ function emptyActivity(): Activity {
       ecosystem,
       { popular: [], recent: [] },
     ]),
-  ) as Activity;
+  ) as unknown as Activity;
 }
 
 function ActivityList({
