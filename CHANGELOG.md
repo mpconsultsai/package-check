@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.25 - 2026-11-10
+
+- test: Fix stale test (993a0e1)
+- fix: Fix type issue and add husky (6abf127)
+
 ## 0.1.24 - 2026-11-10
 
 - chore: Minor updates and fixes (144d58c)
