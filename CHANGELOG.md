@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.24 - 2026-11-10
+
+- chore: Minor updates and fixes (144d58c)
+
 ## 0.1.23 - 2026-11-10
 
 - chore: Update Most checked and doc updates (c1cd31e)
