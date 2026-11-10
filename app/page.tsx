@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { PackageActivity } from "@/components/PackageActivity";
 import { WhatWeCheck } from "@/components/WhatWeCheck";
-import { loadPackageActivity } from "@/lib/db/package-activity";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE } from "@/lib/site/site-brand";
 import { getSiteUrl } from "@/lib/site/site-url";
 
@@ -36,18 +35,14 @@ const jsonLd = {
   ],
 };
 
-/** Always load activity at request time — ISR was caching empty lists when DB was cold. */
-export const dynamic = "force-dynamic";
-
-export default async function Home() {
-  const activity = await loadPackageActivity();
+export default function Home() {
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <PackageActivity activity={activity} />
+      <PackageActivity />
       <WhatWeCheck />
     </>
   );

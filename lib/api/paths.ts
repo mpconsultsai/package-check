@@ -11,6 +11,8 @@ export const apiPaths = {
   health: "/api/v1/health",
   packages: {
     search: "/api/v1/packages/search",
+    /** Most / recently checked packages for the home page */
+    activity: "/api/v1/packages/activity",
     /** Three names drawn from that registry's top downloads */
     examples: "/api/v1/packages/examples",
     security: "/api/v1/packages/security",

@@ -491,28 +491,43 @@ export function PackageSearchForm({
         : tone === "deprecated"
           ? "bg-orange-600"
           : "bg-gray-400";
-  const { checking: watchlistChecking, error: watchlistCheckError, checkNow } =
-    useWatchlistRefresh(true);
+  const {
+    checking: watchlistChecking,
+    error: watchlistCheckError,
+    checkNow,
+    checkStale,
+  } = useWatchlistRefresh();
   const announce = useAnnounce();
+  const announceRef = useRef(announce);
+  const checkStaleRef = useRef(checkStale);
+  const watchCountRef = useRef(watchCount);
+  const ecosystemRef = useRef(ecosystem);
+  const pasteLabelRef = useRef(pasteLabel);
+  announceRef.current = announce;
+  checkStaleRef.current = checkStale;
+  watchCountRef.current = watchCount;
+  ecosystemRef.current = ecosystem;
+  pasteLabelRef.current = pasteLabel;
 
   useEffect(() => {
     if (utilityPanel === "watchlist") {
       watchlistPanelRef.current?.focus();
-      announce(
-        watchCount > 0
-          ? `Watchlist opened, ${watchCount} ${registryLabel(ecosystem)} package${watchCount === 1 ? "" : "s"}`
+      checkStaleRef.current();
+      const count = watchCountRef.current;
+      announceRef.current(
+        count > 0
+          ? `Watchlist opened, ${count} ${registryLabel(ecosystemRef.current)} package${count === 1 ? "" : "s"}`
           : "Watchlist opened, no packages yet",
       );
     } else if (utilityPanel === "paste") {
       pastePanelRef.current?.focus();
-      announce(`${pasteLabel} opened`);
+      announceRef.current(`${pasteLabelRef.current} opened`);
     } else if (utilityPanel === "settings") {
       settingsPanelRef.current?.focus();
-      announce("Settings opened");
+      announceRef.current("Settings opened");
     }
-    // Announce once when the panel opens; ignore later watchlist edits.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- utilityPanel only
-  }, [utilityPanel, announce]);
+    // Announce / stale-check once when the panel opens; ignore later watchlist edits.
+  }, [utilityPanel]);
 
   const searchingMessage =
     !loading &&

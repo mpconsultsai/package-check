@@ -6,8 +6,6 @@ The same review is available in the browser and over [MCP](#mcp-server). The sit
 
 Choose a registry above the search box, then open a package at `/npm/<name>`, `/pypi/<name>`, `/nuget/<name>`, or `/maven/<groupId%3AartifactId>`.
 
-![Package Check home page](docs/home.png)
-
 ## Features
 
 All four registries:
@@ -18,7 +16,7 @@ All four registries:
 - **AI insights** - Recommendation, strengths, concerns, and scores. Gemini 2.5 Flash falls back to Flash-Lite, then Groq
 - **Dependencies** - Direct dependencies before you add the package. The view opens on the list (with the count), then the full tree, then the chart. The chart legend marks peer dependencies on npm only
 - **Trends** - Release history and GitHub issue history
-- **Watchlist** - Saved packages checked again from the browser, at most daily, with Check now. A new version, a named advisory, a new deprecation, or a newly affected npm direct dependency stays listed until you mark it seen. The toolbar dot includes every registry. The list itself is filtered to the registry you are browsing
+- **Watchlist** - Saved packages checked again when you open Watchlist (at most daily) or tap Check now. A new version, a named advisory, a new deprecation, or a newly affected npm direct dependency stays listed until you mark it seen. The toolbar dot includes every registry. The list itself is filtered to the registry you are browsing
 - **Paste a list** - Analyse many packages from a dependency file
 - **Most checked this week** - The home page lists the packages people opened most in the last seven days, and the most recent ones, for the selected registry (needs the database, see below)
 
@@ -127,7 +125,7 @@ npm run dev
 
 Anonymous package searches and opened package pages are stored in a `package_searches` table. Create it by running `supabase/migrations/20261016000000_package_searches.sql` in the Supabase SQL editor, then set `SUPABASE_URL`, `SUPABASE_DB_HOST` (the transaction pooler host for your project region, for example `aws-0-eu-west-1.pooler.supabase.com`), `SUPABASE_DB_PORT` (`6543`), `SUPABASE_DB_USER` (`postgres.<project-ref>`), and `POSTGRES_DB_PWD`. The `NEXT_PUBLIC_SUPABASE_*` keys are not used.
 
-The home page lists come from this table (loaded on each request). A package only appears after its metrics load succeeds, so a typed URL for a package that does not exist is never listed. Without the database, the app works and the lists are hidden.
+The home page lists come from `/api/v1/packages/activity` (loaded in the browser). A package appears after a successful metrics open, an MCP package tool call, or an exact-name web search that returned it — so typed URLs for packages that do not exist are not listed. Without the database, the app works and the lists are hidden.
 
 ### Tests
 

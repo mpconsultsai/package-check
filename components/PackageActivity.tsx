@@ -1,10 +1,29 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useShellEcosystem } from "@/components/shell-ecosystem";
 import { requestCloseShellUtilityPanel } from "@/components/shell-utility-panel";
-import type { ActivePackage, PackageActivity as Activity } from "@/lib/db/package-activity";
-import { packagePagePath, type PackageEcosystem } from "@/lib/packages/package-routes";
+import { apiPaths } from "@/lib/api/paths";
+import { fetchJson } from "@/lib/prefs/fetch-client";
+import type {
+  ActivePackage,
+  PackageActivity as Activity,
+} from "@/lib/db/package-activity";
+import {
+  PACKAGE_ECOSYSTEMS,
+  packagePagePath,
+  type PackageEcosystem,
+} from "@/lib/packages/package-routes";
+
+function emptyActivity(): Activity {
+  return Object.fromEntries(
+    PACKAGE_ECOSYSTEMS.map((ecosystem) => [
+      ecosystem,
+      { popular: [], recent: [] },
+    ]),
+  ) as Activity;
+}
 
 function ActivityList({
   title,
@@ -49,10 +68,43 @@ function ActivityList({
   );
 }
 
-export function PackageActivity({ activity }: { activity: Activity }) {
+export function PackageActivity() {
   const ecosystem = useShellEcosystem();
-  const { popular, recent } = activity[ecosystem];
+  const [activity, setActivity] = useState<Activity | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetchJson<{
+      activity?: Activity;
+      databaseConfigured?: boolean;
+      error?: string;
+    }>(apiPaths.packages.activity, {
+      signal: controller.signal,
+      timeoutMs: 20_000,
+      retries: 1,
+    })
+      .then(({ ok, data }) => {
+        if (controller.signal.aborted) return;
+        if (!ok || !data.activity) {
+          setActivity(emptyActivity());
+          return;
+        }
+        setActivity(data.activity);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setActivity(emptyActivity());
+      });
+    return () => controller.abort();
+  }, []);
+
+  if (!activity) return null;
+
+  const { popular, recent } = activity[ecosystem] ?? {
+    popular: [],
+    recent: [],
+  };
   if (popular.length === 0 && recent.length === 0) return null;
+
   const popularNames = new Set(popular.map((item) => item.name));
   const recentAddsNothing = recent.every((item) => popularNames.has(item.name));
 

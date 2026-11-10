@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { fetchJson } from "@/lib/prefs/fetch-client";
 import { apiPaths } from "@/lib/api/paths";
 import {
@@ -10,7 +10,6 @@ import {
   type WatchlistFresh,
 } from "@/lib/prefs/watchlist-store";
 import type { PackageEcosystem } from "@/lib/packages/package-routes";
-import { useWatchlist } from "@/lib/prefs/use-watchlist";
 
 interface CheckResponse {
   packages?: Array<
@@ -26,11 +25,11 @@ interface CheckResponse {
 const CHECK_FAILED = "Could not check the watchlist";
 
 /**
- * Refresh stale watchlist packages at most once per day each when `auto` is on.
- * checkNow ignores that interval.
+ * Watchlist registry poll. Stale packages are checked at most once per day
+ * unless `checkNow` forces a full refresh. No automatic page-load polling —
+ * call `checkStale` when the Watchlist panel opens.
  */
-export function useWatchlistRefresh(auto: boolean) {
-  const entries = useWatchlist();
+export function useWatchlistRefresh() {
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inFlight = useRef(false);
@@ -82,16 +81,13 @@ export function useWatchlistRefresh(auto: boolean) {
     }
   }, []);
 
-  useEffect(() => {
-    if (!auto) return;
-    const controller = new AbortController();
-    void runCheck(false, controller.signal);
-    return () => controller.abort();
-  }, [auto, entries.length, runCheck]);
-
   const checkNow = useCallback(() => {
     void runCheck(true);
   }, [runCheck]);
 
-  return { checking, error, checkNow };
+  const checkStale = useCallback(() => {
+    void runCheck(false);
+  }, [runCheck]);
+
+  return { checking, error, checkNow, checkStale };
 }

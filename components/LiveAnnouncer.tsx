@@ -19,6 +19,7 @@ export type AnnounceOptions = {
 export type AnnounceFn = (message: string, options?: AnnounceOptions) => void;
 
 const AnnounceContext = createContext<AnnounceFn | null>(null);
+const noopAnnounce: AnnounceFn = () => {};
 
 const REANNOUNCE_MS = 50;
 
@@ -84,7 +85,7 @@ export function LiveAnnouncerProvider({ children }: { children: ReactNode }) {
 /** Announce a status or error. No-ops outside LiveAnnouncerProvider. */
 export function useAnnounce(): AnnounceFn {
   const announce = useContext(AnnounceContext);
-  return announce ?? (() => {});
+  return announce ?? noopAnnounce;
 }
 
 /**

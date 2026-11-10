@@ -86,10 +86,22 @@ export function groupPackageActivity(rows: PackageActivityRow[]): PackageActivit
   return activity;
 }
 
+function asRowList(result: unknown): PackageActivityRow[] {
+  if (Array.isArray(result)) return result as PackageActivityRow[];
+  if (
+    result &&
+    typeof result === "object" &&
+    Array.isArray((result as { rows?: unknown }).rows)
+  ) {
+    return (result as { rows: PackageActivityRow[] }).rows;
+  }
+  return [];
+}
+
 /**
- * Packages opened in the last week.
- * Page opens are recorded only after metrics resolve a real package, so a
- * typed URL for a missing name never appears here.
+ * Packages opened / looked up in the last week.
+ * Counts: resolved page opens, MCP package tools, and exact-name web searches
+ * that returned the package (so lists still populate when page opens were missed).
  */
 export async function loadPackageActivity(
   db: Database | null = getDb(),
@@ -99,7 +111,7 @@ export async function loadPackageActivity(
     // Unprepared queries (transaction pooler) cannot bind a Date; send ISO text.
     const day = 24 * 60 * 60 * 1000;
     const since = new Date(Date.now() - ACTIVITY_DAYS * day).toISOString();
-    const rows = await db.execute<PackageActivityRow>(sql`
+    const result = await db.execute<PackageActivityRow>(sql`
       select
         ecosystem,
         (array_agg(btrim(query) order by created_at desc))[1] as name,
@@ -115,10 +127,22 @@ export async function loadPackageActivity(
             'upgrade_package',
             'analyse_package'
           )
+          or (
+            coalesce(metadata->>'page', '') <> 'true'
+            and (
+              metadata->>'tool' is null
+              or metadata->>'tool' = 'search_packages'
+            )
+            and exists (
+              select 1
+              from unnest(result_names) as hit(name)
+              where lower(btrim(hit.name)) = query_normalized
+            )
+          )
         )
       group by ecosystem, query_normalized
     `);
-    return groupPackageActivity([...rows]);
+    return groupPackageActivity(asRowList(result));
   } catch (error: unknown) {
     const cause = error instanceof Error && error.cause !== undefined ? error.cause : error;
     const message = cause instanceof Error ? cause.message : "activity query failed";
