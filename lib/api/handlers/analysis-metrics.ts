@@ -18,7 +18,8 @@ const analyze = async (
   console.log(`Analyzing package (metrics): ${ecosystem}|${packageName}`);
   const packageData = await analyzePackageCached(packageName, ecosystem);
   // Only count packages that resolved — feeds "Most checked this week".
-  recordOpenedPackage(ecosystem, packageName, requestHeaders);
+  // Must await: serverless freezes the isolate after the response is sent.
+  await recordOpenedPackage(ecosystem, packageName, requestHeaders);
   return jsonOk(buildAnalysisResponse(packageName, packageData, null));
 };
 

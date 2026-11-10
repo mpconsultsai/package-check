@@ -98,6 +98,12 @@ function asRowList(result: unknown): PackageActivityRow[] {
   return [];
 }
 
+export type PackageActivityLoad = {
+  activity: PackageActivity;
+  matchedRows: number;
+  error: string | null;
+};
+
 /**
  * Packages opened / looked up in the last week.
  * Counts: resolved page opens, MCP package tools, and exact-name web searches
@@ -105,8 +111,10 @@ function asRowList(result: unknown): PackageActivityRow[] {
  */
 export async function loadPackageActivity(
   db: Database | null = getDb(),
-): Promise<PackageActivity> {
-  if (!db) return emptyActivity();
+): Promise<PackageActivityLoad> {
+  if (!db) {
+    return { activity: emptyActivity(), matchedRows: 0, error: null };
+  }
   try {
     // Unprepared queries (transaction pooler) cannot bind a Date; send ISO text.
     const day = 24 * 60 * 60 * 1000;
@@ -135,20 +143,23 @@ export async function loadPackageActivity(
             )
             and exists (
               select 1
-              from unnest(result_names) as hit(name)
-              where lower(btrim(hit.name)) = query_normalized
+              from unnest(result_names) as hit(package_name)
+              where lower(btrim(hit.package_name)) = query_normalized
             )
           )
         )
       group by ecosystem, query_normalized
     `);
-    return groupPackageActivity(asRowList(result));
+    const rows = asRowList(result);
+    return {
+      activity: groupPackageActivity(rows),
+      matchedRows: rows.length,
+      error: null,
+    };
   } catch (error: unknown) {
     const cause = error instanceof Error && error.cause !== undefined ? error.cause : error;
     const message = cause instanceof Error ? cause.message : "activity query failed";
-    if (!/password/i.test(message)) {
-      console.error("Failed to load package activity:", message);
-    }
-    return emptyActivity();
+    console.error("Failed to load package activity:", message);
+    return { activity: emptyActivity(), matchedRows: 0, error: message };
   }
 }

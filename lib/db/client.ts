@@ -17,6 +17,18 @@ function projectRef(supabaseUrl: string): string | null {
   }
 }
 
+/** Trim and drop wrapping quotes from dashboard/env copy-paste. */
+function envValue(value: string | undefined): string {
+  const trimmed = value?.trim() ?? "";
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    return trimmed.slice(1, -1);
+  }
+  return trimmed;
+}
+
 type PostgresConfig = {
   host: string;
   port: number;
@@ -25,18 +37,22 @@ type PostgresConfig = {
 };
 
 function postgresConfig(): PostgresConfig | null {
-  const password = process.env.POSTGRES_DB_PWD?.trim();
-  const supabaseUrl = process.env.SUPABASE_URL?.trim();
+  const password = envValue(process.env.POSTGRES_DB_PWD);
+  const supabaseUrl = envValue(process.env.SUPABASE_URL);
   if (!password || !supabaseUrl) return null;
   const ref = projectRef(supabaseUrl);
   if (!ref) return null;
 
-  const host = process.env.SUPABASE_DB_HOST?.trim() || `db.${ref}.supabase.co`;
-  const portNumber = Number(process.env.SUPABASE_DB_PORT || "5432");
-  const port = Number.isFinite(portNumber) ? portNumber : 5432;
+  const host =
+    envValue(process.env.SUPABASE_DB_HOST) || `db.${ref}.supabase.co`;
+  const pooler = host.includes("pooler.supabase.com");
+  // Transaction pooler is 6543; direct db.* hosts use 5432.
+  const defaultPort = pooler ? "6543" : "5432";
+  const portNumber = Number(envValue(process.env.SUPABASE_DB_PORT) || defaultPort);
+  const port = Number.isFinite(portNumber) ? portNumber : Number(defaultPort);
   const username =
-    process.env.SUPABASE_DB_USER?.trim() ||
-    (host.includes("pooler.supabase.com") ? `postgres.${ref}` : "postgres");
+    envValue(process.env.SUPABASE_DB_USER) ||
+    (pooler ? `postgres.${ref}` : "postgres");
 
   return { host, port, username, password };
 }

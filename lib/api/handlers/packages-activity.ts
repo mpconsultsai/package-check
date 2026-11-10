@@ -1,4 +1,5 @@
-import { jsonOk, withHandler } from "@/lib/api/http";
+import { NextResponse } from "next/server";
+import { withHandler } from "@/lib/api/http";
 import { databaseLogContext, getDb } from "@/lib/db/client";
 import { loadPackageActivity } from "@/lib/db/package-activity";
 
@@ -6,11 +7,26 @@ import { loadPackageActivity } from "@/lib/db/package-activity";
 export const GET = withHandler(
   async () => {
     const db = getDb();
-    const activity = await loadPackageActivity(db);
-    return jsonOk({
-      activity,
-      databaseConfigured: databaseLogContext().configured,
-    });
+    const connection = databaseLogContext();
+    const { activity, matchedRows, error } = await loadPackageActivity(db);
+    return NextResponse.json(
+      {
+        activity,
+        matchedRows,
+        databaseConfigured: connection.configured,
+        connection: {
+          host: connection.host,
+          port: connection.port,
+          user: connection.user,
+        },
+        ...(error ? { error } : {}),
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store",
+        },
+      },
+    );
   },
   {
     logLabel: "packages/activity",

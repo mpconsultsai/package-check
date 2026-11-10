@@ -1,6 +1,8 @@
 import { jsonOk, withHandler } from "@/lib/api/http";
+import { databaseLogContext } from "@/lib/db/client";
 
 export const GET = withHandler(async () => {
+  const postgres = databaseLogContext();
   return jsonOk({
     status: "ok",
     timestamp: new Date().toISOString(),
@@ -13,12 +15,11 @@ export const GET = withHandler(async () => {
       ),
       github: Boolean(process.env.GITHUB_TOKEN),
       mcp: Boolean(process.env.MCP_API_KEY?.trim()),
-      postgres: Boolean(
-        process.env.POSTGRES_DB_PWD?.trim() &&
-          process.env.SUPABASE_URL?.trim() &&
-          process.env.SUPABASE_DB_HOST?.trim(),
-      ),
+      postgres: postgres.configured,
     },
+    postgres: postgres.configured
+      ? { host: postgres.host, port: postgres.port, user: postgres.user }
+      : null,
     message: "API is running",
   });
 }, { logLabel: "health" });

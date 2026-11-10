@@ -12,8 +12,8 @@ describe("recordOpenedPackage", () => {
     recordPackageSearch.mockClear();
   });
 
-  it("should record the opened package immediately", () => {
-    recordOpenedPackage(
+  it("should await recording the opened package", async () => {
+    await recordOpenedPackage(
       "pypi",
       " requests ",
       new Headers({ "user-agent": "Cursor/1.4.0" }),
@@ -37,8 +37,8 @@ describe("recordOpenedPackage", () => {
     ]);
   });
 
-  it("should skip a name that is too short", () => {
-    recordOpenedPackage("npm", " a ");
+  it("should skip a name that is too short", async () => {
+    await recordOpenedPackage("npm", " a ");
     recordPackageSearch.mock.calls.should.have.length(0);
   });
 });

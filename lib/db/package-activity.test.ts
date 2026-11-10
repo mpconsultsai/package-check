@@ -52,8 +52,10 @@ describe("loadPackageActivity", () => {
   });
 
   it("should return empty lists when the database is unset", async () => {
-    const activity = await loadPackageActivity(null);
-    activity.npm.should.deep.equal({ popular: [], recent: [] });
+    const result = await loadPackageActivity(null);
+    result.activity.npm.should.deep.equal({ popular: [], recent: [] });
+    result.matchedRows.should.equal(0);
+    (result.error === null).should.equal(true);
   });
 
   it("should return empty lists when the query fails", async () => {
@@ -61,7 +63,24 @@ describe("loadPackageActivity", () => {
     const execute = vi.fn(async () => {
       throw new Error("connection refused");
     });
-    const activity = await loadPackageActivity({ execute } as unknown as Database);
-    activity.pypi.should.deep.equal({ popular: [], recent: [] });
+    const result = await loadPackageActivity({ execute } as unknown as Database);
+    result.activity.pypi.should.deep.equal({ popular: [], recent: [] });
+    result.matchedRows.should.equal(0);
+    result.error!.should.match(/connection refused/);
+  });
+
+  it("should group rows returned by execute", async () => {
+    const execute = vi.fn(async () => [
+      {
+        ecosystem: "npm",
+        name: "lodash",
+        checks: 3,
+        last_checked: "2026-11-10T10:00:00Z",
+      },
+    ]);
+    const result = await loadPackageActivity({ execute } as unknown as Database);
+    result.matchedRows.should.equal(1);
+    (result.error === null).should.equal(true);
+    result.activity.npm.popular.should.deep.equal([{ name: "lodash", checks: 3 }]);
   });
 });

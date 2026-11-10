@@ -8,18 +8,18 @@ type HeaderSource = {
 
 /**
  * Store a package that was successfully opened (metrics loaded).
- * Starts the insert immediately — does not use `after()`, which is unreliable
- * on some hosts and left the home-page activity lists empty in production.
+ * Awaited by the metrics handler so serverless runtimes do not freeze
+ * before the insert finishes (fire-and-forget left activity lists empty).
  */
-export function recordOpenedPackage(
+export async function recordOpenedPackage(
   ecosystem: PackageEcosystem,
   packageName: string,
   requestHeaders?: HeaderSource,
-): void {
+): Promise<void> {
   const query = packageName.trim();
   if (query.length < 2) return;
   const client = requestHeaders ? clientMetadata(requestHeaders) : {};
-  void recordPackageSearch({
+  await recordPackageSearch({
     ecosystem,
     query,
     resultNames: [query],
