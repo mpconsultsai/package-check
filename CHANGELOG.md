@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.26 - 2026-11-10
+
+- fix: Changes to DB access (0a39f92)
+
 ## 0.1.25 - 2026-11-10
 
 - test: Fix stale test (993a0e1)
