@@ -170,6 +170,7 @@ export function WatchlistSection({
   checking = false,
   checkError = null,
   onCheck,
+  onSelect,
   ecosystem = "npm",
 }: {
   /** Compact list for the search-card Watchlist panel */
@@ -177,6 +178,8 @@ export function WatchlistSection({
   checking?: boolean;
   checkError?: string | null;
   onCheck?: () => void;
+  /** Fired when a watched package link is activated (e.g. close the panel). */
+  onSelect?: () => void;
   /** Show only packages from this registry. */
   ecosystem?: PackageEcosystem;
 }) {
@@ -262,6 +265,7 @@ export function WatchlistSection({
           <Link
             href={packagePagePath(entry.ecosystem ?? "npm", entry.name)}
             scroll={false}
+            onClick={() => onSelect?.()}
             className="group min-w-0 flex-1"
           >
             <p className="truncate font-mono text-sm font-medium">

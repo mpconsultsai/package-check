@@ -23,6 +23,7 @@ import {
   pypiHasAnyRequirements,
   type PypiDependenciesMeta,
 } from "@/components/analysis/PypiDependenciesPanel";
+import { ChevronRightIcon } from "@/components/icons";
 
 const GRAPH_CAP = 18;
 
@@ -128,18 +129,9 @@ function DependencyRow({
             }
             className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
           >
-            <svg
+            <ChevronRightIcon
               className={`h-3.5 w-3.5 transition-transform ${open ? "rotate-90" : ""}`}
-              viewBox="0 0 20 20"
-              fill="currentColor"
-              aria-hidden="true"
-            >
-              <path
-                fillRule="evenodd"
-                d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z"
-                clipRule="evenodd"
-              />
-            </svg>
+            />
           </button>
         ) : (
           <span className="mt-0.5 inline-block h-6 w-6 shrink-0" aria-hidden="true" />

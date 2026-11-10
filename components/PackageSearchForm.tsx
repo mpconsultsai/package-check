@@ -45,6 +45,7 @@ import {
   ClearIcon,
   SearchIcon,
 } from "@/components/icons";
+import { subscribeCloseShellUtilityPanel } from "@/components/shell-utility-panel";
 
 function mavenArtifactLabel(name: string): string {
   return parseMavenCoordinate(name)?.artifactId ?? name;
@@ -371,6 +372,11 @@ export function PackageSearchForm({
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [utilityPanel, closeUtilityPanel]);
+
+  useEffect(
+    () => subscribeCloseShellUtilityPanel(() => closeUtilityPanel(false)),
+    [closeUtilityPanel],
+  );
 
   const showResultsPanel =
     !utilityPanel &&
@@ -895,6 +901,7 @@ export function PackageSearchForm({
             checking={watchlistChecking}
             checkError={watchlistCheckError}
             onCheck={checkNow}
+            onSelect={() => setUtilityPanel(null)}
           />
         </div>
       )}

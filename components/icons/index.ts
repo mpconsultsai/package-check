@@ -1,6 +1,7 @@
 export type { IconProps } from "@/components/icons/icon-props";
 export { ArrowPathIcon } from "@/components/icons/ArrowPathIcon";
 export { CheckIcon } from "@/components/icons/CheckIcon";
+export { ChevronRightIcon } from "@/components/icons/ChevronRightIcon";
 export { ClearIcon } from "@/components/icons/ClearIcon";
 export { ClipboardIcon } from "@/components/icons/ClipboardIcon";
 export { CogIcon } from "@/components/icons/CogIcon";

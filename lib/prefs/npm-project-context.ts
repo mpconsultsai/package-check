@@ -6,11 +6,22 @@ import {
 } from "@/lib/parse/parse-npm-project-context";
 
 const STORAGE_KEY = "npv-npm-project-context-v1";
+/** Legacy key from when project context lived in localStorage. */
+const LEGACY_LOCAL_STORAGE_KEY = "npv-npm-project-context-v1";
 
 type Listener = () => void;
 
 const listeners = new Set<Listener>();
 let storageHydrated = false;
+
+function sessionStore(): Storage | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.sessionStorage;
+  } catch {
+    return null;
+  }
+}
 
 export type NpmProjectContext = {
   rawText: string;
@@ -52,7 +63,15 @@ function fromParsed(
 
 function readRaw(): NpmProjectContext | null {
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    // Drop any leftover localStorage copy from earlier builds.
+    try {
+      window.localStorage.removeItem(LEGACY_LOCAL_STORAGE_KEY);
+    } catch {
+      // ignore
+    }
+    const store = sessionStore();
+    if (!store) return null;
+    const raw = store.getItem(STORAGE_KEY);
     if (!raw) return null;
     const data = JSON.parse(raw) as {
       rawText?: unknown;
@@ -118,7 +137,7 @@ export function setNpmProjectContextFromText(
   const next = fromParsed(trimmed, parsed);
   snapshot = next;
   try {
-    window.localStorage.setItem(
+    sessionStore()?.setItem(
       STORAGE_KEY,
       JSON.stringify({ rawText: next.rawText, updatedAt: next.updatedAt }),
     );
@@ -135,7 +154,12 @@ export function clearNpmProjectContext(): void {
   }
   snapshot = null;
   try {
-    window.localStorage.removeItem(STORAGE_KEY);
+    sessionStore()?.removeItem(STORAGE_KEY);
+  } catch {
+    // ignore
+  }
+  try {
+    window.localStorage.removeItem(LEGACY_LOCAL_STORAGE_KEY);
   } catch {
     // ignore
   }

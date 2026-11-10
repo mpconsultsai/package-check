@@ -22,6 +22,7 @@ import { useAiAnalysisEnabled, useAiAnalysisPrefReady } from "@/lib/prefs/use-ai
 import { getAiAnalysisEnabled } from "@/lib/prefs/ai-analysis-pref";
 import { compactAdvisories } from "@/lib/prefs/watchlist-alerts";
 import type { WatchlistSummary } from "@/lib/prefs/watchlist-store";
+import { clearNpmProjectContext } from "@/lib/prefs/npm-project-context";
 import {
   PackageInfoCard,
   MetricsChartsCard,
@@ -359,6 +360,12 @@ function PackagePageContent({
     if (tab === "charts") setChartsOpened(true);
     setOverviewTab(tab);
   };
+
+  // Paste lives only while Upgrade is open — clear when leaving the tab.
+  useEffect(() => {
+    if (overviewTab === "upgrade") return;
+    clearNpmProjectContext();
+  }, [overviewTab]);
 
   const handleInsightTabChange = (tab: InsightTabId) => {
     setInsightTab(tab);

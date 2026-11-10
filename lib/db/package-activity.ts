@@ -7,10 +7,11 @@ import type { Database } from "@/lib/db/client";
 import { getDb } from "@/lib/db/client";
 
 const ACTIVITY_DAYS = 7;
-const VERIFY_DAYS = 30;
 const LIST_LIMIT = 8;
 const NAME_MAX = 100;
-const PACKAGE_NAME = /^(?:@[a-z0-9][\w.-]*\/)?[a-z0-9][\w.-]*$/i;
+/** npm/PyPI/NuGet names, plus Maven groupId:artifactId. */
+const PACKAGE_NAME =
+  /^(?:@[a-z0-9][\w.-]*\/)?[a-z0-9][\w.-]*(?::[a-z0-9][\w.-]*)?$/i;
 
 export type ActivePackage = { name: string; checks: number };
 
@@ -86,8 +87,9 @@ export function groupPackageActivity(rows: PackageActivityRow[]): PackageActivit
 }
 
 /**
- * Packages opened in the last week. A name only counts once a registry search has returned it,
- * so typed URLs for packages that do not exist never reach the home page.
+ * Packages opened in the last week.
+ * Page opens are recorded only after metrics resolve a real package, so a
+ * typed URL for a missing name never appears here.
  */
 export async function loadPackageActivity(
   db: Database | null = getDb(),
@@ -97,36 +99,24 @@ export async function loadPackageActivity(
     // Unprepared queries (transaction pooler) cannot bind a Date; send ISO text.
     const day = 24 * 60 * 60 * 1000;
     const since = new Date(Date.now() - ACTIVITY_DAYS * day).toISOString();
-    const verifySince = new Date(Date.now() - VERIFY_DAYS * day).toISOString();
     const rows = await db.execute<PackageActivityRow>(sql`
-      with opened as (
-        select ecosystem, query_normalized as key, btrim(query) as name, created_at
-        from package_searches
-        where created_at >= ${since}
-          and (
-            metadata->>'page' = 'true'
-            or metadata->>'tool' in ('get_package', 'get_security', 'upgrade_package', 'analyse_package')
-          )
-      ),
-      verified as (
-        select distinct ecosystem, lower(btrim(hit.name)) as key
-        from package_searches
-        cross join lateral unnest(result_names) as hit(name)
-        where created_at >= ${verifySince}
-          and coalesce(metadata->>'page', '') <> 'true'
-          and (
-            metadata->>'tool' = 'search_packages'
-            or metadata->>'tool' is null
-          )
-      )
       select
-        opened.ecosystem,
-        (array_agg(opened.name order by opened.created_at desc))[1] as name,
+        ecosystem,
+        (array_agg(btrim(query) order by created_at desc))[1] as name,
         count(*)::int as checks,
-        max(opened.created_at) as last_checked
-      from opened
-      join verified using (ecosystem, key)
-      group by opened.ecosystem, opened.key
+        max(created_at) as last_checked
+      from package_searches
+      where created_at >= ${since}
+        and (
+          metadata->>'page' = 'true'
+          or metadata->>'tool' in (
+            'get_package',
+            'get_security',
+            'upgrade_package',
+            'analyse_package'
+          )
+        )
+      group by ecosystem, query_normalized
     `);
     return groupPackageActivity([...rows]);
   } catch (error: unknown) {

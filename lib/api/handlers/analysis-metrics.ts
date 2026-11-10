@@ -7,20 +7,25 @@ import {
   requirePackageFromQueryWithEcosystem,
   requirePackageNameForEcosystem,
 } from "@/lib/api/params";
+import { recordOpenedPackage } from "@/lib/db/record-opened-package";
+import type { PackageEcosystem } from "@/lib/packages/package-routes";
 
 const analyze = async (
   packageName: string,
-  ecosystem: import("@/lib/packages/package-routes").PackageEcosystem,
+  ecosystem: PackageEcosystem,
+  requestHeaders?: Headers,
 ) => {
   console.log(`Analyzing package (metrics): ${ecosystem}|${packageName}`);
   const packageData = await analyzePackageCached(packageName, ecosystem);
+  // Only count packages that resolved — feeds "Most checked this week".
+  recordOpenedPackage(ecosystem, packageName, requestHeaders);
   return jsonOk(buildAnalysisResponse(packageName, packageData, null));
 };
 
 /** GET /api/v1/analysis/metrics?package=&ecosystem=npm|pypi */
 export const GET = withHandler(async (request) => {
   const { packageName, ecosystem } = requirePackageFromQueryWithEcosystem(request);
-  return analyze(packageName, ecosystem);
+  return analyze(packageName, ecosystem, request.headers);
 }, { logLabel: "analysis/metrics", fallbackMessage: "Failed to analyse package" });
 
 /** POST /api/v1/analysis/metrics { packageName, ecosystem? } */
@@ -33,5 +38,5 @@ export const POST = withHandler(async (request) => {
     typeof body.packageName === "string" ? body.packageName : "",
     ecosystem,
   );
-  return analyze(packageName, ecosystem);
+  return analyze(packageName, ecosystem, request.headers);
 }, { logLabel: "analysis/metrics", fallbackMessage: "Failed to analyse package" });

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useShellEcosystem } from "@/components/shell-ecosystem";
+import { requestCloseShellUtilityPanel } from "@/components/shell-utility-panel";
 import type { ActivePackage, PackageActivity as Activity } from "@/lib/db/package-activity";
 import { packagePagePath, type PackageEcosystem } from "@/lib/packages/package-routes";
 
@@ -31,6 +32,7 @@ function ActivityList({
             <Link
               href={packagePagePath(ecosystem, item.name)}
               scroll={false}
+              onClick={() => requestCloseShellUtilityPanel()}
               className="link min-w-0 truncate font-mono text-sm"
             >
               {item.name}

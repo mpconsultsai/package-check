@@ -127,7 +127,7 @@ npm run dev
 
 Anonymous package searches and opened package pages are stored in a `package_searches` table. Create it by running `supabase/migrations/20261016000000_package_searches.sql` in the Supabase SQL editor, then set `SUPABASE_URL`, `SUPABASE_DB_HOST` (the transaction pooler host for your project region, for example `aws-0-eu-west-1.pooler.supabase.com`), `SUPABASE_DB_PORT` (`6543`), `SUPABASE_DB_USER` (`postgres.<project-ref>`), and `POSTGRES_DB_PWD`. The `NEXT_PUBLIC_SUPABASE_*` keys are not used.
 
-The home page lists come from this table and refresh every five minutes. A package name only appears there after a registry search has returned it, so a typed URL for a package that does not exist is never listed. Without the database, the app works and the lists are hidden.
+The home page lists come from this table (loaded on each request). A package only appears after its metrics load succeeds, so a typed URL for a package that does not exist is never listed. Without the database, the app works and the lists are hidden.
 
 ### Tests
 

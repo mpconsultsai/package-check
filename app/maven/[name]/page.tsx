@@ -1,6 +1,4 @@
-import { headers } from "next/headers";
 import { PackageAnalysisPage } from "@/components/analysis/PackageAnalysisPage";
-import { recordOpenedPackage } from "@/lib/db/record-opened-package";
 import {
   decodePackageParam,
   packagePageMetadata,
@@ -20,7 +18,6 @@ export default async function MavenPackagePage({
 }: MavenPackagePageProps) {
   const { name } = await params;
   const packageName = decodePackageParam(name);
-  recordOpenedPackage("maven", packageName, await headers());
 
   return (
     <PackageAnalysisPage ecosystem="maven" nameFromPath={packageName} />

@@ -31,9 +31,18 @@ describe("groupPackageActivity", () => {
       { ecosystem: "npm", name: "a", checks: 4, last_checked: "2026-10-10T10:00:00Z" },
       { ecosystem: "cargo", name: "serde", checks: 4, last_checked: "2026-10-10T10:00:00Z" },
       { ecosystem: "nuget", name: "Newtonsoft.Json", checks: 1, last_checked: "2026-10-10T10:00:00Z" },
+      {
+        ecosystem: "maven",
+        name: "com.google.guava:guava",
+        checks: 2,
+        last_checked: "2026-10-10T10:00:00Z",
+      },
     ]);
     activity.npm.popular.should.deep.equal([]);
     activity.nuget.popular.should.deep.equal([{ name: "Newtonsoft.Json", checks: 1 }]);
+    activity.maven.popular.should.deep.equal([
+      { name: "com.google.guava:guava", checks: 2 },
+    ]);
   });
 });
 

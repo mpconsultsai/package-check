@@ -23,6 +23,7 @@ import { SelectField } from "@/components/SelectField";
 import { AgentGraphSteps } from "@/components/analysis/AgentGraphSteps";
 import {
   ArrowPathIcon,
+  ChevronRightIcon,
   MinusIcon,
   PlusIcon,
 } from "@/components/icons";
@@ -448,7 +449,9 @@ export function UpgradeAdvisorPanel({
     if (projectContext?.rawText) {
       setProjectDraft(projectContext.rawText);
       setProjectOpen(true);
+      return;
     }
+    setProjectDraft("");
   }, [projectContext?.rawText]);
 
   // Resolve latest Node LTS from nodejs.org for the default runtime.
@@ -1015,23 +1018,18 @@ export function UpgradeAdvisorPanel({
       >
         <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-medium hover:bg-black/[0.03] dark:hover:bg-white/[0.04] sm:px-5 [&::-webkit-details-marker]:hidden">
           <span className="inline-flex min-w-0 items-center gap-2">
-            <span
-              className="shrink-0 text-xs opacity-50 transition-transform group-open:rotate-90"
-              aria-hidden="true"
-            >
-              ▶
-            </span>
-            <span className="font-semibold text-ink">Paste package.json</span>
+            <ChevronRightIcon className="h-3.5 w-3.5 shrink-0 text-gray-500 transition-transform group-open:rotate-90 dark:text-gray-400" />
+            <span className="font-semibold text-ink">Your project</span>
           </span>
           <span className="truncate text-xs font-normal text-gray-500 dark:text-gray-400">
             {projectContext
               ? `Using ${sourceLabel} · ${projectContext.packageCount} package${projectContext.packageCount === 1 ? "" : "s"}`
-              : "Seed versions and check peers"}
+              : "Optional — match this upgrade to your deps"}
           </span>
         </summary>
         <div className="space-y-3 border-t border-rule px-4 py-3 sm:px-5">
           <label htmlFor="upgradeProjectContext" className="sr-only">
-            Paste package.json
+            Paste your package.json
           </label>
           <textarea
             id="upgradeProjectContext"
@@ -1042,7 +1040,7 @@ export function UpgradeAdvisorPanel({
             }}
             rows={6}
             spellCheck={false}
-            placeholder='{ "dependencies": { … }, "engines": { "node": ">=18" } }'
+            placeholder="Paste package.json (or a lockfile) here"
             className="w-full rounded-lg border border-rule bg-white px-3 py-2 font-mono text-xs leading-relaxed text-ink outline-none focus:border-signal dark:bg-gray-900"
           />
           <div className="flex flex-wrap items-center gap-2">
@@ -1451,12 +1449,7 @@ export function UpgradeAdvisorPanel({
             >
               <summary className="cursor-pointer list-none px-4 py-3 sm:px-5 text-sm font-medium flex items-center justify-between gap-3 hover:bg-black/[0.03] dark:hover:bg-white/[0.04] [&::-webkit-details-marker]:hidden">
                 <span className="inline-flex items-center gap-2">
-                  <span
-                    className="text-xs opacity-50 transition-transform group-open:rotate-90"
-                    aria-hidden="true"
-                  >
-                    ▶
-                  </span>
+                  <ChevronRightIcon className="h-3.5 w-3.5 shrink-0 text-gray-500 transition-transform group-open:rotate-90 dark:text-gray-400" />
                   What changed
                 </span>
                 <span className="text-xs font-normal opacity-60 truncate">

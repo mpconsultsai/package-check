@@ -36,7 +36,8 @@ const jsonLd = {
   ],
 };
 
-export const revalidate = 300;
+/** Always load activity at request time — ISR was caching empty lists when DB was cold. */
+export const dynamic = "force-dynamic";
 
 export default async function Home() {
   const activity = await loadPackageActivity();
