@@ -1,6 +1,8 @@
 const { execFileSync } = require("node:child_process");
 const path = require("node:path");
 
+const RELEASE_COMMIT = /^v\d+\.\d+\.\d+ \[skip render\]$/;
+
 function githubRepoUrl(remote) {
   const cleaned = String(remote ?? "").trim().replace(/\.git$/, "");
   const ssh = cleaned.match(/^git@github\.com:(.+)$/);
@@ -21,6 +23,23 @@ function releaseRepoUrl(remote, slug) {
 
 function git(args, options = {}) {
   return execFileSync("git", args, { encoding: "utf8", ...options });
+}
+
+function envFlag(name) {
+  const value = process.env[name]?.trim().toLowerCase();
+  return value === "1" || value === "true" || value === "yes";
+}
+
+/**
+ * Skip bump/tag when asked, or when HEAD is already a release commit
+ * (common on Render "Manual Deploy" of main after a prior release).
+ */
+function shouldSkipRelease(subject = "") {
+  if (envFlag("SKIP_RELEASE")) return "SKIP_RELEASE is set";
+  if (RELEASE_COMMIT.test(subject.trim())) {
+    return `HEAD is already a release commit (${subject.trim()})`;
+  }
+  return null;
 }
 
 /** A Render checkout is often shallow and has no tags, so the changelog would miss commits. */
@@ -44,6 +63,18 @@ function fetchReleaseHistory() {
 
 function main() {
   if (process.env.RENDER !== "true") return;
+
+  let headSubject = "";
+  try {
+    headSubject = git(["log", "-1", "--pretty=%s"]).trim();
+  } catch {
+    headSubject = "";
+  }
+  const skipReason = shouldSkipRelease(headSubject);
+  if (skipReason) {
+    console.log(`Skipping release-it: ${skipReason}`);
+    return;
+  }
 
   const token = process.env.RELEASE_GITHUB_TOKEN?.trim();
   if (!token) {
@@ -91,4 +122,4 @@ function main() {
 
 if (require.main === module) main();
 
-module.exports = { githubRepoUrl, releaseRepoUrl };
+module.exports = { githubRepoUrl, releaseRepoUrl, shouldSkipRelease };

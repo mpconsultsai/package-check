@@ -10,7 +10,7 @@ import {
   createEmptyPackageActivity,
   type ActivePackage,
   type PackageActivity as Activity,
-} from "@/lib/db/package-activity";
+} from "@/lib/db/package-activity-model";
 import {
   packagePagePath,
   type PackageEcosystem,
