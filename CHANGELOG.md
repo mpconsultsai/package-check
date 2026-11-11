@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.30 - 2026-11-11
+
+- refactor: Fixes and updates (99b0852)
+
 ## 0.1.29 - 2026-11-11
 
 - refactor: Fixes and updates (57574ba)
