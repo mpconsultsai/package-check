@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.29 - 2026-11-11
+
+- refactor: Fixes and updates (57574ba)
+
 ## 0.1.26 - 2026-11-10
 
 - fix: Changes to DB access (0a39f92)
