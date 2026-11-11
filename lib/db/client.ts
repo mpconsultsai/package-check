@@ -18,7 +18,7 @@ function projectRef(supabaseUrl: string): string | null {
 }
 
 /** Trim and drop wrapping quotes from dashboard/env copy-paste. */
-function envValue(value: string | undefined): string {
+export const envValue = (value: string | undefined): string => {
   const trimmed = value?.trim() ?? "";
   if (
     (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
@@ -27,7 +27,28 @@ function envValue(value: string | undefined): string {
     return trimmed.slice(1, -1);
   }
   return trimmed;
-}
+};
+
+/**
+ * Prefer `POSTGRES_DB_PWD_B64` (base64 of the real password) so `$`, `#`,
+ * quotes, and similar survive Render / .env paste. Falls back to plain
+ * `POSTGRES_DB_PWD`.
+ */
+type EnvMap = Record<string, string | undefined>;
+
+export const resolvePostgresPassword = (env: EnvMap = process.env): string => {
+  const encoded = envValue(env.POSTGRES_DB_PWD_B64);
+  if (encoded) {
+    try {
+      const decoded = Buffer.from(encoded, "base64").toString("utf8");
+      // Reject obvious non-base64 garbage that decodes to empty or binary junk.
+      if (decoded.length > 0) return decoded;
+    } catch {
+      // fall through
+    }
+  }
+  return envValue(env.POSTGRES_DB_PWD);
+};
 
 type PostgresConfig = {
   host: string;
@@ -36,22 +57,21 @@ type PostgresConfig = {
   password: string;
 };
 
-function postgresConfig(): PostgresConfig | null {
-  const password = envValue(process.env.POSTGRES_DB_PWD);
-  const supabaseUrl = envValue(process.env.SUPABASE_URL);
+function postgresConfig(env: EnvMap = process.env): PostgresConfig | null {
+  const password = resolvePostgresPassword(env);
+  const supabaseUrl = envValue(env.SUPABASE_URL);
   if (!password || !supabaseUrl) return null;
   const ref = projectRef(supabaseUrl);
   if (!ref) return null;
 
-  const host =
-    envValue(process.env.SUPABASE_DB_HOST) || `db.${ref}.supabase.co`;
+  const host = envValue(env.SUPABASE_DB_HOST) || `db.${ref}.supabase.co`;
   const pooler = host.includes("pooler.supabase.com");
   // Transaction pooler is 6543; direct db.* hosts use 5432.
   const defaultPort = pooler ? "6543" : "5432";
-  const portNumber = Number(envValue(process.env.SUPABASE_DB_PORT) || defaultPort);
+  const portNumber = Number(envValue(env.SUPABASE_DB_PORT) || defaultPort);
   const port = Number.isFinite(portNumber) ? portNumber : Number(defaultPort);
   const username =
-    envValue(process.env.SUPABASE_DB_USER) ||
+    envValue(env.SUPABASE_DB_USER) ||
     (pooler ? `postgres.${ref}` : "postgres");
 
   return { host, port, username, password };

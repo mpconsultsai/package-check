@@ -11,11 +11,11 @@ type HeaderSource = {
  * Awaited by the metrics handler so serverless runtimes do not freeze
  * before the insert finishes (fire-and-forget left activity lists empty).
  */
-export async function recordOpenedPackage(
+export const recordOpenedPackage = async (
   ecosystem: PackageEcosystem,
   packageName: string,
   requestHeaders?: HeaderSource,
-): Promise<void> {
+): Promise<void> => {
   const query = packageName.trim();
   if (query.length < 2) return;
   const client = requestHeaders ? clientMetadata(requestHeaders) : {};
@@ -26,4 +26,4 @@ export async function recordOpenedPackage(
     source: "web",
     metadata: { page: true, resolved: true, ...client },
   });
-}
+};

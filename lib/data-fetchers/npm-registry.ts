@@ -861,19 +861,3 @@ export async function fetchSimilarPackages(
   }
 }
 
-/**
- * Fetch package README content (truncated for AI analysis).
- * Prefer readme from fetchNpmPackageData when analysing - this is a standalone fallback.
- */
-export async function fetchNpmReadme(packageName: string): Promise<string | null> {
-  try {
-    const { readme } = await fetchNpmPackageData(packageName);
-    return readme;
-  } catch (error: unknown) {
-    console.error(
-      `Failed to fetch README for ${packageName}:`,
-      errorMessage(error),
-    );
-    return null;
-  }
-}

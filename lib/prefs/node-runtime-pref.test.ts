@@ -6,7 +6,7 @@ import {
 } from "./node-runtime-pref";
 
 describe("parseNodeRuntimeVersion", () => {
-  it("accepts empty and bare majors/minors/patches", () => {
+  it("should accept empty and bare majors/minors/patches", () => {
     expect(parseNodeRuntimeVersion("")).to.deep.equal({ ok: true, value: "" });
     expect(parseNodeRuntimeVersion("  ")).to.deep.equal({ ok: true, value: "" });
     expect(parseNodeRuntimeVersion("22")).to.deep.equal({ ok: true, value: "22" });
@@ -20,7 +20,7 @@ describe("parseNodeRuntimeVersion", () => {
     });
   });
 
-  it("rejects ranges, tags, and nonsense", () => {
+  it("should reject ranges, tags, and nonsense", () => {
     expect(parseNodeRuntimeVersion(">=20").ok).to.equal(false);
     expect(parseNodeRuntimeVersion("lts").ok).to.equal(false);
     expect(parseNodeRuntimeVersion("20.x").ok).to.equal(false);
@@ -30,7 +30,7 @@ describe("parseNodeRuntimeVersion", () => {
 });
 
 describe("normalizeNodeRuntimeVersion", () => {
-  it("returns empty for invalid input", () => {
+  it("should return empty for invalid input", () => {
     expect(normalizeNodeRuntimeVersion("lts")).to.equal("");
     expect(normalizeNodeRuntimeVersion("v22.1")).to.equal("22.1");
   });

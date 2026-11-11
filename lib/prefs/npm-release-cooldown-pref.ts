@@ -1,3 +1,5 @@
+import { createLocalPrefStore } from "@/lib/prefs/local-pref-store";
+
 const STORAGE_KEY = "npv-npm-release-cooldown-hours";
 
 /** Default matches common enterprise “wait a day” install policies. */
@@ -13,16 +15,6 @@ export type NpmReleaseCooldownHours =
 
 const MIN_HOURS = 0;
 const MAX_HOURS = 168;
-
-type Listener = () => void;
-
-const listeners = new Set<Listener>();
-let storageHydrated = false;
-let hours: NpmReleaseCooldownHours = DEFAULT_NPM_RELEASE_COOLDOWN_HOURS;
-
-const emit = () => {
-  listeners.forEach((listener) => listener());
-};
 
 export function clampNpmReleaseCooldownHours(
   value: unknown,
@@ -51,51 +43,24 @@ export function clampNpmReleaseCooldownHours(
   return best;
 }
 
-function hydrateFromStorage(): void {
-  if (storageHydrated) return;
-  storageHydrated = true;
-  const raw = window.localStorage.getItem(STORAGE_KEY);
-  hours =
+const store = createLocalPrefStore<NpmReleaseCooldownHours>({
+  key: STORAGE_KEY,
+  defaultValue: DEFAULT_NPM_RELEASE_COOLDOWN_HOURS,
+  parse: (raw) =>
     raw === null
       ? DEFAULT_NPM_RELEASE_COOLDOWN_HOURS
-      : clampNpmReleaseCooldownHours(raw);
-  emit();
-}
+      : clampNpmReleaseCooldownHours(raw),
+  serialize: (value) => String(value),
+});
 
-const read = (): NpmReleaseCooldownHours => {
-  if (typeof window === "undefined") return DEFAULT_NPM_RELEASE_COOLDOWN_HOURS;
-  if (!storageHydrated) return DEFAULT_NPM_RELEASE_COOLDOWN_HOURS;
-  return hours;
-};
-
-export const subscribeNpmReleaseCooldownPref = (
-  listener: Listener,
-): (() => void) => {
-  listeners.add(listener);
-  if (typeof window !== "undefined" && !storageHydrated) {
-    queueMicrotask(() => hydrateFromStorage());
-  }
-  return () => listeners.delete(listener);
-};
-
-export const getNpmReleaseCooldownHours = (): NpmReleaseCooldownHours => read();
-
-export const getNpmReleaseCooldownHoursServerSnapshot =
-  (): NpmReleaseCooldownHours => DEFAULT_NPM_RELEASE_COOLDOWN_HOURS;
+export const subscribeNpmReleaseCooldownPref = store.subscribe;
+export const getNpmReleaseCooldownHours = store.get;
+export const getNpmReleaseCooldownHoursServerSnapshot = store.getServerSnapshot;
 
 export const setNpmReleaseCooldownHours = (
   value: NpmReleaseCooldownHours | number | string,
 ): void => {
-  const next = clampNpmReleaseCooldownHours(value);
-  if (storageHydrated && hours === next) return;
-  hours = next;
-  storageHydrated = true;
-  try {
-    window.localStorage.setItem(STORAGE_KEY, String(next));
-  } catch {
-    // ignore quota / private mode
-  }
-  emit();
+  store.set(clampNpmReleaseCooldownHours(value));
 };
 
 export function npmReleaseCooldownLabel(value: NpmReleaseCooldownHours): string {

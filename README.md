@@ -123,7 +123,7 @@ npm run dev
 
 ### Database (optional)
 
-Anonymous package searches and opened package pages are stored in a `package_searches` table. Create it by running `supabase/migrations/20261016000000_package_searches.sql` in the Supabase SQL editor, then set `SUPABASE_URL`, `SUPABASE_DB_HOST` (the transaction pooler host for your project region, for example `aws-0-eu-west-1.pooler.supabase.com`), `SUPABASE_DB_PORT` (`6543`), `SUPABASE_DB_USER` (`postgres.<project-ref>`), and `POSTGRES_DB_PWD`. The `NEXT_PUBLIC_SUPABASE_*` keys are not used.
+Anonymous package searches and opened package pages are stored in a `package_searches` table. Create it by running `supabase/migrations/20261016000000_package_searches.sql` in the Supabase SQL editor, then set `SUPABASE_URL`, `SUPABASE_DB_HOST` (the transaction pooler host for your project region, for example `aws-0-eu-west-1.pooler.supabase.com`), `SUPABASE_DB_PORT` (`6543`), `SUPABASE_DB_USER` (`postgres.<project-ref>`), and the database password. Prefer `POSTGRES_DB_PWD_B64` (base64 of the real password: `printf '%s' 'your-password' | base64`) on Render so `$` and other characters are not mangled; `POSTGRES_DB_PWD` is the plain-text fallback. The `NEXT_PUBLIC_SUPABASE_*` keys are not used.
 
 The home page lists come from `/api/v1/packages/activity` (loaded in the browser). A package appears after a successful metrics open, an MCP package tool call, or an exact-name web search that returned it — so typed URLs for packages that do not exist are not listed. Without the database, the app works and the lists are hidden.
 
@@ -245,7 +245,7 @@ On Render, create a **Web Service** (this app serves API routes, so it is not a 
 - **Health check path**: `/api/v1/health`
 - **Root directory**: leave blank
 - **Node**: set `NODE_VERSION` to `24.21.0`. The app requires Node.js 24 or newer.
-- **Environment**: `GOOGLE_API_KEY`, `GROQ_API_KEY`, `GROQ_MODEL`, `GROQ_UPGRADE_AGENT_MODEL`, and `GITHUB_TOKEN`. Set `NEXT_PUBLIC_SITE_URL` for Open Graph, sitemap, and robots. On Render, `RENDER_EXTERNAL_URL` is used when that variable is unset. Optional: `NEXT_PUBLIC_GITHUB_REPO` and `NEXT_PUBLIC_CONTACT_EMAIL`. Set `MCP_API_KEY` to open the MCP endpoint. Set `SUPABASE_URL`, `SUPABASE_DB_HOST`, `SUPABASE_DB_PORT`, `SUPABASE_DB_USER`, and `POSTGRES_DB_PWD` to store anonymous package searches through the transaction pooler. `/api/v1/health` includes `apiKeys.postgres` when the URL, pooler host, and password are set
+- **Environment**: `GOOGLE_API_KEY`, `GROQ_API_KEY`, `GROQ_MODEL`, `GROQ_UPGRADE_AGENT_MODEL`, and `GITHUB_TOKEN`. Set `NEXT_PUBLIC_SITE_URL` for Open Graph, sitemap, and robots. On Render, `RENDER_EXTERNAL_URL` is used when that variable is unset. Optional: `NEXT_PUBLIC_GITHUB_REPO` and `NEXT_PUBLIC_CONTACT_EMAIL`. Set `MCP_API_KEY` to open the MCP endpoint. Set `SUPABASE_URL`, `SUPABASE_DB_HOST`, `SUPABASE_DB_PORT`, `SUPABASE_DB_USER`, and `POSTGRES_DB_PWD_B64` (or `POSTGRES_DB_PWD`) to store anonymous package searches through the transaction pooler. Use base64 for the password on Render when special characters break auth. `/api/v1/health` includes `apiKeys.postgres` when the URL and password are set
 
 Set `MCP_API_KEY` on the service to open `/api/mcp`. Clients and tool list are in [MCP server](#mcp-server).
 

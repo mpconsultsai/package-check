@@ -39,18 +39,6 @@ import type { ProjectUpgradeFacts } from "@/lib/upgrade/project-upgrade-fit";
 
 export { UPGRADE_AGENT_GENERIC_ERROR } from "@/lib/ai/upgrade-agent-messages";
 export type { UpgradeAgentStreamEvent } from "@/lib/ai/upgrade-agent-events";
-export {
-  computeUpgradeRisk,
-  buildSeedBullets,
-  buildSeedWatchFor,
-  buildContextualNextSteps,
-  mergeUpgradeNextSteps,
-  isQuietUpgrade,
-  finalizeUpgradeBrief,
-  upgradeAgeSignals,
-  dependencyChangeCount,
-  peerChangeCount,
-} from "@/lib/ai/upgrade-agent-brief";
 
 const briefSchema = z.object({
   headline: z.string().describe("One-line upgrade action verdict for this range"),

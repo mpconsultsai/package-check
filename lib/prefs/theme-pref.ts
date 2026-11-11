@@ -1,58 +1,23 @@
+import { createLocalPrefStore } from "@/lib/prefs/local-pref-store";
+
 export type ThemePreference = "system" | "light" | "dark";
 
 const STORAGE_KEY = "npv-theme";
 
-type Listener = () => void;
-
-const listeners = new Set<Listener>();
-let storageHydrated = false;
-let preference: ThemePreference = "system";
-
-const emit = () => {
-  listeners.forEach((listener) => listener());
-};
-
 const isThemePreference = (value: string | null): value is ThemePreference =>
   value === "system" || value === "light" || value === "dark";
 
-function hydrateFromStorage(): void {
-  if (storageHydrated) return;
-  storageHydrated = true;
-  const raw = window.localStorage.getItem(STORAGE_KEY);
-  preference = isThemePreference(raw) ? raw : "system";
-  emit();
-}
+const store = createLocalPrefStore<ThemePreference>({
+  key: STORAGE_KEY,
+  defaultValue: "system",
+  parse: (raw) => (isThemePreference(raw) ? raw : "system"),
+  serialize: (value) => value,
+});
 
-const read = (): ThemePreference => {
-  if (typeof window === "undefined") return "system";
-  if (!storageHydrated) return "system";
-  return preference;
-};
-
-export const subscribeThemePref = (listener: Listener): (() => void) => {
-  listeners.add(listener);
-  if (typeof window !== "undefined" && !storageHydrated) {
-    queueMicrotask(() => hydrateFromStorage());
-  }
-  return () => listeners.delete(listener);
-};
-
-export const getThemePreference = (): ThemePreference => read();
-
-export const getThemePreferenceServerSnapshot = (): ThemePreference =>
-  "system";
-
-export const setThemePreference = (value: ThemePreference): void => {
-  if (storageHydrated && preference === value) return;
-  preference = value;
-  storageHydrated = true;
-  try {
-    window.localStorage.setItem(STORAGE_KEY, value);
-  } catch {
-    // ignore quota / private mode
-  }
-  emit();
-};
+export const subscribeThemePref = store.subscribe;
+export const getThemePreference = store.get;
+export const getThemePreferenceServerSnapshot = store.getServerSnapshot;
+export const setThemePreference = store.set;
 
 export function resolveTheme(
   pref: ThemePreference,

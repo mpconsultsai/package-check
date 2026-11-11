@@ -11,6 +11,8 @@ export default defineConfig({
     environment: "node",
     include: ["**/*.test.ts"],
     setupFiles: ["./vitest.setup.ts"],
+    // List every test name (not just file summaries).
+    reporters: ["verbose"],
     coverage: {
       provider: "v8",
       reporter: ["text", "html"],

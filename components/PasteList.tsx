@@ -55,7 +55,7 @@ function isNotFoundError(message: string | undefined): boolean {
 }
 
 /** True when npm latest is newer than the pasted constraint / locked version. */
-export function isUpdateAvailable(
+function isUpdateAvailable(
   requested: string | undefined,
   latest: string | undefined,
 ): boolean {

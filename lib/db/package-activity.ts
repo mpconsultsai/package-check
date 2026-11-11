@@ -5,6 +5,8 @@ import {
 } from "@/lib/packages/package-routes";
 import type { Database } from "@/lib/db/client";
 import { getDb } from "@/lib/db/client";
+import { asExecuteRows } from "@/lib/db/execute-rows";
+import { dbFailureMessage } from "@/lib/db/query-error";
 
 const ACTIVITY_DAYS = 7;
 const LIST_LIMIT = 5;
@@ -29,26 +31,27 @@ export type PackageActivityRow = {
   last_checked: unknown;
 };
 
-function emptyActivity(): PackageActivity {
-  return Object.fromEntries(
-    PACKAGE_ECOSYSTEMS.map((ecosystem) => [ecosystem, { popular: [], recent: [] }]),
-  ) as unknown as PackageActivity;
-}
+export const createEmptyPackageActivity = (): PackageActivity => {
+  const activity = {} as PackageActivity;
+  for (const ecosystem of PACKAGE_ECOSYSTEMS) {
+    activity[ecosystem] = { popular: [], recent: [] };
+  }
+  return activity;
+};
 
-function isEcosystem(value: unknown): value is PackageEcosystem {
-  return (
-    typeof value === "string" &&
-    (PACKAGE_ECOSYSTEMS as readonly string[]).includes(value)
-  );
-}
+const isEcosystem = (value: unknown): value is PackageEcosystem =>
+  typeof value === "string" &&
+  (PACKAGE_ECOSYSTEMS as readonly string[]).includes(value);
 
-function timestamp(value: unknown): number {
+const timestamp = (value: unknown): number => {
   const time = value instanceof Date ? value.getTime() : Date.parse(String(value));
   return Number.isFinite(time) ? time : 0;
-}
+};
 
 /** Most checked and most recently checked packages per registry. */
-export function groupPackageActivity(rows: PackageActivityRow[]): PackageActivity {
+export const groupPackageActivity = (
+  rows: PackageActivityRow[],
+): PackageActivity => {
   const byEcosystem = new Map<
     PackageEcosystem,
     { name: string; checks: number; last: number }[]
@@ -66,7 +69,7 @@ export function groupPackageActivity(rows: PackageActivityRow[]): PackageActivit
     byEcosystem.set(row.ecosystem, list);
   }
 
-  const activity = emptyActivity();
+  const activity = createEmptyPackageActivity();
   for (const [ecosystem, list] of byEcosystem) {
     const strip = ({ name, checks }: { name: string; checks: number }) => ({
       name,
@@ -84,19 +87,7 @@ export function groupPackageActivity(rows: PackageActivityRow[]): PackageActivit
     };
   }
   return activity;
-}
-
-function asRowList(result: unknown): PackageActivityRow[] {
-  if (Array.isArray(result)) return result as PackageActivityRow[];
-  if (
-    result &&
-    typeof result === "object" &&
-    Array.isArray((result as { rows?: unknown }).rows)
-  ) {
-    return (result as { rows: PackageActivityRow[] }).rows;
-  }
-  return [];
-}
+};
 
 export type PackageActivityLoad = {
   activity: PackageActivity;
@@ -109,11 +100,11 @@ export type PackageActivityLoad = {
  * Counts: resolved page opens, MCP package tools, and exact-name web searches
  * that returned the package (so lists still populate when page opens were missed).
  */
-export async function loadPackageActivity(
+export const loadPackageActivity = async (
   db: Database | null = getDb(),
-): Promise<PackageActivityLoad> {
+): Promise<PackageActivityLoad> => {
   if (!db) {
-    return { activity: emptyActivity(), matchedRows: 0, error: null };
+    return { activity: createEmptyPackageActivity(), matchedRows: 0, error: null };
   }
   try {
     // Unprepared queries (transaction pooler) cannot bind a Date; send ISO text.
@@ -150,16 +141,19 @@ export async function loadPackageActivity(
         )
       group by ecosystem, query_normalized
     `);
-    const rows = asRowList(result);
+    const rows = asExecuteRows<PackageActivityRow>(result);
     return {
       activity: groupPackageActivity(rows),
       matchedRows: rows.length,
       error: null,
     };
   } catch (error: unknown) {
-    const cause = error instanceof Error && error.cause !== undefined ? error.cause : error;
-    const message = cause instanceof Error ? cause.message : "activity query failed";
+    const message = dbFailureMessage(error, "activity query failed");
     console.error("Failed to load package activity:", message);
-    return { activity: emptyActivity(), matchedRows: 0, error: message };
+    return {
+      activity: createEmptyPackageActivity(),
+      matchedRows: 0,
+      error: message,
+    };
   }
-}
+};

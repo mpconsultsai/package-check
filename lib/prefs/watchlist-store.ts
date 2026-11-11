@@ -184,10 +184,6 @@ export function isWatched(
   );
 }
 
-export function countWatchlistAlerts(entries: WatchlistEntry[] = listWatchlist()): number {
-  return entries.filter(watchlistEntryHasAlerts).length;
-}
-
 export function getWatchlistEntriesNeedingCheck(
   now = Date.now(),
 ): WatchlistEntry[] {
@@ -401,6 +397,3 @@ function freshEqual(
   );
 }
 
-export function clearWatchlist(): void {
-  writeRaw([]);
-}

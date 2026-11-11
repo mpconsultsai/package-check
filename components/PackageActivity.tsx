@@ -6,24 +6,15 @@ import { useShellEcosystem } from "@/components/shell-ecosystem";
 import { requestCloseShellUtilityPanel } from "@/components/shell-utility-panel";
 import { apiPaths } from "@/lib/api/paths";
 import { fetchJson } from "@/lib/prefs/fetch-client";
-import type {
-  ActivePackage,
-  PackageActivity as Activity,
+import {
+  createEmptyPackageActivity,
+  type ActivePackage,
+  type PackageActivity as Activity,
 } from "@/lib/db/package-activity";
 import {
-  PACKAGE_ECOSYSTEMS,
   packagePagePath,
   type PackageEcosystem,
 } from "@/lib/packages/package-routes";
-
-function emptyActivity(): Activity {
-  return Object.fromEntries(
-    PACKAGE_ECOSYSTEMS.map((ecosystem) => [
-      ecosystem,
-      { popular: [], recent: [] },
-    ]),
-  ) as unknown as Activity;
-}
 
 function ActivityList({
   title,
@@ -86,13 +77,15 @@ export function PackageActivity() {
       .then(({ ok, data }) => {
         if (controller.signal.aborted) return;
         if (!ok || !data.activity) {
-          setActivity(emptyActivity());
+          setActivity(createEmptyPackageActivity());
           return;
         }
         setActivity(data.activity);
       })
       .catch(() => {
-        if (!controller.signal.aborted) setActivity(emptyActivity());
+        if (!controller.signal.aborted) {
+          setActivity(createEmptyPackageActivity());
+        }
       });
     return () => controller.abort();
   }, []);

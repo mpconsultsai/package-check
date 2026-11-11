@@ -1,14 +1,6 @@
+import { createLocalPrefStore } from "@/lib/prefs/local-pref-store";
+
 const STORAGE_KEY = "npv-node-runtime-version";
-
-type Listener = () => void;
-
-const listeners = new Set<Listener>();
-let storageHydrated = false;
-let version = "";
-
-const emit = () => {
-  listeners.forEach((listener) => listener());
-};
 
 export type NodeRuntimeParse =
   | { ok: true; value: string }
@@ -52,50 +44,18 @@ export function normalizeNodeRuntimeVersion(value: unknown): string {
   return parsed.ok ? parsed.value : "";
 }
 
-function hydrateFromStorage(): void {
-  if (storageHydrated) return;
-  storageHydrated = true;
-  try {
-    version = normalizeNodeRuntimeVersion(
-      window.localStorage.getItem(STORAGE_KEY) ?? "",
-    );
-  } catch {
-    version = "";
-  }
-  emit();
-}
+const store = createLocalPrefStore<string>({
+  key: STORAGE_KEY,
+  defaultValue: "",
+  parse: (raw) => normalizeNodeRuntimeVersion(raw ?? ""),
+  serialize: (value) => (value ? value : null),
+});
 
-export const subscribeNodeRuntimePref = (
-  listener: Listener,
-): (() => void) => {
-  listeners.add(listener);
-  if (typeof window !== "undefined" && !storageHydrated) {
-    queueMicrotask(() => hydrateFromStorage());
-  }
-  return () => listeners.delete(listener);
-};
-
-export function getNodeRuntimeVersion(): string {
-  if (typeof window === "undefined") return "";
-  if (!storageHydrated) return "";
-  return version;
-}
-
-export function getNodeRuntimeVersionServerSnapshot(): string {
-  return "";
-}
+export const subscribeNodeRuntimePref = store.subscribe;
+export const getNodeRuntimeVersion = store.get;
+export const getNodeRuntimeVersionServerSnapshot = store.getServerSnapshot;
 
 export function setNodeRuntimeVersion(value: string): void {
-  if (typeof window !== "undefined") {
-    hydrateFromStorage();
-  }
-  const next = normalizeNodeRuntimeVersion(value);
-  version = next;
-  try {
-    if (next) window.localStorage.setItem(STORAGE_KEY, next);
-    else window.localStorage.removeItem(STORAGE_KEY);
-  } catch {
-    // ignore quota / private mode
-  }
-  emit();
+  store.ensureHydrated();
+  store.set(normalizeNodeRuntimeVersion(value));
 }

@@ -2,6 +2,8 @@ import { sql } from "drizzle-orm";
 import type { PackageEcosystem } from "@/lib/packages/package-routes";
 import type { Database } from "@/lib/db/client";
 import { getDb } from "@/lib/db/client";
+import { asExecuteRows } from "@/lib/db/execute-rows";
+import { dbFailureMessage } from "@/lib/db/query-error";
 
 const USAGE_DAYS = 30;
 const ALSO_SHOWN_LIMIT = 6;
@@ -76,11 +78,6 @@ type AlsoShownRow = {
   name: unknown;
 };
 
-function failureMessage(error: unknown): string {
-  const cause = error instanceof Error && error.cause !== undefined ? error.cause : error;
-  return cause instanceof Error ? cause.message : "usage query failed";
-}
-
 /** Recent anonymous interest for one package. Null when the database is unset or the query fails. */
 export async function loadPackageUsageBrief(
   ecosystem: PackageEcosystem,
@@ -146,9 +143,9 @@ export async function loadPackageUsageBrief(
       order by hits desc, name
       limit ${ALSO_SHOWN_LIMIT}
     `);
-    const countRow = counts[0];
+    const countRow = asExecuteRows<CountRow>(counts)[0];
     const recommendationCounts: PackageUsageBrief["recommendations"] = {};
-    for (const row of recommendations) {
+    for (const row of asExecuteRows<RecommendationRow>(recommendations)) {
       if (typeof row.recommendation !== "string" || !isRecommendation(row.recommendation)) {
         continue;
       }
@@ -159,12 +156,12 @@ export async function loadPackageUsageBrief(
       securityChecks: asCount(countRow?.security_checks),
       reviews: asCount(countRow?.reviews),
       recommendations: recommendationCounts,
-      alsoShownWith: alsoShown.flatMap((row) =>
+      alsoShownWith: asExecuteRows<AlsoShownRow>(alsoShown).flatMap((row) =>
         typeof row.name === "string" && row.name.trim() ? [row.name.trim()] : [],
       ),
     });
   } catch (error: unknown) {
-    const message = failureMessage(error);
+    const message = dbFailureMessage(error, "usage query failed");
     if (/password/i.test(message)) return null;
     console.error("Failed to load package usage:", message);
     return null;
