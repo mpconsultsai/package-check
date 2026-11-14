@@ -42,7 +42,9 @@ The MCP server is the same review pipeline as the site, with a compact JSON resu
 | Auth | `Authorization: Bearer <MCP_API_KEY>` |
 | Name | `package-check` |
 
-Set `MCP_API_KEY` to a long random value. When it is unset, every request is rejected with `401` and `{ "error": "Unauthorized" }`. `/api/v1/health` reports `apiKeys.mcp` when the variable is set. Tool calls are stored in `package_searches` with `source` `mcp` when the database is configured.
+Set `MCP_API_KEY` to a long random value (at least 32 random bytes). When it is unset, every request is rejected with `401` and `{ "error": "Unauthorized" }`. `/api/v1/health` reports `apiKeys.mcp` when the variable is set. Tool calls are stored in `package_searches` with `source` `mcp` when the database is configured.
+
+Authenticated MCP traffic is rate-limited in-process: **60 requests/minute** per API key by default (`MCP_RATE_LIMIT_PER_MIN`), and **`analyse_package` 6/minute** (`MCP_ANALYSE_RATE_LIMIT_PER_MIN`). Exceeding the limit returns `429` with `Retry-After` (HTTP) or a tool error for analyse. Limits are per Render instance.
 
 A Cursor MCP entry for a local server:
 
@@ -67,6 +69,10 @@ Point `url` at the deployed host for a remote agent. The bearer value is the `MC
 | `get_package` | Latest version, quality score, and advisory counts. No LLM call |
 | `get_security` | Advisories for one version (up to 15), with CVE, severity, and known-exploited flags |
 | `get_dependencies` | Direct dependencies for the latest version (up to 40). npm includes peers. PyPI includes `Requires-Python` and extras. NuGet includes the target framework |
+| `get_dependency_graph` | npm only. Transitive deps.dev graph with advisory counts (node list may be truncated) |
+| `get_scorecard` | OpenSSF Scorecard for a GitHub repo (from npm package and/or `repository`) |
+| `check_version` | `use` / `wait` / `prefer_other` / `avoid` for one version (advisories, deprecation, npm cooldown) |
+| `check_project_fit` | npm only. Reverse peer scan: which project deps conflict with upgrading `package` to `to` |
 | `upgrade_package` | npm only. Compare `from` with the latest stable version, or with `to`. Returns the bump, releases behind, and breaking notes when an upgrade exists. No LLM call |
 | `analyse_package` | The `get_package` report plus an AI recommendation, strengths, concerns, and scores. This is the slow tool |
 

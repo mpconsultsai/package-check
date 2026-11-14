@@ -1,8 +1,10 @@
 import { afterEach, describe, it, vi } from "vitest";
 import { POST } from "@/app/api/mcp/route";
+import { resetMcpRateLimits } from "@/lib/mcp/rate-limit";
 
 afterEach(() => {
   vi.unstubAllEnvs();
+  resetMcpRateLimits();
 });
 
 function mcpRequest(body: unknown, authorization?: string): Request {
@@ -69,8 +71,25 @@ describe("POST /api/mcp", () => {
       "get_package",
       "get_security",
       "get_dependencies",
+      "get_dependency_graph",
+      "get_scorecard",
+      "check_version",
+      "check_project_fit",
       "upgrade_package",
       "analyse_package",
     ]);
+  });
+
+  it("should rate-limit repeated MCP requests for the same key", async () => {
+    vi.stubEnv("MCP_API_KEY", "secret-token");
+    vi.stubEnv("MCP_RATE_LIMIT_PER_MIN", "2");
+    const body = { jsonrpc: "2.0", id: 3, method: "tools/list" };
+    (await POST(mcpRequest(body, "Bearer secret-token"))).status.should.equal(200);
+    (await POST(mcpRequest(body, "Bearer secret-token"))).status.should.equal(200);
+    const limited = await POST(mcpRequest(body, "Bearer secret-token"));
+    limited.status.should.equal(429);
+    limited.headers.get("Retry-After")!.should.match(/^\d+$/);
+    const payload = (await limited.json()) as { error?: string };
+    payload.error!.should.match(/Too many MCP requests/i);
   });
 });
