@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.31 - 2026-11-14
+
+- feat: Extend MCP server (de2567c)
+
 ## 0.1.30 - 2026-11-11
 
 - refactor: Fixes and updates (99b0852)
